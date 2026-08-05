@@ -33,6 +33,52 @@
 ```bash
 pip install requests
 
+python find_2out_first_base.py
+```
+
+`find_2out_first_base.py` 預設抓取 2026 年例行賽 GameSno 1–240，篩出第 1–8 局、
+兩出局且僅一壘有人的打席，輸出：
+
+- `Outcome=steal_success`：`RequestedRE` 是盜壘成功事件後至當半局結束的剩餘得分。
+- `Outcome=steal_failure`：`RequestedRE` 是同隊下一個半局的得分。
+- `Outcome=no_steal`：`RequestedRE` 是同隊下一個半局的得分。
+
+逐場原始回應快取於 `data/raw/cpbl/`，分析結果寫入 `outputs/`。若途中中斷，重跑
+同一指令會沿用已完成的快取，只重抓缺少的場次。可用參數縮小範圍做測試：
+
+```bash
+python find_2out_first_base.py --start 226 --end 240 --delay 1
+```
+
+CSV 同時保留當半局剩餘得分、下一半局得分與兩半局合計，方便後續依研究定義調整。
+
+抓取完成後，可執行第一版打者與打序模型：
+
+```bash
+python model_batter_decisions.py --simulations 2000
+```
+
+若要處理完整 2025 球季：
+
+```bash
+python find_2out_first_base.py --year 2025 --start 1 --end 360
+python model_batter_decisions.py --year 2025 --start 1 --end 360 --simulations 2000
+```
+
+模型使用打者個人的 `1B/2B/3B/HR/BB-HBP/REACH/OUT` 機率，同時模擬：
+
+- 成功：二壘、兩出局、當前打者繼續打，再算到下一個進攻半局結束。
+- 失敗：當局結束，下一局保留當前打者開頭。
+- 不跑：一壘、兩出局、當前打者繼續打，再算到下一個進攻半局結束。
+
+壘包推進暫時使用聯盟整體、相同 base-out state 與打席結果的經驗分布，尚未加入
+個別跑者速度。輸出包含三分支價值、打者出局傷害、打者保留價值與損益兩平成功率。
+出局傷害另拆成「非出局時的分支價值」「一次出局的條件成本」與「依打者 OUT%
+加權後的預期損失」，避免把高出局率和單次第三出局的傷害混為同一件事。
+
+原本的通用逐球資料匯出仍可執行：
+
+```bash
 python getData.py
 ```
 
@@ -49,3 +95,19 @@ python getData.py
 - 野球革命 Open Data 依 **ODC-By** 授權，使用時須標註來源。
 - CPBL 官網資料屬自行爬蟲取得，請留意其使用條款並控制爬取頻率；原始資料與程式碼分開管理，**不建議把大型原始資料檔（CSV/JSON）進版控**。
 - Open Data 與 CPBL 官網資料均含部分人工紀錄成分，盜壘等事件性紀錄須留意判讀誤差，詳見計畫書「已知限制」。
+
+## 2025 互動報告
+
+可直接用瀏覽器開啟 [reports/cpbl-steal-decision-2025.html](reports/cpbl-steal-decision-2025.html)。報告包含三種決策路線的計算流程、2025 整體結果、損益兩平公式，以及 1,877 筆情境的逐筆查詢與成功率試算。
+
+模型結果更新後可重新產生報告：
+
+```bash
+python generate_decision_report.py
+```
+
+也可指定其他球季或輸出位置：
+
+```bash
+python generate_decision_report.py --year 2025 --start 1 --end 360 --output reports/cpbl-steal-decision-2025.html
+```
