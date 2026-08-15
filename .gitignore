@@ -1,5 +1,10 @@
-*.csv
-*.json
 __pycache__/
-*.pyc
+*.py[cod]
+.pytest_cache/
 .venv/
+*.json
+
+# 官網原始回應與分析輸出可由爬蟲重建，不進版控。
+data/raw/
+outputs/
+*.csv
