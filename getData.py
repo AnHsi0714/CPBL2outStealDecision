@@ -110,7 +110,7 @@ def parse_game(game_meta: dict, data: dict) -> tuple[list[dict], list[dict], lis
         playbyplay.append({
             **game_id,
             "InningSeq": row.get("InningSeq"),
-            "VisitingHomeType": row.get("VisitingHomeType"),  # 1=主隊打擊, 2=客隊打擊（依賽程頁定義）
+            "VisitingHomeType": row.get("VisitingHomeType"),  # getlive 實測：1=客隊打擊, 2=主隊打擊
             "BattingOrderInInning": row.get("BattingOrder"),  # 該半局第幾位打者（每局重算，非棒次）
             "HitterLineup": row.get("HitterLineup"),          # 真正的棒次 1-9
             "HitterName": row.get("HitterName"),
