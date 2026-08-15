@@ -72,7 +72,44 @@ def compact_case(row: dict[str, str], index: int) -> dict[str, Any]:
     return data
 
 
-def build_payload(rows: list[dict[str, str]], summary: dict[str, Any]) -> dict[str, Any]:
+def build_segments(comparison: dict[str, Any] | None) -> dict[str, Any] | None:
+    if comparison is None:
+        return None
+    def round_or_none(value: Any) -> float | None:
+        return round(value, 6) if value is not None else None
+
+    return {
+        "lineupSlots": [
+            {
+                "slot": item["slot"],
+                "n": item["n"],
+                "median": round_or_none(item["median"]),
+                "meanVNoSteal": round_or_none(item["meanVNoSteal"]),
+                "meanVFailure": round_or_none(item["meanVFailure"]),
+                "meanVSuccess": round_or_none(item["meanVSuccess"]),
+                "numerator": round_or_none(item["numerator"]),
+                "denominator": round_or_none(item["denominator"]),
+            }
+            for item in comparison["lineup_slot_breakdown"]
+        ],
+        "comparisons": comparison["comparisons"],
+        "qualifiedRows": comparison["batter_type_qualified_rows"],
+        "substitution": comparison.get("lineup_substitution"),
+        "correlations": comparison.get("batter_type_correlations"),
+        "crossTables": {
+            "lineupXPower": comparison.get("cross_table_lineup_x_power"),
+            "lineupXPatience": comparison.get("cross_table_lineup_x_patience"),
+            "lineupXObp": comparison.get("cross_table_lineup_x_obp"),
+            "lineupXContact": comparison.get("cross_table_lineup_x_contact"),
+        },
+    }
+
+
+def build_payload(
+    rows: list[dict[str, str]],
+    summary: dict[str, Any],
+    comparison: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     outcome_counts = {"steal_success": 0, "steal_failure": 0, "no_steal": 0}
     for row in rows:
         outcome = row.get("Outcome", "")
@@ -124,6 +161,7 @@ def build_payload(rows: list[dict[str, str]], summary: dict[str, Any]) -> dict[s
         },
         "defaultCase": default_case,
         "cases": cases,
+        "segments": build_segments(comparison),
     }
 
 
@@ -338,6 +376,83 @@ HTML_TEMPLATE = r'''<!doctype html>
       </div>
     </section>
 
+    <section id="segment-section" aria-labelledby="segment-title" hidden>
+      <h2 id="segment-title">棒次與打者類型如何影響門檻</h2>
+      <div class="panel">
+        <p class="muted">長打／選球分組只納入該季打席數 ≥ 100 的打者（<span id="segment-qualified"></span> 位），用聯盟中位數切成高/低兩組；門檻只計入落在 0-100% 之間、有意義的情境。</p>
+        <div class="grid" id="substitution-stats" style="margin-top:14px"></div>
+        <p class="muted" style="margin-top:10px">先發／代打交叉檢查：把「僅先發打者」跟「全部決策」分別算逐棒次門檻中位數，差異都在 1 個百分點以內，代打不會系統性扭曲下面的棒次分析。</p>
+
+        <h3 style="margin-top:22px">逐棒次（1–9）損益兩平門檻中位數</h3>
+        <div id="lineup-bars" style="margin-top:12px"></div>
+
+        <div class="formula" id="slot-interpretation">
+          <strong>為什麼門檻隨棒次起伏</strong>
+          <p class="muted" style="margin-top:8px">門檻幾乎完全由分子「V不跑－V失敗」決定，分母「V成功－V失敗」（盜壘成功能省下多少）在各棒次都差不多（<span id="denom-range"></span>）。分子大，代表「不跑但打席繼續」跟「盜壘刺、直接把打者保留到下一局」這兩者的差距特別大：</p>
+          <ul class="note-list" style="margin-top:12px; grid-template-columns:1fr">
+            <li><strong>第 <span id="peak-slot"></span> 棒（門檻最高，<span id="peak-value"></span>）</strong>：分子主要來自「他自己夠強」——這棒續打時常能靠自己的打擊在本半局多得分，但盜壘刺會立刻結束半局，等於白白放棄這個打席的價值。</li>
+            <li><strong>第 9 棒（門檻 <span id="slot9-value"></span>，全場第二高）</strong>：分子主要來自「保留效應」——不管有沒有盜壘，只要第 9 棒正常出局，下一局通常輪到全隊最強的第 1 棒開路；但盜壘刺會讓第 9 棒自己被保留、下一局改由他先打，等於賠掉了讓第 1 棒提前登場的機會。</li>
+            <li><strong>第 <span id="trough-slot"></span> 棒（門檻最低，<span id="trough-value"></span>）</strong>：不管盜壘失敗被保留、還是不跑正常出局後換下一棒，接手的都是實力相近的早段棒次，兩種情況的價值差不多，「這位打者自己多強」跟「保留效應」都不明顯，是全場相對最適合冒險盜壘的棒次。</li>
+          </ul>
+        </div>
+
+        <h3 style="margin-top:28px">分組比較</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>比較</th><th>組一</th><th>組二</th><th>差異（組一－組二）</th><th>p 值（Mann-Whitney U）</th></tr></thead>
+            <tbody id="segment-table"></tbody>
+          </table>
+        </div>
+        <p class="muted" style="margin-top:14px">高長打、高選球打者在場時，門檻都比對照組高，且在前段／後段棒次分開看仍然成立——換句話說，這位打者整體打擊能力愈強，愈不該冒險盜壘，長打力與選球力兩者方向一致，不是互相抵銷的兩股力量。以下是分開看的交叉表：</p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:14px">
+          <div class="table-wrap">
+            <table>
+              <caption class="muted" style="text-align:left; margin-bottom:8px">棒次 × 長打分組（門檻中位數）</caption>
+              <thead><tr><th>棒次</th><th>高長打</th><th>低長打</th></tr></thead>
+              <tbody id="cross-table-power"></tbody>
+            </table>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="muted" style="text-align:left; margin-bottom:8px">棒次 × 選球分組（門檻中位數）</caption>
+              <thead><tr><th>棒次</th><th>高選球</th><th>低選球</th></tr></thead>
+              <tbody id="cross-table-patience"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <h3 style="margin-top:28px">為什麼不直接用「上壘率」分組</h3>
+        <div class="panel" style="padding:0; box-shadow:none; border:none">
+          <div class="grid" style="grid-template-columns:repeat(2,1fr)">
+            <article class="stat"><small>ISO 與選球力（保送/觸身率）相關係數</small><strong id="corr-iso-bb"></strong><span>我們實際用來分組的指標</span></article>
+            <article class="stat"><small>ISO 與真上壘率（安打+保送）相關係數</small><strong id="corr-iso-obp"></strong><span>相關性更高，跟長打較難分開</span></article>
+          </div>
+          <div class="table-wrap" style="margin-top:16px">
+            <table>
+              <caption class="muted" style="text-align:left; margin-bottom:8px">棒次 × 真上壘率分組（門檻中位數）</caption>
+              <thead><tr><th>棒次</th><th>高上壘率</th><th>低上壘率</th></tr></thead>
+              <tbody id="cross-table-obp"></tbody>
+            </table>
+          </div>
+          <p class="muted" style="margin-top:14px">改用真上壘率（安打+保送）分組，結果的方向跟純選球力（保送/觸身率）<strong>相反</strong>：高上壘率組門檻反而較低，且效應主要出現在後段棒次。原因是上壘率把「安打」也算進去，而安打型打者本來就更容易靠自己在本半局把跑者送回來，這股力量跟「保送不太能直接送回一壘跑者」的效應方向相反、混在一起會互相抵銷，訊號變得不乾淨——這正是我們選用 ISO／BB% 而不是 SLG／OBP 分組的原因，不是隨意規定。</p>
+        </div>
+
+        <h3 style="margin-top:28px">用純單打率驗證「高上壘接觸型該不該跑」</h3>
+        <div class="panel" style="padding:0; box-shadow:none; border:none">
+          <p>把「安打」本身拆更細：只看單打率（<code>SingleRate_proxy = P_1B</code>），對應計畫書「高上壘接觸型——單打即可得分」的原始假設。這個指標跟長打幾乎是反方向（<span id="corr-iso-single"></span>，長打型打者安打常常直接是長打，單打占比反而低），是三個上壘相關指標裡跟 ISO 重疊最少、最乾淨的一個。</p>
+          <div class="table-wrap" style="margin-top:16px">
+            <table>
+              <caption class="muted" style="text-align:left; margin-bottom:8px">棒次 × 單打率分組（門檻中位數）</caption>
+              <thead><tr><th>棒次</th><th>高單打率（接觸型）</th><th>低單打率</th></tr></thead>
+              <tbody id="cross-table-contact"></tbody>
+            </table>
+          </div>
+          <p class="muted" style="margin-top:14px" id="contact-summary"></p>
+        </div>
+      </div>
+    </section>
+
     <section aria-labelledby="explorer-title">
       <h2 id="explorer-title">逐筆重算：換一位打者就會得到不同答案</h2>
       <div class="panel">
@@ -439,6 +554,100 @@ HTML_TEMPLATE = r'''<!doctype html>
       $('generated-at').textContent = new Date(m.generatedAt).toLocaleString('zh-TW');
     }
 
+    const comparisonLabels = {
+      lineup_front_vs_back: ['前段(1-5)', '後段(6-9)'],
+      power_high_vs_low_ISO: ['高長打', '低長打'],
+      patience_high_vs_low_BB: ['高選球', '低選球'],
+      obp_high_vs_low_OBP: ['高上壘率', '低上壘率'],
+      contact_high_vs_low_1B: ['高單打率(接觸型)', '低單打率'],
+    };
+
+    function fillSegments() {
+      const segments = REPORT.segments;
+      if (!segments) return;
+      $('segment-section').hidden = false;
+      $('segment-qualified').textContent = segments.qualifiedRows.toLocaleString();
+
+      const sub = segments.substitution;
+      if (sub) {
+        const slotEntries = Object.entries(sub.bySlot).sort((a, b) => Number(a[0]) - Number(b[0]));
+        const lowestStarterSlot = slotEntries.reduce((worst, [slot, s]) =>
+          (s.starterRate !== null && (!worst || s.starterRate < worst[1].starterRate)) ? [slot, s] : worst, null);
+        $('substitution-stats').innerHTML = `
+          <article class="stat"><small>決策當下為該棒次先發打者</small><strong>${pct(sub.starterRate)}</strong><span>${sub.starterDecisions.toLocaleString()} / ${sub.totalDecisions.toLocaleString()} 筆</span></article>
+          <article class="stat"><small>代打／換人後才上場</small><strong>${pct(1 - sub.starterRate)}</strong><span>${sub.substituteDecisions.toLocaleString()} 筆</span></article>
+          <article class="stat"><small>代打比例最高的棒次</small><strong>第 ${lowestStarterSlot[0]} 棒</strong><span>先發比例 ${pct(lowestStarterSlot[1].starterRate)}（n=${lowestStarterSlot[1].n}）</span></article>
+        `;
+      }
+
+      const maxMedian = Math.max(...segments.lineupSlots.map((s) => s.median ?? 0));
+      $('lineup-bars').innerHTML = segments.lineupSlots.map((s) => `
+        <div class="bar-row">
+          <span>第 ${s.slot} 棒</span>
+          <div class="track"><div class="bar neutral" style="width:${maxMedian ? (s.median / maxMedian) * 100 : 0}%"></div></div>
+          <strong>${s.median === null ? '無' : pct(s.median)}</strong>
+        </div>
+      `).join('');
+
+      $('segment-table').innerHTML = segments.comparisons.map((c) => {
+        const [labelA, labelB] = comparisonLabels[c.comparison] || [c.comparison, ''];
+        const keys = Object.keys(c).filter((k) => !['comparison', 'mann_whitney_u', 'p_value'].includes(k));
+        const a = c[keys[0]];
+        const b = c[keys[1]];
+        const diff = a.median - b.median;
+        const pText = c.p_value === null ? '無' : (c.p_value < 0.001 ? '< 0.001' : c.p_value.toFixed(4));
+        return `<tr><td>${labelA} vs ${labelB}</td><td>${pct(a.median)}（n=${a.n}）</td><td>${pct(b.median)}（n=${b.n}）</td><td>${diff >= 0 ? '+' : ''}${pct(diff)}</td><td>${pText}</td></tr>`;
+      }).join('');
+
+      const slots = segments.lineupSlots.filter((s) => s.median !== null);
+      if (slots.length) {
+        const peak = slots.reduce((a, b) => (b.median > a.median ? b : a));
+        const trough = slots.reduce((a, b) => (b.median < a.median ? b : a));
+        const slot9 = slots.find((s) => s.slot === 9);
+        const denoms = slots.map((s) => s.denominator).filter((v) => v !== null);
+        $('peak-slot').textContent = peak.slot;
+        $('peak-value').textContent = pct(peak.median);
+        $('trough-slot').textContent = trough.slot;
+        $('trough-value').textContent = pct(trough.median);
+        if (slot9) $('slot9-value').textContent = pct(slot9.median);
+        if (denoms.length) {
+          $('denom-range').textContent = `${pct(Math.min(...denoms))} ~ ${pct(Math.max(...denoms))}`;
+        }
+      }
+
+      const crossLabels = { front_1_5: '前段(1-5)', back_6_9: '後段(6-9)' };
+      function renderCrossTable(elementId, table, colA, colB) {
+        if (!table) { $(elementId).innerHTML = '<tr><td colspan="3">無資料</td></tr>'; return; }
+        $(elementId).innerHTML = Object.keys(table).sort().reverse().map((lineupKey) => {
+          const cell = table[lineupKey];
+          const a = cell[colA];
+          const b = cell[colB];
+          const fmtCell = (stat) => (stat && stat.median !== null ? `${pct(stat.median)}（n=${stat.n}）` : '無');
+          return `<tr><td>${crossLabels[lineupKey] || lineupKey}</td><td>${fmtCell(a)}</td><td>${fmtCell(b)}</td></tr>`;
+        }).join('');
+      }
+      if (segments.crossTables) {
+        renderCrossTable('cross-table-power', segments.crossTables.lineupXPower, 'high_ISO', 'low_ISO');
+        renderCrossTable('cross-table-patience', segments.crossTables.lineupXPatience, 'high_BB', 'low_BB');
+        renderCrossTable('cross-table-obp', segments.crossTables.lineupXObp, 'high_OBP', 'low_OBP');
+        renderCrossTable('cross-table-contact', segments.crossTables.lineupXContact, 'high_1B', 'low_1B');
+      }
+
+      if (segments.correlations) {
+        $('corr-iso-bb').textContent = segments.correlations.iso_vs_bb.toFixed(3);
+        $('corr-iso-obp').textContent = segments.correlations.iso_vs_obp.toFixed(3);
+        $('corr-iso-single').textContent = `相關係數 ${segments.correlations.iso_vs_single.toFixed(3)}`;
+      }
+
+      const contactComparison = segments.comparisons.find((c) => c.comparison === 'contact_high_vs_low_1B');
+      if (contactComparison) {
+        const hi = contactComparison.high_1B;
+        const lo = contactComparison.low_1B;
+        const pText = contactComparison.p_value < 0.001 ? '< 0.001' : contactComparison.p_value.toFixed(4);
+        $('contact-summary').textContent = `高單打率組門檻 ${pct(hi.median)}（n=${hi.n}），低單打率組 ${pct(lo.median)}（n=${lo.n}），低了 ${pct(Math.abs(hi.median - lo.median))}，p = ${pText}——是所有分組比較裡差距最大、也最顯著的一組，直接支持「單打即可得分」的假設：這類打者一旦上場最可能就是單打，而單打能不能把跑者從一壘送回本壘高度依賴壘包位置，讓跑者先上二壘的邊際價值特別高。`;
+      }
+    }
+
     function optionText(c) {
       return `Game ${c.game}｜${c.inning}局｜${c.hitter}（${c.team}）`;
     }
@@ -496,6 +705,7 @@ HTML_TEMPLATE = r'''<!doctype html>
     }
 
     fillAggregate();
+    fillSegments();
     $('case-select').value = String(REPORT.defaultCase);
     populateCases();
     $('case-select').value = String(REPORT.defaultCase);
@@ -513,6 +723,7 @@ def generate_report(
     model_csv: Path,
     summary_json: Path,
     output: Path,
+    comparison_json: Path | None = None,
 ) -> dict[str, Any]:
     with model_csv.open("r", encoding="utf-8-sig", newline="") as handle:
         rows = list(csv.DictReader(handle))
@@ -522,7 +733,15 @@ def generate_report(
     with summary_json.open("r", encoding="utf-8-sig") as handle:
         summary = json.load(handle)
 
-    payload = build_payload(rows, summary)
+    comparison = None
+    if comparison_json is not None and comparison_json.exists():
+        with comparison_json.open("r", encoding="utf-8-sig") as handle:
+            comparison = json.load(handle)
+    elif comparison_json is not None:
+        print(f"提醒：找不到 {comparison_json}，報告將略過棒次/打者類型分析區塊"
+              f"（可先執行 analyze_batter_types.py / join_decision_batter_types.py / compare_groups.py）")
+
+    payload = build_payload(rows, summary, comparison)
     payload_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     payload_json = payload_json.replace("</", "<\\/")
     document = HTML_TEMPLATE.replace("__REPORT_DATA__", payload_json)
@@ -540,6 +759,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--end", type=int, default=360)
     parser.add_argument("--model-csv", type=Path)
     parser.add_argument("--summary-json", type=Path)
+    parser.add_argument("--comparison-json", type=Path)
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
 
@@ -549,8 +769,9 @@ def main() -> int:
     stem = f"{args.year}_{args.kind_code}_{args.start}-{args.end}"
     model_csv = args.model_csv or ROOT / "outputs" / f"cpbl_decision_model_{stem}.csv"
     summary_json = args.summary_json or ROOT / "outputs" / f"cpbl_decision_model_{stem}_summary.json"
+    comparison_json = args.comparison_json or ROOT / "outputs" / f"cpbl_group_comparison_{stem}.json"
     output = args.output or ROOT / "reports" / f"cpbl-steal-decision-{args.year}.html"
-    payload = generate_report(model_csv, summary_json, output)
+    payload = generate_report(model_csv, summary_json, output, comparison_json)
     print(
         f"Wrote {output} with {payload['meta']['samples']} cases; "
         f"median threshold={payload['aggregate']['medianThreshold']:.3%}"
