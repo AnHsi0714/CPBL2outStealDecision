@@ -68,11 +68,7 @@ def parse_game(game_meta: dict, feed: dict) -> list[dict]:
             "TeamFielding": row.get("team_fielding"),
             "BatterName": row.get("batter_name"),
             "PitcherName": row.get("pitcher_name"),
-            # outs/runnerOnXB 都是「這一球投出前」的即時狀態（實測過：
-            # 2026-08-20 STL@CIN 第8局 Baez 被抓到盜壘那球，outs=2、
-            # runnerOn1B=True，跟前一球 Baez 保送上一壘、當時2出局的狀態吻合）。
-            # runnerOnXB 這幾個 key 只有壘包真的有人時才會出現，沒人時整個
-            # key 不存在，所以用 bool(row.get(...)) 判斷即可，不用另外處理 False。
+            # outs/runnerOnXB 都是「這一球投出前」的即時狀態
             "Outs": row.get("outs"),
             "On1B": bool(row.get("runnerOn1B")),
             "On2B": bool(row.get("runnerOn2B")),
