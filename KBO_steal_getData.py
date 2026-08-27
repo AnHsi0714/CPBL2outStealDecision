@@ -12,24 +12,18 @@ session.headers.update({
 })
 
 # 官網本身的賽程 AJAX（/ws/Schedule.asmx/GetScheduleList）試過會回 401，目前沒找到正確呼叫方式。
-# 賽程清單改用 Naver Sports 的公開閘道抓 gameId，但只抓「一天有哪些比賽、gameId 是什麼」這種
-# 輕量清單資料；實際的逐球內容（大量資料）全部只從 KBO 官網本身的 LiveTextView2.aspx 抓，
-# 避開 Naver 文件裡「不可用於大量資料蒐集」的使用限制。
 NAVER_SCHEDULE_URL = "https://api-gw.sports.naver.com/schedule/games"
 KBO_LIVETEXT_URL = "https://www.koreabaseball.com/Game/LiveTextView2.aspx"
 DATA_DIR = "kbo_data"
 
-# 官網賽程/文字轉播裡出現的球隊簡稱 -> 中文隊名（10支一軍球隊，固定集合）
+# 球隊簡稱 -> 中文隊名（10支一軍球隊）
 TEAM_NAME_ZH = {
     "KIA": "起亞", "한화": "韓華", "KT": "KT", "LG": "LG",
     "두산": "斗山", "NC": "NC", "SSG": "SSG", "삼성": "三星",
     "키움": "키움英雄", "롯데": "樂天",
 }
 
-# 逐句翻譯用的固定用語字典，是從實際抓到的比賽裡逐一比對出來的固定詞彙（守備位置、打法、
-# 出局/上壘類型、上壘原因），不是每場都會出現全部用語，比對不到的詞會照原文留著，不會亂猜。
-# 比對時要由長到短取代，避免短字串先取代掉、破壞掉包含它的長字串（例如「희생번트 아웃」
-# 要先於「아웃」被取代，不然「아웃」會先被換成「出局」，「희생번트」就變成孤立片段）。
+# 守備位置、打法、出局/上壘類型、上壘原因
 _TERM_DICT = [
     # 守備位置
     ("투수", "投手"), ("포수", "捕手"), ("1루수", "一壘手"), ("2루수", "二壘手"),
@@ -124,7 +118,7 @@ def get_schedule(start_date: str, end_date: str) -> list[dict]:
             })
 
         day += timedelta(days=1)
-        polite_sleep(0.5, 0.5)  # 賽程查詢也是對同一個端點連續呼叫，一樣禮貌延遲
+        polite_sleep(0.5, 0.5)  # 賽程查詢也是對同一個端點連續呼叫
 
     return games
 
@@ -138,7 +132,7 @@ def get_full_text(game_id: str, year: str) -> str:
     return resp.text
 
 
-# 依序比對：先比對更具體的格式，比對不到才落到「未知」桶方便之後檢查有沒有漏掉的用語
+# 依序比對：先比對更具體的格式，比對不到才「未知」，方便之後檢查有沒有漏掉的用語
 _INNING_HEADER_RE = re.compile(r'^(\d+)회(초|말)\s*(\S+)\s*공격')
 _BATTER_INTRO_RE = re.compile(r'^(\d+)번타자\s*(\S+)$')
 _PITCH_DETAIL_RE = re.compile(r'^-\s*\d+구')
@@ -179,11 +173,8 @@ def parse_game(game_meta: dict, html: str) -> list[dict]:
 
     inning, half, batting_team, batter_name = None, None, None, None
     outs = 0
-    # 壘包狀態用「目前佔用者的姓名」追蹤（不是單純布林值）：官網常常用兩則獨立敘述描述同一
-    # 時刻（例如「打者觸身球上一壘」+「原本一壘跑者被擠到二壘」），如果只記布林值，清空一壘
-    # 這個動作沒辦法分辨「原本那個跑者離開」跟「新打者剛上壘」，會把新打者也一起清掉（實測過：
-    # 2026-08-20 두산@NC 第2局，博건우 1루打→이우성 觸身球擠到一壘→박건우 被動→2壘，就是這樣算錯）。
-    # 清空壘包前先比對姓名是不是目前這個人，才不會誤清到已經換人佔用的壘包。
+    # 壘包狀態用「目前佔用者的姓名」追蹤，沒辦法分辨「原本那個跑者離開」跟「新打者剛上壘」，會把新打者也一起清掉
+    # eg. 2026-08-20 두산@NC 第2局，博건우 1루打→이우성 觸身球擠到一壘→박건우 被動→2壘，就是這樣算錯
     base = {1: None, 2: None, 3: None}
     rows = []
 
@@ -200,9 +191,7 @@ def parse_game(game_meta: dict, html: str) -> list[dict]:
                 base = {1: None, 2: None, 3: None}
             continue
 
-        # class="red" 不是「場邊資訊」的專用標記，得分相關的安打/跑者移動事件也會用紅字強調，
-        # 實測過（2026-08-20 두산@NC 第3局）：漏判 class="red" 一律跳過，會把真正讓打者上壘的
-        # 安打事件也濾掉，導致後面盜壘事件的壘包狀態算錯。改用內容判斷場邊資訊列，跟 class 無關。
+        # class="red" 不是場邊資訊的專用標記，得分相關的安打/跑者移動事件也會用紅字強調
         if text == "=====================================" or text == "경기종료" or \
            re.match(r'^(승리|패전)(팀\s*홀드)?투수\s*:', text) or re.match(r'^세이브투수\s*:', text):
             continue
@@ -214,7 +203,7 @@ def parse_game(game_meta: dict, html: str) -> list[dict]:
         if _PITCH_DETAIL_RE.match(text):
             continue
 
-        if "비디오 판독" in text:  # 判決覆審註記，不是新事件，結果已經反映在正式的事件列裡
+        if "비디오 판독" in text:  # 判決覆審註記，不是新事件
             continue
 
         m = _RUNNER_MOVE_RE.match(text)
@@ -232,8 +221,7 @@ def parse_game(game_meta: dict, html: str) -> list[dict]:
                 "RawText_zh": text_zh, "RawText_zh_Complete": text_zh_full,
                 "HasStealMention": "도루" in text,
             }
-            # 這個壘包目前佔用者跟這行敘述的跑者姓名不一致，代表壘包早已換人（例如上面註解的情境），
-            # 這行描述的是「舊佔用者」的動作，不能拿來動到「新佔用者」的狀態
+
             is_current_occupant = base[from_base] == runner_name
 
             if "대주자" in result:  # 代跑上場，人還在同一個壘包，只是姓名換成代跑選手
@@ -258,7 +246,7 @@ def parse_game(game_meta: dict, html: str) -> list[dict]:
                     base[dest] = runner_name
                     row["Parsed"] = True
                 else:
-                    row["Parsed"] = False  # 沒對到任何已知用語，狀態不變，留給人工檢查
+                    row["Parsed"] = False  # 沒對到任何已知用語，人工檢查
 
             rows.append(row)
             continue
@@ -286,7 +274,7 @@ def parse_game(game_meta: dict, html: str) -> list[dict]:
                 hit = _HIT_BASE_RE.search(result)
                 if hit:
                     dest = int(hit.group(1))
-                elif "안타" in result:  # 例如「번트안타」沒有數字，視為一壘安打
+                elif "안타" in result:  # 「안타」視為一安打
                     dest = 1
                 elif "볼넷" in result or "몸에 맞는 볼" in result or "고의4구" in result:
                     dest = 1
