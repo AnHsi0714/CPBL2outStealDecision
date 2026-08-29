@@ -23,6 +23,7 @@ from find_2out_first_base import (
     batting_score,
     half_key,
     occupied,
+    remove_administrative_rows,
     split_plate_appearances,
 )
 
@@ -163,6 +164,7 @@ def load_raw_games(cache_dir: Path) -> dict[int, list[dict[str, Any]]]:
         data = json.loads(path.read_text(encoding="utf-8"))
         raw = data.get("LiveLogJson")
         rows = json.loads(raw) if isinstance(raw, str) and raw else []
+        rows = remove_administrative_rows(rows)
         if rows:
             game_sno = as_int(rows[0].get("GameSno"), as_int(path.stem.split("_")[-1]))
             games[game_sno] = rows

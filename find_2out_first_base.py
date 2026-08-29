@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 import getData
+from cpbl_row_filters import is_administrative_only_row, remove_administrative_rows  # noqa: F401 (re-exported)
 
 
 DEFAULT_YEAR = 2026
@@ -170,6 +171,7 @@ def analyze_game(game_meta: dict[str, Any], data: dict[str, Any]) -> list[dict[s
     rows: list[dict[str, Any]] = json.loads(raw) if isinstance(raw, str) else raw
     if not rows:
         return []
+    rows = remove_administrative_rows(rows)
 
     half_indices: dict[tuple[int, str], list[int]] = {}
     for index, row in enumerate(rows):
