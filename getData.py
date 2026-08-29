@@ -1,3 +1,4 @@
+import os
 import requests
 import re
 import json
@@ -6,6 +7,8 @@ import random
 import csv
 
 from cpbl_row_filters import remove_administrative_rows
+
+DATA_DIR = "cpbl_data"
 
 session = requests.Session()
 session.headers.update({
@@ -228,7 +231,8 @@ if __name__ == "__main__":
 
     pbp_rows, sb_rows, bat_rows = fetch_games(games)
 
+    os.makedirs(DATA_DIR, exist_ok=True)
     tag = f"{YEAR}_{KIND_CODE}_{GAME_SNO_START}-{GAME_SNO_END}"
-    save_to_csv(pbp_rows, f"cpbl_playbyplay_{tag}.csv")
-    save_to_csv(sb_rows, f"cpbl_scoreboard_{tag}.csv")
-    save_to_csv(bat_rows, f"cpbl_batting_{tag}.csv")
+    save_to_csv(pbp_rows, os.path.join(DATA_DIR, f"cpbl_playbyplay_{tag}.csv"))
+    save_to_csv(sb_rows, os.path.join(DATA_DIR, f"cpbl_scoreboard_{tag}.csv"))
+    save_to_csv(bat_rows, os.path.join(DATA_DIR, f"cpbl_batting_{tag}.csv"))
