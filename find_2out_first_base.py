@@ -15,7 +15,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable
 
-import getData
+import CPBL_steal_getData
 from cpbl_row_filters import is_administrative_only_row, remove_administrative_rows  # noqa: F401 (re-exported)
 
 
@@ -339,7 +339,7 @@ def load_or_fetch_game(
     for attempt in range(1, retries + 1):
         try:
             month = as_int(str(game_meta.get("GameDate"))[5:7])
-            data = getData.get_live_data(
+            data = CPBL_steal_getData.get_live_data(
                 as_int(game_meta.get("Year"), DEFAULT_YEAR),
                 str(game_meta.get("KindCode") or DEFAULT_KIND_CODE),
                 game_sno,
@@ -505,7 +505,7 @@ def main() -> int:
     if args.start < 1 or args.end < args.start:
         raise SystemExit("場次範圍錯誤：需滿足 1 <= start <= end")
 
-    schedule = getData.get_schedule(args.year, args.kind_code)
+    schedule = CPBL_steal_getData.get_schedule(args.year, args.kind_code)
     games = deduplicate_schedule(
         game
         for game in schedule
