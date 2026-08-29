@@ -14,7 +14,10 @@
 
 ```
 .
-├── getData.py                              # CPBL 官網逐場資料爬蟲（補充 2025-2026 資料用）
+├── CPBL_steal_getData.py                   # CPBL 官網逐場資料爬蟲（補充 2025-2026 資料用）
+├── KBO_steal_getData.py                    # KBO 逐場資料爬蟲，供跨聯盟比較用
+├── MLB_steal_getData.py                    # MLB 逐場資料爬蟲，供跨聯盟比較用
+├── combine_leagues.py                      # 把三聯盟 playbyplay CSV 統一欄位命名後合併
 ├── 兩出局一壘有人盜壘決策_專案計畫書.md      # 完整計畫書
 └── README.md
 ```
@@ -24,7 +27,8 @@
 | 來源 | 內容 | 涵蓋期間 |
 |-----|------|--------|
 | 野球革命 Open Data（主要） | game / batterBox / pitcherBox / PA / event / runner 六表 | 2023–2024 |
-| CPBL 官網（`getData.py`，補充） | 逐場逐球紀錄、逐局比分、球員盒分 | 2025–2026 |
+| CPBL 官網（`CPBL_steal_getData.py`，補充） | 逐場逐球紀錄、逐局比分、球員盒分 | 2025–2026 |
+| KBO／MLB 官網（`KBO_steal_getData.py`／`MLB_steal_getData.py`） | 逐場逐球紀錄 | 供跨聯盟比較，計畫書「跨聯盟比較」項目用 |
 
 詳細欄位需求與已知限制見計畫書「二、資料來源」。
 
@@ -79,10 +83,10 @@ python model_batter_decisions.py --year 2025 --start 1 --end 360 --simulations 2
 原本的通用逐球資料匯出仍可執行：
 
 ```bash
-python getData.py
+python CPBL_steal_getData.py
 ```
 
-`getData.py` 預設抓 2026 年例行賽 GameSno 226–240，每抓完一場比賽會隨機延遲數秒再抓下一場，避免對 CPBL 官網造成過大負擔。輸出三張 CSV：
+`CPBL_steal_getData.py`（原檔名 `getData.py`，跨聯盟資料整併時改名）預設抓 2026 年例行賽 GameSno 226–240，每抓完一場比賽會隨機延遲數秒再抓下一場，避免對 CPBL 官網造成過大負擔。輸出三張 CSV 到 `cpbl_data/` 目錄：
 
 - `cpbl_playbyplay_*.csv`：逐球紀錄（含壘包狀態、累積比分、打序）
 - `cpbl_scoreboard_*.csv`：逐局比分（僅供總覽/核對，不可用於 RE 計算，見計畫書 3.0）
@@ -90,12 +94,14 @@ python getData.py
 
 要換抓其他場次，修改檔案最下方的 `YEAR` / `KIND_CODE` / `GAME_SNO_START` / `GAME_SNO_END`。
 
+`KBO_steal_getData.py`／`MLB_steal_getData.py` 是同樣模式的另外兩個聯盟爬蟲，`combine_leagues.py` 把三份 playbyplay CSV 統一欄位命名（`Outs`／`On1B`／`On2B`／`On3B` 等）後合併成一份跨聯盟資料集，供計畫書「跨聯盟比較」項目使用。
+
 ## 資料使用注意事項
 
 - 野球革命 Open Data 依 **ODC-By** 授權，使用時須標註來源。
 - CPBL 官網資料屬自行爬蟲取得，請留意其使用條款並控制爬取頻率；原始資料與程式碼分開管理，**不建議把大型原始資料檔（CSV/JSON）進版控**。
 - Open Data 與 CPBL 官網資料均含部分人工紀錄成分，盜壘等事件性紀錄須留意判讀誤差，詳見計畫書「已知限制」。
-- **CPBL 逐球資料含「換投手／代打／代跑／守備／選手」等純公告列**（不是真正的投球事件），這種列的 `OutCnt`／壘包欄位是殘留自公告發生當下、尚未被下一球更新的舊值，最常出現在半局交替或臨場換人時刻。若未過濾，會被誤判成真實比賽狀態（實測約占全部列數 3%），集中污染「兩出局、空壘」這類半局尾聲常見的狀態。過濾邏輯（`is_administrative_only_row`／`remove_administrative_rows`）抽在獨立的 `cpbl_row_filters.py`（避免 `find_2out_first_base.py`／`getData.py` 互相 import 造成循環依賴），`find_2out_first_base.py`、`getData.py`、`build_re24_matrix.py`、`model_batter_decisions.py` 均已套用；`find_2out_first_base.py` 本身的 1,877 筆決策樣本經重跑確認筆數不變，不受影響。詳見下方「引擎驗證」一節。
+- **CPBL 逐球資料含「換投手／代打／代跑／守備／選手」等純公告列**（不是真正的投球事件），這種列的 `OutCnt`／壘包欄位是殘留自公告發生當下、尚未被下一球更新的舊值，最常出現在半局交替或臨場換人時刻。若未過濾，會被誤判成真實比賽狀態（實測約占全部列數 3%），集中污染「兩出局、空壘」這類半局尾聲常見的狀態。過濾邏輯（`is_administrative_only_row`／`remove_administrative_rows`）抽在獨立的 `cpbl_row_filters.py`（避免 `find_2out_first_base.py`／`CPBL_steal_getData.py` 互相 import 造成循環依賴），`find_2out_first_base.py`、`CPBL_steal_getData.py`、`build_re24_matrix.py`、`model_batter_decisions.py` 均已套用；`find_2out_first_base.py` 本身的 1,877 筆決策樣本經重跑確認筆數不變，不受影響。詳見下方「引擎驗證」一節。
 
 ## 2025 互動報告
 

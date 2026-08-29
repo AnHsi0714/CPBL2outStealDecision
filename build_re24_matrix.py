@@ -28,7 +28,7 @@ from pathlib import Path
 from statistics import mean, pstdev
 from typing import Any
 
-import getData
+import CPBL_steal_getData
 from find_2out_first_base import (
     DEFAULT_END,
     DEFAULT_KIND_CODE,
@@ -223,7 +223,7 @@ def main() -> int:
     if args.start < 1 or args.end < args.start:
         raise SystemExit("場次範圍錯誤：需滿足 1 <= start <= end")
 
-    schedule = getData.get_schedule(args.year, args.kind_code)
+    schedule = CPBL_steal_getData.get_schedule(args.year, args.kind_code)
     games = deduplicate_schedule(
         game
         for game in schedule
