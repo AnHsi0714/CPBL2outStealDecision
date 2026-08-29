@@ -1,6 +1,10 @@
+import csv
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
-from generate_decision_report import build_payload
+from generate_decision_report import build_payload, load_re24_validation, load_steal_validation
 
 
 def sample_row(outcome="no_steal"):
@@ -57,6 +61,95 @@ class DecisionReportTests(unittest.TestCase):
         self.assertAlmostEqual(payload["aggregate"]["aggregateThreshold"], 0.5)
         self.assertAlmostEqual(payload["aggregate"]["medianThreshold"], 0.5)
         self.assertEqual(payload["cases"][0]["hitter"], "測試打者")
+
+    def test_payload_carries_validation_data_when_provided(self):
+        summary = {
+            "year": 2025,
+            "games_with_raw_data": 360,
+            "completed_pa_for_profiles": 27161,
+            "batter_profiles": 174,
+            "simulations_per_context": 2000,
+            "prior_pa": 50,
+        }
+        rows = [sample_row("no_steal")]
+        re24_validation = {"correlation": 0.992, "weightedMae": 0.033}
+        steal_validation = {"parsedSuccess": 508, "officialSuccess": 508}
+
+        payload = build_payload(rows, summary, None, re24_validation, steal_validation)
+
+        self.assertEqual(payload["validation"]["re24"], re24_validation)
+        self.assertEqual(payload["validation"]["steal"], steal_validation)
+
+    def test_payload_validation_defaults_to_none(self):
+        summary = {
+            "year": 2025,
+            "games_with_raw_data": 360,
+            "completed_pa_for_profiles": 27161,
+            "batter_profiles": 174,
+            "simulations_per_context": 2000,
+            "prior_pa": 50,
+        }
+        payload = build_payload([sample_row("no_steal")], summary)
+        self.assertIsNone(payload["validation"]["re24"])
+        self.assertIsNone(payload["validation"]["steal"])
+
+
+class LoadValidationFilesTests(unittest.TestCase):
+    def test_load_re24_validation_returns_none_when_missing(self):
+        self.assertIsNone(load_re24_validation(Path("does/not/exist.json")))
+
+    def test_load_re24_validation_reads_expected_fields(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "re24.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "correlation": 0.9919,
+                        "weighted_mean_absolute_error": 0.0329,
+                        "max_absolute_error": 0.1792,
+                        "games_with_raw_data": 360,
+                        "simulations_per_state": 3000,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = load_re24_validation(path)
+            self.assertEqual(result["correlation"], 0.9919)
+            self.assertEqual(result["weightedMae"], 0.0329)
+            self.assertEqual(result["gamesWithRawData"], 360)
+
+    def test_load_steal_validation_sums_rows_and_counts_mismatches(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "steal.csv"
+            with path.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.DictWriter(
+                    handle,
+                    fieldnames=[
+                        "outs", "baseCode", "baseLabel", "parsedSuccess", "officialSuccess",
+                        "successDiff", "parsedCaught", "officialCaught", "caughtDiff",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow({
+                    "outs": 0, "baseCode": 0, "baseLabel": "", "parsedSuccess": 300,
+                    "officialSuccess": 300, "successDiff": 0, "parsedCaught": 150,
+                    "officialCaught": 150, "caughtDiff": 0,
+                })
+                writer.writerow({
+                    "outs": 0, "baseCode": 0, "baseLabel": "", "parsedSuccess": 208,
+                    "officialSuccess": 208, "successDiff": 0, "parsedCaught": 91,
+                    "officialCaught": 92, "caughtDiff": -1,
+                })
+            result = load_steal_validation(path)
+            self.assertEqual(result["parsedSuccess"], 508)
+            self.assertEqual(result["officialSuccess"], 508)
+            self.assertEqual(result["parsedCaught"], 241)
+            self.assertEqual(result["officialCaught"], 242)
+            self.assertEqual(result["combos"], 2)
+            self.assertEqual(result["mismatches"], 1)
+
+    def test_load_steal_validation_returns_none_when_missing(self):
+        self.assertIsNone(load_steal_validation(Path("does/not/exist.csv")))
 
 
 if __name__ == "__main__":

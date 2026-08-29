@@ -72,6 +72,40 @@ def compact_case(row: dict[str, str], index: int) -> dict[str, Any]:
     return data
 
 
+def load_re24_validation(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    with path.open("r", encoding="utf-8-sig") as handle:
+        data = json.load(handle)
+    return {
+        "correlation": data.get("correlation"),
+        "weightedMae": data.get("weighted_mean_absolute_error"),
+        "maxAbsoluteError": data.get("max_absolute_error"),
+        "gamesWithRawData": data.get("games_with_raw_data"),
+        "simulationsPerState": data.get("simulations_per_state"),
+    }
+
+
+def load_steal_validation(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    if not rows:
+        return None
+    mismatches = sum(
+        1 for row in rows if int(row["successDiff"]) != 0 or int(row["caughtDiff"]) != 0
+    )
+    return {
+        "parsedSuccess": sum(int(row["parsedSuccess"]) for row in rows),
+        "officialSuccess": sum(int(row["officialSuccess"]) for row in rows),
+        "parsedCaught": sum(int(row["parsedCaught"]) for row in rows),
+        "officialCaught": sum(int(row["officialCaught"]) for row in rows),
+        "combos": len(rows),
+        "mismatches": mismatches,
+    }
+
+
 def build_segments(comparison: dict[str, Any] | None) -> dict[str, Any] | None:
     if comparison is None:
         return None
@@ -109,6 +143,8 @@ def build_payload(
     rows: list[dict[str, str]],
     summary: dict[str, Any],
     comparison: dict[str, Any] | None = None,
+    re24_validation: dict[str, Any] | None = None,
+    steal_validation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     outcome_counts = {"steal_success": 0, "steal_failure": 0, "no_steal": 0}
     for row in rows:
@@ -162,6 +198,10 @@ def build_payload(
         "defaultCase": default_case,
         "cases": cases,
         "segments": build_segments(comparison),
+        "validation": {
+            "re24": re24_validation,
+            "steal": steal_validation,
+        },
     }
 
 
@@ -361,6 +401,15 @@ HTML_TEMPLATE = r'''<!doctype html>
       </div>
     </section>
 
+    <section id="validation-section" aria-labelledby="validation-title" hidden>
+      <h2 id="validation-title">方法驗證</h2>
+      <div class="panel">
+        <p class="muted">模型結果不是自說自話：模擬引擎跟真實資料算出的 RE24 逐格比對過，盜壘文字判讀也跟 CPBL 官方統計逐場逐隊對過帳。</p>
+        <div class="grid" id="validation-stats" style="margin-top:14px"></div>
+        <p class="muted" style="margin-top:14px" id="validation-note"></p>
+      </div>
+    </section>
+
     <section aria-labelledby="personal-title">
       <h2 id="personal-title">打者沒有被視為同一個人</h2>
       <div class="panel">
@@ -391,7 +440,7 @@ HTML_TEMPLATE = r'''<!doctype html>
           <p class="muted" style="margin-top:8px">門檻幾乎完全由分子「V不跑－V失敗」決定，分母「V成功－V失敗」（盜壘成功能省下多少）在各棒次都差不多（<span id="denom-range"></span>）。分子大，代表「不跑但打席繼續」跟「盜壘刺、直接把打者保留到下一局」這兩者的差距特別大：</p>
           <ul class="note-list" style="margin-top:12px; grid-template-columns:1fr">
             <li><strong>第 <span id="peak-slot"></span> 棒（門檻最高，<span id="peak-value"></span>）</strong>：分子主要來自「他自己夠強」——這棒續打時常能靠自己的打擊在本半局多得分，但盜壘刺會立刻結束半局，等於白白放棄這個打席的價值。</li>
-            <li><strong>第 9 棒（門檻 <span id="slot9-value"></span>，全場第二高）</strong>：分子主要來自「保留效應」——不管有沒有盜壘，只要第 9 棒正常出局，下一局通常輪到全隊最強的第 1 棒開路；但盜壘刺會讓第 9 棒自己被保留、下一局改由他先打，等於賠掉了讓第 1 棒提前登場的機會。</li>
+            <li id="runner-up-item"><strong>第 <span id="runner-up-slot"></span> 棒（門檻 <span id="runner-up-value"></span>，全場次高）</strong>：分子主要來自「保留效應」——不管有沒有盜壘，只要這棒正常出局，下一局通常很快輪到全隊前段棒次開路；但盜壘刺會讓這棒自己被保留、下一局改由他先打，等於賠掉了讓前段棒次提前登場的機會。</li>
             <li><strong>第 <span id="trough-slot"></span> 棒（門檻最低，<span id="trough-value"></span>）</strong>：不管盜壘失敗被保留、還是不跑正常出局後換下一棒，接手的都是實力相近的早段棒次，兩種情況的價值差不多，「這位打者自己多強」跟「保留效應」都不明顯，是全場相對最適合冒險盜壘的棒次。</li>
           </ul>
         </div>
@@ -523,6 +572,30 @@ HTML_TEMPLATE = r'''<!doctype html>
     })[char]);
     const outcomeLabel = { steal_success: '實際：盜壘成功', steal_failure: '實際：盜壘失敗', no_steal: '實際：不盜壘' };
 
+    function fillValidation() {
+      const v = REPORT.validation;
+      if (!v || (!v.re24 && !v.steal)) return;
+      $('validation-section').hidden = false;
+      const cards = [];
+      if (v.re24) {
+        cards.push(`
+          <article class="stat"><small>模擬 vs 真實 RE24（24格）</small><strong>r = ${v.re24.correlation.toFixed(3)}</strong><span>加權平均誤差 ${fmt(v.re24.weightedMae)} 分</span></article>
+        `);
+      }
+      if (v.steal) {
+        const s = v.steal;
+        const allMatch = s.parsedSuccess === s.officialSuccess && s.parsedCaught === s.officialCaught;
+        cards.push(`
+          <article class="stat"><small>盜壘文字判讀 vs CPBL 官方統計</small><strong>${s.parsedSuccess}/${s.officialSuccess} 成功・${s.parsedCaught}/${s.officialCaught} 刺殺</strong><span>${s.combos.toLocaleString()} 個場次×球隊組合，${allMatch ? '完全相符' : `${s.mismatches} 組不相符`}</span></article>
+        `);
+      }
+      $('validation-stats').innerHTML = cards.join('');
+      const notes = [];
+      if (v.re24) notes.push(`模擬引擎（<code>model_batter_decisions.py</code>）跟 <code>build_re24_matrix.py</code> 從真實逐球資料算出的 24 格 RE24 逐格比對，最大誤差都落在樣本數較少的稀有壘包組合，屬合理抽樣雜訊。`);
+      if (v.steal) notes.push(`盜壘判讀（<code>is_steal_success</code>／<code>is_steal_failure</code>）的通用版套用到全場，逐場逐隊加總比對 CPBL 官方 box score 的盜壘成功/刺殺統計。`);
+      $('validation-note').innerHTML = notes.join(' ') + ' 詳見 <a href="cpbl-re24-matrix-2025.html">RE24 矩陣熱力圖報告</a>與專案 README「引擎驗證」一節。';
+    }
+
     function fillAggregate() {
       const { meta: m, aggregate: a } = REPORT;
       $('meta-games').textContent = `${m.games} 場完整賽事`;
@@ -601,15 +674,26 @@ HTML_TEMPLATE = r'''<!doctype html>
 
       const slots = segments.lineupSlots.filter((s) => s.median !== null);
       if (slots.length) {
-        const peak = slots.reduce((a, b) => (b.median > a.median ? b : a));
-        const trough = slots.reduce((a, b) => (b.median < a.median ? b : a));
-        const slot9 = slots.find((s) => s.slot === 9);
+        const sorted = [...slots].sort((a, b) => b.median - a.median);
+        const peak = sorted[0];
+        const trough = sorted[sorted.length - 1];
+        const runnerUp = sorted[1];
+        const thirdPlace = sorted[2];
         const denoms = slots.map((s) => s.denominator).filter((v) => v !== null);
         $('peak-slot').textContent = peak.slot;
         $('peak-value').textContent = pct(peak.median);
         $('trough-slot').textContent = trough.slot;
         $('trough-value').textContent = pct(trough.median);
-        if (slot9) $('slot9-value').textContent = pct(slot9.median);
+        if (runnerUp) {
+          // 差距在 1 個百分點內視為並列次高，兩棒一起列出，不硬指認單一棒次。
+          const isClose = thirdPlace && Math.abs(runnerUp.median - thirdPlace.median) < 0.01;
+          $('runner-up-slot').textContent = isClose ? `${runnerUp.slot}、${thirdPlace.slot}` : runnerUp.slot;
+          $('runner-up-value').textContent = isClose
+            ? `${pct(runnerUp.median)}／${pct(thirdPlace.median)}，差距在雜訊範圍內`
+            : pct(runnerUp.median);
+        } else {
+          $('runner-up-item').hidden = true;
+        }
         if (denoms.length) {
           $('denom-range').textContent = `${pct(Math.min(...denoms))} ~ ${pct(Math.max(...denoms))}`;
         }
@@ -705,6 +789,7 @@ HTML_TEMPLATE = r'''<!doctype html>
     }
 
     fillAggregate();
+    fillValidation();
     fillSegments();
     $('case-select').value = String(REPORT.defaultCase);
     populateCases();
@@ -724,6 +809,8 @@ def generate_report(
     summary_json: Path,
     output: Path,
     comparison_json: Path | None = None,
+    re24_validation_json: Path | None = None,
+    steal_validation_csv: Path | None = None,
 ) -> dict[str, Any]:
     with model_csv.open("r", encoding="utf-8-sig", newline="") as handle:
         rows = list(csv.DictReader(handle))
@@ -741,7 +828,17 @@ def generate_report(
         print(f"提醒：找不到 {comparison_json}，報告將略過棒次/打者類型分析區塊"
               f"（可先執行 analyze_batter_types.py / join_decision_batter_types.py / compare_groups.py）")
 
-    payload = build_payload(rows, summary, comparison)
+    re24_validation = load_re24_validation(re24_validation_json) if re24_validation_json else None
+    if re24_validation_json is not None and re24_validation is None:
+        print(f"提醒：找不到 {re24_validation_json}，報告將略過RE24引擎驗證區塊"
+              f"（可先執行 build_re24_matrix.py / validate_re24_simulation.py）")
+
+    steal_validation = load_steal_validation(steal_validation_csv) if steal_validation_csv else None
+    if steal_validation_csv is not None and steal_validation is None:
+        print(f"提醒：找不到 {steal_validation_csv}，報告將略過盜壘判讀對帳區塊"
+              f"（可先執行 validate_steal_parsing.py）")
+
+    payload = build_payload(rows, summary, comparison, re24_validation, steal_validation)
     payload_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     payload_json = payload_json.replace("</", "<\\/")
     document = HTML_TEMPLATE.replace("__REPORT_DATA__", payload_json)
@@ -760,6 +857,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model-csv", type=Path)
     parser.add_argument("--summary-json", type=Path)
     parser.add_argument("--comparison-json", type=Path)
+    parser.add_argument("--re24-validation-json", type=Path)
+    parser.add_argument("--steal-validation-csv", type=Path)
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
 
@@ -770,8 +869,16 @@ def main() -> int:
     model_csv = args.model_csv or ROOT / "outputs" / f"cpbl_decision_model_{stem}.csv"
     summary_json = args.summary_json or ROOT / "outputs" / f"cpbl_decision_model_{stem}_summary.json"
     comparison_json = args.comparison_json or ROOT / "outputs" / f"cpbl_group_comparison_{stem}.json"
+    re24_validation_json = (
+        args.re24_validation_json or ROOT / "outputs" / f"cpbl_re24_validation_{stem}_summary.json"
+    )
+    steal_validation_csv = (
+        args.steal_validation_csv or ROOT / "outputs" / f"cpbl_steal_parsing_validation_{stem}.csv"
+    )
     output = args.output or ROOT / "reports" / f"cpbl-steal-decision-{args.year}.html"
-    payload = generate_report(model_csv, summary_json, output, comparison_json)
+    payload = generate_report(
+        model_csv, summary_json, output, comparison_json, re24_validation_json, steal_validation_csv
+    )
     print(
         f"Wrote {output} with {payload['meta']['samples']} cases; "
         f"median threshold={payload['aggregate']['medianThreshold']:.3%}"
