@@ -42,10 +42,12 @@ def join(decisions: list[dict[str, Any]], types: dict[str, dict[str, Any]]) -> l
                 "BBpct_proxy": type_row["BBpct_proxy"] if type_row else "",
                 "OBP_proxy": type_row["OBP_proxy"] if type_row else "",
                 "SingleRate_proxy": type_row["SingleRate_proxy"] if type_row else "",
+                "TTO_proxy": type_row["TTO_proxy"] if type_row else "",
                 "PowerGroup": type_row["PowerGroup"] if type_row else "",
                 "PatienceGroup": type_row["PatienceGroup"] if type_row else "",
                 "OBPGroup": type_row["OBPGroup"] if type_row else "",
                 "ContactGroup": type_row["ContactGroup"] if type_row else "",
+                "TTOGroup": type_row["TTOGroup"] if type_row else "",
                 "BatterTypeQualified": bool(type_row),
             }
         )
