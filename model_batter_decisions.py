@@ -53,6 +53,7 @@ class PARecord:
     outcome: str
     transition: Transition
     has_runner_event: bool
+    is_strikeout: bool
 
 
 @dataclass
@@ -104,6 +105,16 @@ def classify_outcome(action_name: Any, batting_action_name: Any = "") -> str | N
     return "OUT"
 
 
+def is_strikeout(action_name: Any) -> bool:
+    """三振是「被判定三振」這個事件本身，跟後續是否出局無關。
+
+    不死三振（捕手漏接、打者上壘）在 classify_outcome 仍歸類為 REACH（供壘包推進模型使用），
+    但官方數據上打者仍記一次三振，這裡的 P_K 是獨立於 OUTCOMES 之外的輔助統計，
+    因此不看 classify_outcome 的結果，只看文字是否含「三振」。
+    """
+    return "三振" in str(action_name or "")
+
+
 def extract_pa_records(rows: list[dict[str, Any]]) -> list[PARecord]:
     records: list[PARecord] = []
     for indices in split_plate_appearances(rows):
@@ -153,6 +164,7 @@ def extract_pa_records(rows: list[dict[str, Any]]) -> list[PARecord]:
                 outcome=outcome,
                 transition=Transition(runs, min(3, outs_after), after_bases),
                 has_runner_event=any(marker in content for marker in RUNNER_EVENT_MARKERS),
+                is_strikeout=is_strikeout(last.get("ActionName")),
             )
         )
     return records
@@ -175,17 +187,23 @@ def build_profiles(
     records: Iterable[PARecord], prior_pa: float
 ) -> tuple[dict[str, tuple[list[float], dict[str, float]]], list[dict[str, Any]]]:
     counts: dict[str, Counter[str]] = defaultdict(Counter)
+    strikeout_counts: dict[str, int] = defaultdict(int)
     names: dict[str, str] = {}
     league = Counter()
+    league_strikeouts = 0
     for record in records:
         counts[record.hitter_id][record.outcome] += 1
         league[record.outcome] += 1
         names[record.hitter_id] = record.hitter_name
+        if record.is_strikeout:
+            strikeout_counts[record.hitter_id] += 1
+            league_strikeouts += 1
 
     league_total = sum(league.values())
     if league_total == 0:
         raise RuntimeError("無法建立打者結果分布：沒有完成打席")
     league_prob = {outcome: league[outcome] / league_total for outcome in OUTCOMES}
+    league_k_prob = league_strikeouts / league_total
 
     samplers: dict[str, tuple[list[float], dict[str, float]]] = {}
     profile_rows: list[dict[str, Any]] = []
@@ -204,6 +222,7 @@ def build_profiles(
             cumulative.append(running)
         cumulative[-1] = 1.0
         samplers[hitter_id] = (cumulative, probabilities)
+        k_count = strikeout_counts.get(hitter_id, 0)
         profile_rows.append(
             {
                 "HitterAcnt": hitter_id,
@@ -214,6 +233,8 @@ def build_profiles(
                 **{f"P_{outcome}": probabilities[outcome] for outcome in OUTCOMES},
                 "P_HIT": sum(probabilities[outcome] for outcome in ("1B", "2B", "3B", "HR")),
                 "P_XBH": sum(probabilities[outcome] for outcome in ("2B", "3B", "HR")),
+                "Count_K": k_count,
+                "P_K": (k_count + prior_pa * league_k_prob) / (pa + prior_pa),
             }
         )
 

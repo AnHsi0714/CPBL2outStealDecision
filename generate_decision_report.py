@@ -135,6 +135,7 @@ def build_segments(comparison: dict[str, Any] | None) -> dict[str, Any] | None:
             "lineupXPatience": comparison.get("cross_table_lineup_x_patience"),
             "lineupXObp": comparison.get("cross_table_lineup_x_obp"),
             "lineupXContact": comparison.get("cross_table_lineup_x_contact"),
+            "lineupXTto": comparison.get("cross_table_lineup_x_tto"),
         },
     }
 
@@ -499,6 +500,19 @@ HTML_TEMPLATE = r'''<!doctype html>
           </div>
           <p class="muted" style="margin-top:14px" id="contact-summary"></p>
         </div>
+
+        <h3 style="margin-top:28px">TTO（三振＋全壘打＋保送）複合指標</h3>
+        <div class="panel" style="padding:0; box-shadow:none; border:none">
+          <p>TTO_proxy = P_三振 + P_全壘打 + P_保送觸身，三者都是「打席結果不太受野手守備影響」的事件。這類打者本質上是長打型與選球型的疊加（<span id="corr-iso-tto"></span>），用來檢驗複合指標是否比單一指標訊號更清楚，還是只是重複前面兩組分組。</p>
+          <div class="table-wrap" style="margin-top:16px">
+            <table>
+              <caption class="muted" style="text-align:left; margin-bottom:8px">棒次 × TTO 分組（門檻中位數）</caption>
+              <thead><tr><th>棒次</th><th>高 TTO</th><th>低 TTO</th></tr></thead>
+              <tbody id="cross-table-tto"></tbody>
+            </table>
+          </div>
+          <p class="muted" style="margin-top:14px" id="tto-summary"></p>
+        </div>
       </div>
     </section>
 
@@ -633,6 +647,7 @@ HTML_TEMPLATE = r'''<!doctype html>
       patience_high_vs_low_BB: ['高選球', '低選球'],
       obp_high_vs_low_OBP: ['高上壘率', '低上壘率'],
       contact_high_vs_low_1B: ['高單打率(接觸型)', '低單打率'],
+      tto_high_vs_low_TTO: ['高TTO型', '低TTO型'],
     };
 
     function fillSegments() {
@@ -715,12 +730,14 @@ HTML_TEMPLATE = r'''<!doctype html>
         renderCrossTable('cross-table-patience', segments.crossTables.lineupXPatience, 'high_BB', 'low_BB');
         renderCrossTable('cross-table-obp', segments.crossTables.lineupXObp, 'high_OBP', 'low_OBP');
         renderCrossTable('cross-table-contact', segments.crossTables.lineupXContact, 'high_1B', 'low_1B');
+        renderCrossTable('cross-table-tto', segments.crossTables.lineupXTto, 'high_TTO', 'low_TTO');
       }
 
       if (segments.correlations) {
         $('corr-iso-bb').textContent = segments.correlations.iso_vs_bb.toFixed(3);
         $('corr-iso-obp').textContent = segments.correlations.iso_vs_obp.toFixed(3);
         $('corr-iso-single').textContent = `相關係數 ${segments.correlations.iso_vs_single.toFixed(3)}`;
+        $('corr-iso-tto').textContent = `與 ISO 相關係數 ${segments.correlations.iso_vs_tto.toFixed(3)}`;
       }
 
       const contactComparison = segments.comparisons.find((c) => c.comparison === 'contact_high_vs_low_1B');
@@ -729,6 +746,15 @@ HTML_TEMPLATE = r'''<!doctype html>
         const lo = contactComparison.low_1B;
         const pText = contactComparison.p_value < 0.001 ? '< 0.001' : contactComparison.p_value.toFixed(4);
         $('contact-summary').textContent = `高單打率組門檻 ${pct(hi.median)}（n=${hi.n}），低單打率組 ${pct(lo.median)}（n=${lo.n}），低了 ${pct(Math.abs(hi.median - lo.median))}，p = ${pText}——是所有分組比較裡差距最大、也最顯著的一組，直接支持「單打即可得分」的假設：這類打者一旦上場最可能就是單打，而單打能不能把跑者從一壘送回本壘高度依賴壘包位置，讓跑者先上二壘的邊際價值特別高。`;
+      }
+
+      const ttoComparison = segments.comparisons.find((c) => c.comparison === 'tto_high_vs_low_TTO');
+      if (ttoComparison) {
+        const hi = ttoComparison.high_TTO;
+        const lo = ttoComparison.low_TTO;
+        const pText = ttoComparison.p_value === null ? '無' : (ttoComparison.p_value < 0.001 ? '< 0.001' : ttoComparison.p_value.toFixed(4));
+        const diff = hi.median - lo.median;
+        $('tto-summary').textContent = `高TTO組門檻 ${pct(hi.median)}（n=${hi.n}），低TTO組 ${pct(lo.median)}（n=${lo.n}），差 ${diff >= 0 ? '+' : ''}${pct(diff)}，p = ${pText}——方向與長打／選球分組${diff >= 0 ? '一致' : '相反'}，${diff >= 0 ? '疊加後訊號沒有比單一指標更清楚，屬於同一股力量的重複確認' : '值得進一步檢查是否為三振本身的效應蓋過了長打與選球'}。`;
       }
     }
 

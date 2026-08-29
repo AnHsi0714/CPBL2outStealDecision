@@ -11,6 +11,12 @@
 
 再算出 SingleRate_proxy = P_1B（純單打率），對應計畫書 1.4 節「高上壘接觸型」（單打即可得分）
 的概念——這個指標刻意排除長打，跟 ISO 是負相關，比 OBP 更乾淨，是驗證 1.4 節假設最直接的指標。
+
+最後算出 TTO_proxy = P_K + P_HR + P_BB_HBP（三振率+全壘打率+保送觸身率，Three True Outcomes），
+對應計畫書第 4-6 週工作項目：三振率不進 P_OUT 之外另計，三者皆是「打席結果不太受野手守備影響」
+的事件。TTO 型打者本質上是 ISO 型與 BBpct 型的疊加（高長打、高選球通常也伴隨高三振），
+因此 TTO 分組預期方向會與 PowerGroup／PatienceGroup 一致（TTO 高→門檻高），
+用來檢驗「複合純三真傾向」是否比單一指標訊號更強或只是重複。
 """
 
 from __future__ import annotations
@@ -38,30 +44,36 @@ def annotate(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     bb_values = []
     obp_values = []
     single_values = []
+    tto_values = []
     for row in rows:
         iso = as_float(row, "P_2B") * 1 + as_float(row, "P_3B") * 2 + as_float(row, "P_HR") * 3
         bb = as_float(row, "P_BB_HBP")
         obp = as_float(row, "P_HIT") + bb
         single = as_float(row, "P_1B")
+        tto = as_float(row, "P_K") + as_float(row, "P_HR") + bb
         row["ISO_proxy"] = iso
         row["BBpct_proxy"] = bb
         row["OBP_proxy"] = obp
         row["SingleRate_proxy"] = single
+        row["TTO_proxy"] = tto
         iso_values.append(iso)
         bb_values.append(bb)
         obp_values.append(obp)
         single_values.append(single)
+        tto_values.append(tto)
 
     iso_median = median(iso_values)
     bb_median = median(bb_values)
     obp_median = median(obp_values)
     single_median = median(single_values)
+    tto_median = median(tto_values)
     for row in rows:
         row["PowerGroup"] = "high_ISO" if row["ISO_proxy"] >= iso_median else "low_ISO"
         row["PatienceGroup"] = "high_BB" if row["BBpct_proxy"] >= bb_median else "low_BB"
         row["OBPGroup"] = "high_OBP" if row["OBP_proxy"] >= obp_median else "low_OBP"
         row["ContactGroup"] = "high_1B" if row["SingleRate_proxy"] >= single_median else "low_1B"
-    return rows, iso_median, bb_median, obp_median, single_median
+        row["TTOGroup"] = "high_TTO" if row["TTO_proxy"] >= tto_median else "low_TTO"
+    return rows, iso_median, bb_median, obp_median, single_median, tto_median
 
 
 def correlation(left: list[float], right: list[float]) -> float | None:
@@ -81,8 +93,8 @@ def write_csv(rows: list[dict[str, Any]], path: Path) -> None:
         raise RuntimeError(f"{path} 沒有資料")
     fieldnames = [
         "HitterAcnt", "HitterName", "PA",
-        "ISO_proxy", "BBpct_proxy", "OBP_proxy", "SingleRate_proxy",
-        "PowerGroup", "PatienceGroup", "OBPGroup", "ContactGroup",
+        "ISO_proxy", "BBpct_proxy", "OBP_proxy", "SingleRate_proxy", "TTO_proxy",
+        "PowerGroup", "PatienceGroup", "OBPGroup", "ContactGroup", "TTOGroup",
     ]
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8-sig") as file:
@@ -114,26 +126,30 @@ def main() -> int:
     if not rows:
         raise SystemExit(f"沒有打席數 >= {args.min_pa} 的打者，無法分組")
 
-    rows, iso_median, bb_median, obp_median, single_median = annotate(rows)
+    rows, iso_median, bb_median, obp_median, single_median, tto_median = annotate(rows)
     write_csv(rows, output)
 
     corr_bb = correlation([r["ISO_proxy"] for r in rows], [r["BBpct_proxy"] for r in rows])
     corr_obp = correlation([r["ISO_proxy"] for r in rows], [r["OBP_proxy"] for r in rows])
     corr_single = correlation([r["ISO_proxy"] for r in rows], [r["SingleRate_proxy"] for r in rows])
+    corr_tto = correlation([r["ISO_proxy"] for r in rows], [r["TTO_proxy"] for r in rows])
 
     print(f"符合 PA >= {args.min_pa} 的打者：{len(rows)} 位")
     print(f"ISO_proxy 中位數：{iso_median:.4f}")
     print(f"BBpct_proxy 中位數：{bb_median:.4f}")
     print(f"OBP_proxy 中位數：{obp_median:.4f}")
     print(f"SingleRate_proxy 中位數：{single_median:.4f}")
+    print(f"TTO_proxy 中位數：{tto_median:.4f}")
     print(f"ISO_proxy 與 BBpct_proxy 相關係數：{corr_bb:.4f}" if corr_bb is not None else "ISO 與 BB% 相關係數：無法計算")
     print(f"ISO_proxy 與 OBP_proxy 相關係數：{corr_obp:.4f}" if corr_obp is not None else "ISO 與 OBP 相關係數：無法計算")
     print(f"ISO_proxy 與 SingleRate_proxy 相關係數：{corr_single:.4f}" if corr_single is not None else "ISO 與 SingleRate 相關係數：無法計算")
+    print(f"ISO_proxy 與 TTO_proxy 相關係數：{corr_tto:.4f}" if corr_tto is not None else "ISO 與 TTO 相關係數：無法計算")
     print("分組人數：")
     print(f"  high_ISO / low_ISO   = {sum(r['PowerGroup']=='high_ISO' for r in rows)} / {sum(r['PowerGroup']=='low_ISO' for r in rows)}")
     print(f"  high_BB  / low_BB    = {sum(r['PatienceGroup']=='high_BB' for r in rows)} / {sum(r['PatienceGroup']=='low_BB' for r in rows)}")
     print(f"  high_OBP / low_OBP   = {sum(r['OBPGroup']=='high_OBP' for r in rows)} / {sum(r['OBPGroup']=='low_OBP' for r in rows)}")
     print(f"  high_1B  / low_1B    = {sum(r['ContactGroup']=='high_1B' for r in rows)} / {sum(r['ContactGroup']=='low_1B' for r in rows)}")
+    print(f"  high_TTO / low_TTO   = {sum(r['TTOGroup']=='high_TTO' for r in rows)} / {sum(r['TTOGroup']=='low_TTO' for r in rows)}")
     print(f"輸出：{output}")
     return 0
 

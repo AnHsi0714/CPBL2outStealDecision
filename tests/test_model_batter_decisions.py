@@ -7,6 +7,7 @@ from model_batter_decisions import (
     OUTCOMES,
     classify_outcome,
     fallback_transition,
+    is_strikeout,
     out_cost_metrics,
     simulate_half,
     threshold_result,
@@ -23,6 +24,16 @@ class ModelTests(unittest.TestCase):
         self.assertEqual(classify_outcome("接球失誤"), "REACH")
         self.assertEqual(classify_outcome("飛球接殺"), "OUT")
         self.assertIsNone(classify_outcome(""))
+
+    def test_strikeout_detection_counts_uncaught_third_strike_too(self):
+        # 三振是打者被判定三振這個事件本身，跟後續是否出局無關；
+        # 不死三振雖然在 classify_outcome 歸類為 REACH（供壘包推進使用），官方數據上仍算一次三振。
+        self.assertTrue(is_strikeout("三振"))
+        self.assertTrue(is_strikeout("三振/遭捕手傳一壘刺殺"))
+        self.assertTrue(is_strikeout("三振/第三好球觸擊失敗"))
+        self.assertTrue(is_strikeout("不死三振 暴投"))
+        self.assertEqual(classify_outcome("不死三振 暴投"), "REACH")
+        self.assertFalse(is_strikeout("飛球接殺"))
 
     def test_single_scores_runner_from_third_not_first(self):
         from_first = fallback_transition(2, 1, "1B")
