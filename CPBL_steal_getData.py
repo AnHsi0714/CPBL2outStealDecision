@@ -123,36 +123,21 @@ def parse_game(game_meta: dict, data: dict) -> tuple[list[dict], list[dict], lis
             "PitchCnt": row.get("PitchCnt"),
             "StrikeCnt": row.get("StrikeCnt"),
             "BallCnt": row.get("BallCnt"),
-            # OutCnt/壘包狀態是「這一球當下」的即時狀態：打席中途發生盜壘、牽制、
-            # 跑者進佔等動作時會立刻反映在下一球的紀錄上（實測過：盜壘那球的下一球
-            # On1B/On2B 就會跟著換），不是整個打席固定不變的值。可以用相鄰兩球
-            # 的狀態差異，配合 Content 定位「盜壘發生在哪一球」。
+            # OutCnt/壘包狀態是「這一球當下」的即時狀態：打席中途發生盜壘、牽制、跑者進佔等動作時會立刻反映在下一球的紀錄上
             "OutCnt": row.get("OutCnt"),
             "On1B": bool(row.get("FirstBase")),
             "On2B": bool(row.get("SecondBase")),
             "On3B": bool(row.get("ThirdBase")),
-            # VisitingScore/HomeScore/IsScoreCnt 同樣是「這一球當下」的即時累積比分，
-            # 得分發生在哪一球就會在那一球更新（實測過：全壘打的那一球比分才 +1，
-            # 之前的壞球/好球那幾球都還是舊比分）。要算「某個時間點之後到半局結束
-            # 的剩餘得分」，就是拿半局最後一球的比分，減掉那個時間點當下這球的比分
-            # ——不要用 scoreboard 的整局總分，見計畫書 3.0。
             "IsScoreCnt": row.get("IsScoreCnt"),
             "VisitingScore": row.get("VisitingScore"),
             "HomeScore": row.get("HomeScore"),
-            # ActionName/BattingActionName 相反：是整個打席「結束後」的最終結果，
-            # CPBL 會回填到該打席每一球的紀錄上（實測過：全壘打那球之前的壞球/
-            # 好球紀錄，ActionName 就已經顯示「全壘打」了）。可以拿來看這個打席
-            # 最終發生什麼事，但不能拿來判斷「發生在哪一球」。
+            # ActionName/BattingActionName 相反：是整個打席「結束後」的最終結果，CPBL 會回填到該打席每一球的紀錄上
             "ActionName": row.get("ActionName"),
             "BattingActionName": row.get("BattingActionName"),
             "Content": content,
             "HasStealMention": "盜" in content,  # 只標記文字裡有沒有提到盜壘，成功/失敗/發生在哪一球需另外判讀
         })
 
-    # 逐局總比分，只適合拿來做賽況總覽/核對用。RE24 或門檻計算需要的「某個時間點
-    # 之後的剩餘得分」不能用這張表算——它是整局從頭到尾的總分，會把兩出局狀態
-    # 形成前、或盜壘成功前就已經發生的得分也算進去。要算剩餘得分，請用上面
-    # playbyplay 裡逐球的 VisitingScore/HomeScore 做差值（見計畫書 3.0）。
     scoreboard = [
         {**game_id, **{k: row.get(k) for k in (
             "TeamAbbr", "VisitingHomeType", "InningSeq", "ScoreCnt", "HittingCnt", "ErrorCnt"
