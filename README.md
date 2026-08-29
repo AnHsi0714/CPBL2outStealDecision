@@ -112,6 +112,20 @@ python generate_decision_report.py
 python generate_decision_report.py --year 2025 --start 1 --end 360 --output reports/cpbl-steal-decision-2025.html
 ```
 
+## RE24 矩陣與熱力圖
+
+計算中職專屬的 24 種 base-out state 得分期望值矩陣，並輸出熱力圖報告：
+
+```bash
+python build_re24_matrix.py --year 2025 --start 1 --end 360
+python generate_re24_report.py --year 2025 --start 1 --end 360
+```
+
+- `build_re24_matrix.py`：把每個半局切成連續的 base-out state 區段（壘包或出局數一變就是新區段，涵蓋打席內盜壘造成的狀態切換），每個區段的起算比分取自該區段第一球事件發生前的累積比分，剩餘得分＝半局結束比分－起算比分，只計入 `half_is_complete` 判定為已打完的半局。方法與 3.0 節的「起算點對齊到事件本身」原則一致，且重用 `find_2out_first_base.py` 已驗證過的壘包/比分/半局完整性判定邏輯。2025 年 360 場例行賽共取得 29,965 個 state 區段。同時輸出層次二基礎損益兩平門檻（`RE(一壘)/RE(二壘)`，未計保留效應）：2 出局約 70.2%，與計畫書提到的 MLB 參考值（約 69%）量級相近，可作為方法論交叉驗證。
+- `generate_re24_report.py`：把矩陣畫成互動熱力圖（`reports/cpbl-re24-matrix-2025.html`），純 HTML/CSS，不依賴圖表套件；每格可 hover／Tab 顯示樣本數與標準差，並附完整資料表供核對。
+
+可直接用瀏覽器開啟 [reports/cpbl-re24-matrix-2025.html](reports/cpbl-re24-matrix-2025.html)。
+
 ## 棒次 × 打者類型分組分析
 
 在跑完 `find_2out_first_base.py` 與 `model_batter_decisions.py` 之後，可依序執行以下腳本，
