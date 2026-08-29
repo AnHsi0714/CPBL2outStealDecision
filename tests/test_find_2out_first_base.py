@@ -1,7 +1,12 @@
 import json
 import unittest
 
-from find_2out_first_base import analyze_game, deduplicate_schedule
+from find_2out_first_base import (
+    analyze_game,
+    deduplicate_schedule,
+    is_administrative_only_row,
+    remove_administrative_rows,
+)
 
 
 def row(
@@ -260,6 +265,55 @@ class AnalyzeGameTests(unittest.TestCase):
             row(2, "1", 1, 1, 2, first="1", second="2"),
         ]
         self.assertEqual(analyze_game(META, game_data(rows)), [])
+
+
+class AdministrativeRowFilterTests(unittest.TestCase):
+    def test_pure_substitution_announcement_is_administrative(self):
+        self.assertTrue(
+            is_administrative_only_row(row(6, "2", 1, 9, 2, content="更換守備：陳重廷-=>二壘手。\r\n"))
+        )
+        self.assertTrue(
+            is_administrative_only_row(row(6, "2", 3, 2, 1, content="更換投手：布雷克=>林子崴。\r\n"))
+        )
+
+    def test_substitution_combined_with_a_real_pitch_is_kept(self):
+        self.assertFalse(
+            is_administrative_only_row(
+                row(6, "2", 3, 2, 1, content="更換投手：布雷克=>林子崴。\r\n壞球。")
+            )
+        )
+
+    def test_normal_pitch_row_is_not_administrative(self):
+        self.assertFalse(is_administrative_only_row(row(1, "1", 1, 1, 0, content="壞球。")))
+        self.assertFalse(is_administrative_only_row(row(1, "1", 1, 1, 0, content="")))
+
+    def test_remove_administrative_rows_filters_only_matching_rows(self):
+        rows = [
+            row(6, "2", 1, 9, 2, content="更換守備：陳重廷-=>二壘手。\r\n"),
+            row(6, "2", 1, 9, 0, content="好球沒揮棒。"),
+            row(6, "2", 1, 9, 0, content="打者出局-三振出局。 1人出局。"),
+        ]
+        cleaned = remove_administrative_rows(rows)
+        self.assertEqual(len(cleaned), 2)
+        self.assertEqual([r["OutCnt"] for r in cleaned], [0, 0])
+
+    def test_stale_admin_row_no_longer_corrupts_analyze_game(self):
+        # 重現實際抓到的錯誤模式：半局交替時的守備公告列殘留上一個狀態的
+        # OutCnt=2、FirstBase 有人，若未過濾會被誤判成「兩出局、一壘有人」
+        # 的目標情境（實際上這半局才剛要開始，真正第一球是 0 出局空壘）。
+        rows = [
+            row(1, "1", 1, 1, 2, content="打者飛球出局。3人出局。", pitch=10),
+            row(1, "2", 1, 1, 2, first="9", content="更換守備：某人-=>游擊手。\r\n", pitch=11),
+            row(1, "2", 1, 1, 0, pitch=12),
+            row(1, "2", 1, 1, 1, content="打者出局。1人出局。", pitch=13),
+            row(1, "2", 2, 2, 2, content="打者出局。3人出局。", pitch=14),
+            row(2, "1", 1, 5, 0, pitch=15),
+            row(2, "1", 1, 5, 2, visiting_score=2, content="3人出局。", pitch=16),
+        ]
+        results = analyze_game(META, game_data(rows))
+        # 過濾後，半局(1,"2")真正的兩出局狀態（第14列）是空壘，不符合
+        # is_target_state（需要一壘有人），所以不應該產生任何決策樣本。
+        self.assertEqual(results, [])
 
 
 if __name__ == "__main__":

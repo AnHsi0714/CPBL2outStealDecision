@@ -6,6 +6,8 @@ import time
 import random
 import csv
 
+from cpbl_row_filters import remove_administrative_rows
+
 DATA_DIR = "cpbl_data"
 
 session = requests.Session()
@@ -108,7 +110,7 @@ def parse_game(game_meta: dict, data: dict) -> tuple[list[dict], list[dict], lis
     }
 
     playbyplay = []
-    for row in json.loads(data["LiveLogJson"]):
+    for row in remove_administrative_rows(json.loads(data["LiveLogJson"])):
         content = row.get("Content") or ""
         playbyplay.append({
             **game_id,
