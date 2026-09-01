@@ -109,6 +109,13 @@ def load_steal_validation(path: Path) -> dict[str, Any] | None:
     }
 
 
+def load_team_decisions(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    with path.open("r", encoding="utf-8-sig") as handle:
+        return json.load(handle)
+
+
 def build_segments(comparison: dict[str, Any] | None) -> dict[str, Any] | None:
     if comparison is None:
         return None
@@ -149,6 +156,7 @@ def build_payload(
     comparison: dict[str, Any] | None = None,
     re24_validation: dict[str, Any] | None = None,
     steal_validation: dict[str, Any] | None = None,
+    team_decisions: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     outcome_counts = {"steal_success": 0, "steal_failure": 0, "no_steal": 0}
     for row in rows:
@@ -206,6 +214,7 @@ def build_payload(
             "re24": re24_validation,
             "steal": steal_validation,
         },
+        "teamDecisions": team_decisions,
     }
 
 
@@ -216,6 +225,7 @@ def generate_report(
     comparison_json: Path | None = None,
     re24_validation_json: Path | None = None,
     steal_validation_csv: Path | None = None,
+    team_decisions_json: Path | None = None,
 ) -> dict[str, Any]:
     with model_csv.open("r", encoding="utf-8-sig", newline="") as handle:
         rows = list(csv.DictReader(handle))
@@ -243,7 +253,12 @@ def generate_report(
         print(f"提醒：找不到 {steal_validation_csv}，報告將略過盜壘判讀對帳區塊"
               f"（可先執行 validate_steal_parsing.py）")
 
-    payload = build_payload(rows, summary, comparison, re24_validation, steal_validation)
+    team_decisions = load_team_decisions(team_decisions_json) if team_decisions_json else None
+    if team_decisions_json is not None and team_decisions is None:
+        print(f"提醒：找不到 {team_decisions_json}，報告將略過六隊決策品質評估區塊"
+              f"（可先執行 analyze_team_decisions.py）")
+
+    payload = build_payload(rows, summary, comparison, re24_validation, steal_validation, team_decisions)
     payload_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     payload_json = payload_json.replace("</", "<\\/")
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
@@ -267,6 +282,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--comparison-json", type=Path)
     parser.add_argument("--re24-validation-json", type=Path)
     parser.add_argument("--steal-validation-csv", type=Path)
+    parser.add_argument("--team-decisions-json", type=Path)
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
 
@@ -283,9 +299,18 @@ def main() -> int:
     steal_validation_csv = (
         args.steal_validation_csv or ROOT / "outputs" / f"cpbl_steal_parsing_validation_{stem}.csv"
     )
+    team_decisions_json = (
+        args.team_decisions_json or ROOT / "outputs" / f"cpbl_team_decisions_{stem}.json"
+    )
     output = args.output or ROOT / "reports" / f"cpbl-steal-decision-{args.year}.html"
     payload = generate_report(
-        model_csv, summary_json, output, comparison_json, re24_validation_json, steal_validation_csv
+        model_csv,
+        summary_json,
+        output,
+        comparison_json,
+        re24_validation_json,
+        steal_validation_csv,
+        team_decisions_json,
     )
     print(
         f"Wrote {output} with {payload['meta']['samples']} cases; "

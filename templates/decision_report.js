@@ -31,6 +31,49 @@
       $('validation-note').innerHTML = notes.join(' ') + ' 詳見 <a href="cpbl-re24-matrix-2025.html">RE24 矩陣熱力圖報告</a>與專案 README「引擎驗證」一節。';
     }
 
+    function verdictColor(verdict) {
+      if (verdict === '跑對') return 'var(--success)';
+      if (verdict === '跑錯') return 'var(--failure)';
+      return 'var(--muted)';
+    }
+
+    function pValueText(row) {
+      if (row.pValue === null) return '無';
+      return row.pValue < 0.001 ? '< 0.001' : row.pValue.toFixed(3);
+    }
+
+    function teamRowHtml(teamName, row, extraLabel) {
+      const rate = row.actualSuccessRate === null ? '無嘗試' : pct(row.actualSuccessRate);
+      const threshold = row.thresholdMedian === null ? '無資料' : pct(row.thresholdMedian);
+      return `<tr><td>${esc(teamName)}</td><td>${extraLabel}</td><td>${row.attempts.toLocaleString()}</td><td>${rate}</td><td>${threshold}</td><td>${pValueText(row)}</td><td style="color:${verdictColor(row.verdict)}; font-weight:650">${row.verdict}</td></tr>`;
+    }
+
+    function fillTeamDecisions() {
+      const t = REPORT.teamDecisions;
+      if (!t) return;
+      $('team-decisions-section').hidden = false;
+      const league = t.league;
+      $('team-league-summary').textContent =
+        `${league.attempts.toLocaleString()} 次嘗試，實際成功率 ${pct(league.actualSuccessRate)}，門檻中位數 ${pct(league.thresholdMedian)}`;
+      $('team-decisions-table').innerHTML = t.teams.map((row) => {
+        const opp = `<td>${row.opportunities.toLocaleString()}</td>`;
+        const rate = row.actualSuccessRate === null ? '無嘗試' : pct(row.actualSuccessRate);
+        const ci = row.ci95Low === null ? '無' : `${pct(row.ci95Low)} – ${pct(row.ci95High)}`;
+        const threshold = row.thresholdMedian === null ? '無資料' : pct(row.thresholdMedian);
+        return `<tr><td>${esc(row.team)}</td>${opp}<td>${row.attempts.toLocaleString()}</td><td>${rate}</td><td>${ci}</td><td>${threshold}</td><td>${pValueText(row)}</td><td style="color:${verdictColor(row.verdict)}; font-weight:650">${row.verdict}</td></tr>`;
+      }).join('');
+      const halfLabels = { front_1_5: '前段(1-5)', back_6_9: '後段(6-9)' };
+      const halfRows = [];
+      for (const row of t.teams) {
+        const halves = t.teamsByLineupHalf[row.team];
+        if (!halves) continue;
+        for (const key of ['front_1_5', 'back_6_9']) {
+          halfRows.push(teamRowHtml(row.team, halves[key], halfLabels[key]));
+        }
+      }
+      $('team-decisions-lineup-table').innerHTML = halfRows.join('');
+    }
+
     function fillAggregate() {
       const { meta: m, aggregate: a } = REPORT;
       $('meta-games').textContent = `${m.games} 場完整賽事`;
@@ -237,6 +280,7 @@
 
     fillAggregate();
     fillValidation();
+    fillTeamDecisions();
     fillSegments();
     $('case-select').value = String(REPORT.defaultCase);
     populateCases();
