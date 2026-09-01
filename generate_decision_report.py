@@ -34,7 +34,16 @@ def average(rows: list[dict[str, str]], key: str) -> float:
     return mean(values)
 
 
-def compact_case(row: dict[str, str], index: int) -> dict[str, Any]:
+def load_batter_types(path: Path) -> dict[str, dict[str, str]]:
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        return {row["HitterAcnt"]: row for row in csv.DictReader(handle)}
+
+
+def compact_case(
+    row: dict[str, str], index: int, batter_types: dict[str, dict[str, str]]
+) -> dict[str, Any]:
     numeric_keys = (
         "ProfilePA",
         "ModelP_1B",
@@ -72,6 +81,20 @@ def compact_case(row: dict[str, str], index: int) -> dict[str, Any]:
     for key in numeric_keys:
         value = as_float(row, key)
         data[key] = None if value is None else round(value, 6)
+
+    # 這一組是「這位打者本人」的固定屬性（球員類型），跟這一局剛好排第幾棒無關——
+    # 上面的 data["lineup"] 才是這一筆決策當下的實際棒次（情境事實）。
+    type_row = batter_types.get(row.get("HitterAcnt", ""))
+    data["batterTypeQualified"] = type_row is not None
+    for group_key, source_key in (
+        ("typicalLineupGroup", "PrimaryLineupGroup"),
+        ("powerGroup", "PowerGroup"),
+        ("patienceGroup", "PatienceGroup"),
+        ("obpGroup", "OBPGroup"),
+        ("contactGroup", "ContactGroup"),
+        ("ttoGroup", "TTOGroup"),
+    ):
+        data[group_key] = type_row[source_key] if type_row and type_row.get(source_key) else None
     return data
 
 
@@ -110,6 +133,13 @@ def load_steal_validation(path: Path) -> dict[str, Any] | None:
 
 
 def load_team_decisions(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    with path.open("r", encoding="utf-8-sig") as handle:
+        return json.load(handle)
+
+
+def load_runner_qualification(path: Path) -> dict[str, Any] | None:
     if not path.exists():
         return None
     with path.open("r", encoding="utf-8-sig") as handle:
@@ -157,6 +187,8 @@ def build_payload(
     re24_validation: dict[str, Any] | None = None,
     steal_validation: dict[str, Any] | None = None,
     team_decisions: dict[str, Any] | None = None,
+    runner_qualification: dict[str, Any] | None = None,
+    batter_types: dict[str, dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     outcome_counts = {"steal_success": 0, "steal_failure": 0, "no_steal": 0}
     for row in rows:
@@ -169,7 +201,7 @@ def build_payload(
         if (value := as_float(row, "BreakEvenSuccessRate")) is not None
         and 0 <= value <= 1
     ]
-    cases = [compact_case(row, index) for index, row in enumerate(rows)]
+    cases = [compact_case(row, index, batter_types or {}) for index, row in enumerate(rows)]
     threshold_median = median(valid_thresholds)
     default_case = min(
         range(len(cases)),
@@ -215,6 +247,7 @@ def build_payload(
             "steal": steal_validation,
         },
         "teamDecisions": team_decisions,
+        "runnerQualification": runner_qualification,
     }
 
 
@@ -226,6 +259,8 @@ def generate_report(
     re24_validation_json: Path | None = None,
     steal_validation_csv: Path | None = None,
     team_decisions_json: Path | None = None,
+    runner_qualification_json: Path | None = None,
+    batter_types_csv: Path | None = None,
 ) -> dict[str, Any]:
     with model_csv.open("r", encoding="utf-8-sig", newline="") as handle:
         rows = list(csv.DictReader(handle))
@@ -258,7 +293,28 @@ def generate_report(
         print(f"提醒：找不到 {team_decisions_json}，報告將略過六隊決策品質評估區塊"
               f"（可先執行 analyze_team_decisions.py）")
 
-    payload = build_payload(rows, summary, comparison, re24_validation, steal_validation, team_decisions)
+    runner_qualification = (
+        load_runner_qualification(runner_qualification_json) if runner_qualification_json else None
+    )
+    if runner_qualification_json is not None and runner_qualification is None:
+        print(f"提醒：找不到 {runner_qualification_json}，報告將略過符合門檻的跑者名單區塊"
+              f"（可先執行 analyze_runner_steal_rates.py）")
+
+    batter_types = load_batter_types(batter_types_csv) if batter_types_csv else {}
+    if batter_types_csv is not None and not batter_types:
+        print(f"提醒：找不到 {batter_types_csv}，逐筆重算區塊將略過打者類型標籤"
+              f"（可先執行 analyze_batter_types.py）")
+
+    payload = build_payload(
+        rows,
+        summary,
+        comparison,
+        re24_validation,
+        steal_validation,
+        team_decisions,
+        runner_qualification,
+        batter_types,
+    )
     payload_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     payload_json = payload_json.replace("</", "<\\/")
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
@@ -283,6 +339,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--re24-validation-json", type=Path)
     parser.add_argument("--steal-validation-csv", type=Path)
     parser.add_argument("--team-decisions-json", type=Path)
+    parser.add_argument("--runner-qualification-json", type=Path)
+    parser.add_argument("--batter-types-csv", type=Path)
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
 
@@ -302,6 +360,10 @@ def main() -> int:
     team_decisions_json = (
         args.team_decisions_json or ROOT / "outputs" / f"cpbl_team_decisions_{stem}.json"
     )
+    runner_qualification_json = (
+        args.runner_qualification_json or ROOT / "outputs" / f"cpbl_runner_steal_rates_{stem}.json"
+    )
+    batter_types_csv = args.batter_types_csv or ROOT / "outputs" / f"cpbl_batter_types_{stem}.csv"
     output = args.output or ROOT / "reports" / f"cpbl-steal-decision-{args.year}.html"
     payload = generate_report(
         model_csv,
@@ -311,6 +373,8 @@ def main() -> int:
         re24_validation_json,
         steal_validation_csv,
         team_decisions_json,
+        runner_qualification_json,
+        batter_types_csv,
     )
     print(
         f"Wrote {output} with {payload['meta']['samples']} cases; "

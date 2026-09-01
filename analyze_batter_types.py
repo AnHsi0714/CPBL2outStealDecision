@@ -17,15 +17,24 @@
 的事件。TTO 型打者本質上是 ISO 型與 BBpct 型的疊加（高長打、高選球通常也伴隨高三振），
 因此 TTO 分組預期方向會與 PowerGroup／PatienceGroup 一致（TTO 高→門檻高），
 用來檢驗「複合純三真傾向」是否比單一指標訊號更強或只是重複。
+
+另外算出 PrimaryLineupGroup（前段1-5／後段6-9），用該打者當季全部完成打席裡最常見的
+HitterLineup 棒次決定——這是「這位打者本人是什麼類型」的固定標籤，跟決策當下那一局
+剛好排第幾棒無關（同一位打者九成場次打第 3 棒，某天代打排第 8 棒，他還是「前段棒次型」
+打者，不會因為那天的排法而變成後段棒次型）。跟 PowerGroup/PatienceGroup/...一樣是球員
+本身的固定屬性，不是每筆決策各自重算的情境變數。
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+from collections import Counter, defaultdict
 from pathlib import Path
 from statistics import median
 from typing import Any
+
+from model_batter_decisions import extract_pa_records, load_raw_games
 
 
 def as_float(row: dict[str, str], key: str) -> float:
@@ -76,6 +85,21 @@ def annotate(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return rows, iso_median, bb_median, obp_median, single_median, tto_median
 
 
+def lineup_group(slot: int) -> str:
+    return "front_1_5" if 1 <= slot <= 5 else "back_6_9"
+
+
+def compute_primary_lineup(cache_dir: Path) -> dict[str, int]:
+    """算出每位打者當季最常見的打序棒次（眾數），當作他本人的固定棒次類型標籤。"""
+    games = load_raw_games(cache_dir)
+    tally: dict[str, Counter[int]] = defaultdict(Counter)
+    for rows in games.values():
+        for record in extract_pa_records(rows):
+            if 1 <= record.lineup_slot <= 9:
+                tally[record.hitter_id][record.lineup_slot] += 1
+    return {hitter_id: counter.most_common(1)[0][0] for hitter_id, counter in tally.items()}
+
+
 def correlation(left: list[float], right: list[float]) -> float | None:
     if len(left) != len(right) or len(left) < 2:
         return None
@@ -88,6 +112,13 @@ def correlation(left: list[float], right: list[float]) -> float | None:
     return numerator / denominator if denominator else None
 
 
+def apply_primary_lineup(rows: list[dict[str, Any]], primary_lineup: dict[str, int]) -> None:
+    for row in rows:
+        slot = primary_lineup.get(row["HitterAcnt"])
+        row["PrimaryLineupSlot"] = slot if slot is not None else ""
+        row["PrimaryLineupGroup"] = lineup_group(slot) if slot is not None else ""
+
+
 def write_csv(rows: list[dict[str, Any]], path: Path) -> None:
     if not rows:
         raise RuntimeError(f"{path} 沒有資料")
@@ -95,6 +126,7 @@ def write_csv(rows: list[dict[str, Any]], path: Path) -> None:
         "HitterAcnt", "HitterName", "PA",
         "ISO_proxy", "BBpct_proxy", "OBP_proxy", "SingleRate_proxy", "TTO_proxy",
         "PowerGroup", "PatienceGroup", "OBPGroup", "ContactGroup", "TTOGroup",
+        "PrimaryLineupSlot", "PrimaryLineupGroup",
     ]
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8-sig") as file:
@@ -111,6 +143,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--start", type=int, default=1)
     parser.add_argument("--end", type=int, default=360)
     parser.add_argument("--profiles-csv", type=Path)
+    parser.add_argument("--cache-dir", type=Path)
     parser.add_argument("--min-pa", type=float, default=100.0)
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
@@ -127,6 +160,15 @@ def main() -> int:
         raise SystemExit(f"沒有打席數 >= {args.min_pa} 的打者，無法分組")
 
     rows, iso_median, bb_median, obp_median, single_median, tto_median = annotate(rows)
+
+    cache_dir = args.cache_dir or Path("data/raw/cpbl") / f"{args.year}_{args.kind_code}"
+    if cache_dir.exists():
+        primary_lineup = compute_primary_lineup(cache_dir)
+        apply_primary_lineup(rows, primary_lineup)
+    else:
+        print(f"提醒：找不到 {cache_dir}，略過 PrimaryLineupGroup（前段/後段棒次型）計算")
+        apply_primary_lineup(rows, {})
+
     write_csv(rows, output)
 
     corr_bb = correlation([r["ISO_proxy"] for r in rows], [r["BBpct_proxy"] for r in rows])
@@ -150,6 +192,9 @@ def main() -> int:
     print(f"  high_OBP / low_OBP   = {sum(r['OBPGroup']=='high_OBP' for r in rows)} / {sum(r['OBPGroup']=='low_OBP' for r in rows)}")
     print(f"  high_1B  / low_1B    = {sum(r['ContactGroup']=='high_1B' for r in rows)} / {sum(r['ContactGroup']=='low_1B' for r in rows)}")
     print(f"  high_TTO / low_TTO   = {sum(r['TTOGroup']=='high_TTO' for r in rows)} / {sum(r['TTOGroup']=='low_TTO' for r in rows)}")
+    front_count = sum(r["PrimaryLineupGroup"] == "front_1_5" for r in rows)
+    back_count = sum(r["PrimaryLineupGroup"] == "back_6_9" for r in rows)
+    print(f"  front_1_5 / back_6_9 = {front_count} / {back_count}（依球員本季最常打的棒次決定，{len(rows) - front_count - back_count} 位查無逐球紀錄）")
     print(f"輸出：{output}")
     return 0
 

@@ -105,6 +105,26 @@
       $('generated-at').textContent = new Date(m.generatedAt).toLocaleString('zh-TW');
     }
 
+    const GROUP_LABELS = {
+      front_1_5: '前段(1-5)', back_6_9: '後段(6-9)',
+      high_ISO: '高長打', low_ISO: '低長打',
+      high_BB: '高選球', low_BB: '低選球',
+      high_OBP: '高上壘率', low_OBP: '低上壘率',
+      high_1B: '高單打率(接觸型)', low_1B: '低單打率',
+      high_TTO: '高TTO型', low_TTO: '低TTO型',
+    };
+
+    function renderCaseTypeBadges(c) {
+      // 這排標籤是「這位打者本人」的固定球員類型，跟這筆決策剛好排第幾棒（見上方 case-heading）無關。
+      let badges;
+      if (c.batterTypeQualified) {
+        badges = [GROUP_LABELS[c.typicalLineupGroup], GROUP_LABELS[c.powerGroup], GROUP_LABELS[c.patienceGroup], GROUP_LABELS[c.obpGroup], GROUP_LABELS[c.contactGroup], GROUP_LABELS[c.ttoGroup]];
+      } else {
+        badges = ['打席數不足(PA<100)，無球員類型資料'];
+      }
+      $('case-type-badges').innerHTML = badges.filter(Boolean).map((label) => `<span class="pill">${esc(label)}</span>`).join('');
+    }
+
     const comparisonLabels = {
       lineup_front_vs_back: ['前段(1-5)', '後段(6-9)'],
       power_high_vs_low_ISO: ['高長打', '低長打'],
@@ -222,6 +242,76 @@
       }
     }
 
+    function runnerTierColor(tier) {
+      if (tier === '任一棒次都可跑') return 'var(--success)';
+      if (tier === '任一棒次都不建議跑') return 'var(--failure)';
+      if (tier === '視下一棒棒次而定') return 'var(--accent)';
+      return 'var(--muted)';
+    }
+
+    function slotGridHtml(row, slots) {
+      const qualifying = new Set(row.qualifyingSlots);
+      const known = new Set([...row.qualifyingSlots, ...row.nonQualifyingSlots]);
+      return `<div style="display:flex; gap:3px">${slots.map((slot) => {
+        const has = known.has(slot);
+        const ok = qualifying.has(slot);
+        const bg = !has ? 'var(--line)' : (ok ? 'var(--success)' : 'var(--failure)');
+        const title = !has ? `第 ${slot} 棒：無門檻資料` : `第 ${slot} 棒門檻 ${pct(row.slotThresholds ? row.slotThresholds[slot] : 0)}：${ok ? '可跑' : '不建議'}`;
+        return `<span title="${esc(title)}" style="width:16px;height:16px;border-radius:4px;background:${bg};display:inline-flex;align-items:center;justify-content:center;font-size:.62rem;color:#fff;font-weight:700">${slot}</span>`;
+      }).join('')}</div>`;
+    }
+
+    function runnerTypeBadgesHtml(row) {
+      // 跑者本人的固定球員類型（前段/後段棒次型＋長打/選球/上壘/接觸/TTO），
+      // 純供辨識這位跑者是什麼樣的打者，跟左邊的逐棒次門檻判定是兩件事。
+      if (!row.batterTypeQualified) {
+        return `<span class="pill" style="font-size:.68rem; opacity:.65">打席數不足，無類型資料</span>`;
+      }
+      return [row.typicalLineupGroup, row.powerGroup, row.patienceGroup, row.obpGroup, row.contactGroup, row.ttoGroup]
+        .map((key) => GROUP_LABELS[key])
+        .filter(Boolean)
+        .map((label) => `<span class="pill" style="font-size:.68rem">${esc(label)}</span>`)
+        .join('');
+    }
+
+    function renderRunnerTable() {
+      const r = REPORT.runnerQualification;
+      if (!r) return;
+      const query = $('runner-search').value.trim().toLowerCase();
+      const filter = $('runner-filter').value;
+      const slots = Object.keys(r.thresholds.bySlot).map(Number).sort((a, b) => a - b);
+      const rows = r.runners.filter((row) => {
+        if (filter && row.tier !== filter) return false;
+        if (!query) return true;
+        return `${row.hitterName} ${row.team}`.toLowerCase().includes(query);
+      });
+      $('runner-table').innerHTML = rows.map((row) => {
+        const rate = row.successRate === null ? '無嘗試' : pct(row.successRate);
+        return `<tr><td><div>${esc(row.hitterName)}</div><div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:5px">${runnerTypeBadgesHtml(row)}</div></td><td>${esc(row.team)}</td><td>${row.attempts}</td><td>${rate}</td><td style="color:${runnerTierColor(row.tier)}; font-weight:650">${esc(row.tier)}</td><td>${slotGridHtml({ ...row, slotThresholds: r.thresholds.bySlot }, slots)}</td></tr>`;
+      }).join('') || '<tr><td colspan="6">找不到符合條件的跑者</td></tr>';
+    }
+
+    function fillRunnerQualification() {
+      const r = REPORT.runnerQualification;
+      if (!r) return;
+      $('runner-section').hidden = false;
+      const slotValues = Object.values(r.thresholds.bySlot);
+      $('runner-threshold-min').textContent = slotValues.length ? pct(Math.min(...slotValues)) : '無資料';
+      $('runner-threshold-max').textContent = slotValues.length ? pct(Math.max(...slotValues)) : '無資料';
+      $('runner-season-label').textContent = `${r.year} 年`;
+      $('runner-min-attempts').textContent = r.minAttempts;
+      $('runner-min-attempts-note').textContent = `嘗試 < ${r.minAttempts} 次`;
+      $('runner-count-all').textContent = (r.tierCounts['任一棒次都可跑'] || 0).toLocaleString();
+      $('runner-count-depends').textContent = (r.tierCounts['視下一棒棒次而定'] || 0).toLocaleString();
+      $('runner-count-none').textContent = (r.tierCounts['任一棒次都不建議跑'] || 0).toLocaleString();
+      $('runner-count-insufficient').textContent = (r.tierCounts['樣本不足'] || 0).toLocaleString();
+      $('runner-total-count').textContent = r.runners.length.toLocaleString();
+      $('runner-unresolved-note').textContent = r.eventsUnresolved
+        ? `另有 ${r.eventsUnresolved} 次盜壘事件無法解析出跑者身分，未列入統計。`
+        : `全季 ${r.eventsTotal.toLocaleString()} 次一壘盜二壘事件全數成功解析出跑者身分。`;
+      renderRunnerTable();
+    }
+
     function optionText(c) {
       return `Game ${c.game}｜${c.inning}局｜${c.hitter}（${c.team}）`;
     }
@@ -258,6 +348,7 @@
       $('case-heading').textContent = `${c.hitter}｜第 ${c.lineup} 棒｜${c.inning} 局`;
       $('case-subheading').textContent = `${c.date} · Game ${c.game} · ${c.away} vs ${c.home} · 一壘跑者 ${c.runner || '未記錄'} · 投手 ${c.pitcher || '未記錄'}`;
       $('case-actual').textContent = outcomeLabel[c.actual] || c.actual;
+      renderCaseTypeBadges(c);
       $('case-values').innerHTML = `<tr><td>${esc(c.hitter)}</td><td>${fmt(c.ModelVSuccess)}</td><td>${fmt(c.ModelVFailure)}</td><td>${fmt(c.ModelVNoSteal)}</td><td>${c.BreakEvenSuccessRate === null ? '無' : pct(c.BreakEvenSuccessRate)}</td><td>${fmt(c.ConditionalOutCostNoSteal)}</td><td>${fmt(c.ExpectedOutPenaltyNoSteal)}</td></tr>`;
       $('case-profile').innerHTML = `<tr><td>${esc(c.hitter)}</td><td>${Math.round(c.ProfilePA)}</td><td>${pct(c.ModelP_1B)}</td><td>${pct(c.ModelP_2B)}</td><td>${pct(c.ModelP_3B)}</td><td>${pct(c.ModelP_HR)}</td><td>${pct(c.ModelP_BB_HBP)}</td><td>${pct(c.ModelP_REACH)}</td><td>${pct(c.ModelP_OUT)}</td></tr>`;
       if (resetRate) {
@@ -282,6 +373,9 @@
     fillValidation();
     fillTeamDecisions();
     fillSegments();
+    fillRunnerQualification();
+    $('runner-search').addEventListener('input', renderRunnerTable);
+    $('runner-filter').addEventListener('change', renderRunnerTable);
     $('case-select').value = String(REPORT.defaultCase);
     populateCases();
     $('case-select').value = String(REPORT.defaultCase);
