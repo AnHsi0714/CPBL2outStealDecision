@@ -176,6 +176,29 @@
       </div>
     </section>
 
+    <section id="team-decisions-section" aria-labelledby="team-decisions-title" hidden>
+      <h2 id="team-decisions-title">六隊決策品質評估</h2>
+      <div class="panel">
+        <p class="muted">判定邏輯：把每隊兩出局、一壘有人的<strong>所有</strong>決策機會（不論當時有沒有跑）的損益兩平門檻取中位數，當作「該隊門檻」；再用二項檢定（binomtest）檢驗該隊實際盜壘成功次數，是否顯著偏離「真實成功率＝該隊門檻」這個假設——只有 <strong>p &lt; 0.05</strong> 才判「跑對」或「跑錯」，否則標記「無法判定（不顯著）」，避免把抽樣雜訊誤判成球隊決策錯誤。全聯盟：<span id="team-league-summary"></span>。</p>
+        <div class="table-wrap" style="margin-top:14px">
+          <table>
+            <thead><tr><th>球隊</th><th>決策機會</th><th>盜壘嘗試</th><th>實際成功率</th><th>95% 信賴區間</th><th>該隊門檻</th><th>p 值</th><th>判定</th></tr></thead>
+            <tbody id="team-decisions-table"></tbody>
+          </table>
+        </div>
+        <details style="margin-top:16px">
+          <summary>依前段（1–5棒）／後段（6–9棒）拆分</summary>
+          <div class="table-wrap" style="margin-top:10px">
+            <table>
+              <thead><tr><th>球隊</th><th>棒次</th><th>盜壘嘗試</th><th>實際成功率</th><th>該隊門檻</th><th>p 值</th><th>判定</th></tr></thead>
+              <tbody id="team-decisions-lineup-table"></tbody>
+            </table>
+          </div>
+        </details>
+        <p class="muted" style="margin-top:14px">未做「該跑不跑」（條件有利卻很少嘗試）判定——這需要額外定義嘗試率基準，而 2025 年各隊兩出局、一壘有人的盜壘嘗試次數本來就不多（拆前段/後段棒次後更只剩個位數到二十幾次），計畫書 3.3 節已明講這類切層後樣本把握力不足、須誠實揭露，留待跨年度資料補齊後再處理。</p>
+      </div>
+    </section>
+
     <section aria-labelledby="explorer-title">
       <h2 id="explorer-title">逐筆重算：換一位打者就會得到不同答案</h2>
       <div class="panel">
