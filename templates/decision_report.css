@@ -1,0 +1,133 @@
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f1ea;
+      --surface: #fffdf8;
+      --text: #18201c;
+      --muted: #65706a;
+      --line: #d9d4c9;
+      --success: #147d62;
+      --failure: #b34a3c;
+      --neutral: #456582;
+      --accent: #d59c25;
+      --soft-success: #dff2ea;
+      --soft-failure: #f7e3df;
+      --soft-neutral: #e4edf5;
+      --shadow: 0 14px 35px rgba(43, 49, 45, .09);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111512;
+        --surface: #1a201c;
+        --text: #edf2ee;
+        --muted: #aab5ae;
+        --line: #39423c;
+        --success: #54c9a5;
+        --failure: #ef8f82;
+        --neutral: #8db4d6;
+        --accent: #efbd55;
+        --soft-success: #173a30;
+        --soft-failure: #452824;
+        --soft-neutral: #203747;
+        --shadow: none;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      line-height: 1.65;
+    }
+    .wrap { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+    header { padding: 64px 0 30px; border-bottom: 1px solid var(--line); }
+    .eyebrow { color: var(--success); font-weight: 700; letter-spacing: .08em; }
+    h1 { max-width: 850px; margin: 8px 0 12px; font-size: clamp(2rem, 5vw, 4.2rem); line-height: 1.08; letter-spacing: -.035em; }
+    h2 { margin: 0 0 20px; font-size: clamp(1.45rem, 3vw, 2rem); line-height: 1.25; }
+    h3 { margin: 0 0 8px; font-size: 1.05rem; }
+    p { margin: 0 0 12px; }
+    .lede { max-width: 780px; color: var(--muted); font-size: 1.08rem; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 24px; color: var(--muted); font-size: .9rem; }
+    main { padding: 36px 0 80px; }
+    section { margin: 0 0 58px; }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .stat, .branch, .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }
+    .stat { padding: 18px; }
+    .stat small { display: block; color: var(--muted); }
+    .stat strong { display: block; margin: 3px 0; font-size: 1.75rem; line-height: 1.2; }
+    .stat span { color: var(--muted); font-size: .86rem; }
+    .branches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .branch { overflow: hidden; }
+    .branch-head { padding: 18px 20px; }
+    .branch.success .branch-head { background: var(--soft-success); }
+    .branch.failure .branch-head { background: var(--soft-failure); }
+    .branch.neutral .branch-head { background: var(--soft-neutral); }
+    .branch-value { font-size: 2rem; font-weight: 750; line-height: 1; }
+    .branch-body { padding: 18px 20px 20px; }
+    .branch ol { margin: 0; padding-left: 1.25rem; }
+    .branch li + li { margin-top: 7px; }
+    .bar-row { display: grid; grid-template-columns: 96px 1fr 72px; align-items: center; gap: 12px; margin: 16px 0; }
+    .track { height: 18px; background: color-mix(in srgb, var(--line) 70%, transparent); border-radius: 999px; overflow: hidden; }
+    .bar { height: 100%; border-radius: inherit; }
+    .bar.success { background: var(--success); }
+    .bar.failure { background: var(--failure); }
+    .bar.neutral { background: var(--neutral); }
+    .formula {
+      margin-top: 24px;
+      padding: 22px;
+      border-left: 5px solid var(--accent);
+      background: var(--surface);
+      border-radius: 0 14px 14px 0;
+    }
+    code { color: var(--text); font-family: "Cascadia Code", Consolas, monospace; }
+    .formula code { display: block; margin: 8px 0; font-size: clamp(.9rem, 2vw, 1.08rem); overflow-wrap: anywhere; }
+    .panel { padding: 24px; }
+    .controls { display: grid; grid-template-columns: 1fr 1.5fr; gap: 14px; margin-bottom: 22px; }
+    label { display: grid; gap: 5px; color: var(--muted); font-size: .88rem; }
+    input, select {
+      width: 100%;
+      min-height: 42px;
+      padding: 8px 10px;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      font: inherit;
+    }
+    input[type="range"] { padding: 0; }
+    .case-title { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+    .case-title strong { font-size: 1.25rem; }
+    .case-title span { color: var(--muted); }
+    .simulator { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 24px 0; align-items: center; }
+    .decision-readout { padding: 20px; border-radius: 14px; background: var(--soft-neutral); }
+    .decision-readout.good { background: var(--soft-success); }
+    .decision-readout.bad { background: var(--soft-failure); }
+    .decision-readout strong { display: block; font-size: 1.45rem; }
+    .range-value { color: var(--text); font-weight: 700; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+    th, td { padding: 10px 9px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+    th:first-child, td:first-child { text-align: left; }
+    th { color: var(--muted); font-weight: 650; }
+    .note-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 30px; padding-left: 1.2rem; }
+    .note-list li { padding-left: 3px; }
+    .muted { color: var(--muted); }
+    .pill { display: inline-block; padding: 2px 9px; border: 1px solid var(--line); border-radius: 999px; font-size: .78rem; color: var(--muted); }
+    footer { padding: 24px 0 50px; border-top: 1px solid var(--line); color: var(--muted); font-size: .88rem; }
+    @media (max-width: 820px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+      .branches { grid-template-columns: 1fr; }
+      .simulator { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 560px) {
+      .wrap { width: min(100% - 22px, 1120px); }
+      header { padding-top: 38px; }
+      .grid, .controls, .note-list { grid-template-columns: 1fr; }
+      .bar-row { grid-template-columns: 82px 1fr 58px; gap: 8px; }
+      .panel { padding: 17px; }
+    }
