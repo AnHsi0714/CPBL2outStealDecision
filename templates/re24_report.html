@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>中職 RE24 得分期望值矩陣</title>
+  <style>
+/*__STYLES__*/
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="eyebrow">CPBL __YEAR__ REGULAR SEASON</div>
+      <h1>中職 RE24 得分期望值矩陣</h1>
+      <p class="lede">24 種 base-out state（3 種出局數 × 8 種壘包組合）各自「從該狀態起算到半局結束」的平均剩餘得分。起算點對齊到壘包狀態實際變化的那一球，不是打席或半局的開頭——方法見計畫書 3.0 節。</p>
+      <div class="meta">
+        <span>KindCode __KIND_CODE__</span>
+        <span>GameSno __RANGE__</span>
+        <span>__GAMES_PROCESSED__ 場已處理</span>
+        <span>__TOTAL_SEGMENTS__ 個 state 區段觀測值</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section aria-labelledby="heatmap-title">
+      <h2 id="heatmap-title">RE24 熱力圖</h2>
+      <div class="panel">
+        <div class="heatmap">
+          <div class="row-label"></div>
+          __COLUMN_HEADERS__
+          __GRID_CELLS__
+        </div>
+        <div class="legend">
+          <span>__LEGEND_MIN__ 分</span>
+          <div class="legend-bar"></div>
+          <span>__LEGEND_MAX__ 分</span>
+        </div>
+        <p class="lede" style="margin-top:14px; font-size:.86rem">顏色深淺（淺色模式）／亮度（深色模式）代表平均剩餘得分的相對高低；每格滑鼠移過或鍵盤 Tab 到該格可看到樣本數與標準差。空白格代表本季無樣本觀測到該 state。</p>
+        <details style="margin-top:16px">
+          <summary>顯示完整資料表</summary>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>出局數</th><th>壘包狀態</th><th>平均 RE</th><th>SD</th><th>N</th></tr></thead>
+              <tbody>__TABLE_ROWS__</tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section aria-labelledby="threshold-title">
+      <h2 id="threshold-title">由 RE24 直接推導的基礎門檻（層次二）</h2>
+      <p class="lede">計畫書 3.1 節層次二公式：<code>p ≥ RE(一壘) / RE(二壘)</code>，尚未計入盜壘失敗的「保留打者到下一局」效應（層次三蒙地卡羅模擬已處理，見 README 逐棒次門檻）。此處僅作為與模擬結果交叉核對的基準值。</p>
+      <div class="grid" style="margin-top:14px">__THRESHOLD_CARDS__</div>
+    </section>
+  </main>
+
+  <footer><div class="wrap">資料：CPBL 官網逐球紀錄，__YEAR__ 例行賽 GameSno __RANGE__ · RE 計算對齊事件發生當下（計畫書 3.0 節），排除未打完的半局 · 由 build_re24_matrix.py 產生</div></footer>
+</body>
+</html>

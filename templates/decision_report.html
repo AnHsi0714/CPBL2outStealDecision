@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>2025 CPBL 兩出局僅一壘有人：盜壘決策報告</title>
+  <style>
+/*__STYLES__*/
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="eyebrow">CPBL · 2025 REGULAR SEASON</div>
+      <h1>兩出局、僅一壘有人時，盜壘值不值得？</h1>
+      <p class="lede">把同一個比賽瞬間拆成「成功、失敗、不跑」三條平行路線，以當前打者及後續打序的個人化打擊分布，估算一致時間範圍內的期望得分。</p>
+      <div class="meta">
+        <span id="meta-games"></span><span id="meta-pa"></span><span id="meta-batters"></span><span id="meta-sims"></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section aria-labelledby="overview-title">
+      <h2 id="overview-title">2025 資料概況</h2>
+      <div class="grid">
+        <article class="stat"><small>符合條件的決策機會</small><strong id="stat-samples"></strong><span>第 1–8 局、2 出局、僅一壘有人</span></article>
+        <article class="stat"><small>實際盜壘成功</small><strong id="stat-success-count"></strong><span id="stat-success-rate"></span></article>
+        <article class="stat"><small>實際盜壘失敗</small><strong id="stat-failure-count"></strong><span id="stat-failure-rate"></span></article>
+        <article class="stat"><small>情境損益兩平中位數</small><strong id="stat-threshold"></strong><span>每個情境先各自計算，再取中位數</span></article>
+      </div>
+    </section>
+
+    <section aria-labelledby="branches-title">
+      <h2 id="branches-title">三種情況怎麼算</h2>
+      <div class="branches">
+        <article class="branch success">
+          <div class="branch-head"><h3>1 · 盜壘成功</h3><div class="branch-value" id="v-success"></div><small>平均期望得分</small></div>
+          <div class="branch-body"><ol><li>維持兩出局，跑者移到二壘。</li><li>當前打者繼續完成打席。</li><li>模擬本半局剩餘攻勢。</li><li>再模擬球隊下一次進攻半局。</li></ol></div>
+        </article>
+        <article class="branch failure">
+          <div class="branch-head"><h3>2 · 盜壘失敗</h3><div class="branch-value" id="v-failure"></div><small>平均期望得分</small></div>
+          <div class="branch-body"><ol><li>跑者成為第三個出局。</li><li>目前半局立刻結束，得分為 0。</li><li>打席未完成，當前打者被保留。</li><li>下一次進攻由當前打者先打。</li></ol></div>
+        </article>
+        <article class="branch neutral">
+          <div class="branch-head"><h3>3 · 不盜壘</h3><div class="branch-value" id="v-no-steal"></div><small>平均期望得分</small></div>
+          <div class="branch-body"><ol><li>維持兩出局、一壘有人。</li><li>當前打者繼續完成打席。</li><li>若打者出局，本半局結束。</li><li>下一次進攻改由下一棒開始。</li></ol></div>
+        </article>
+      </div>
+
+      <div class="panel" style="margin-top: 18px">
+        <div class="bar-row"><span>成功</span><div class="track"><div id="bar-success" class="bar success"></div></div><strong id="bar-success-label"></strong></div>
+        <div class="bar-row"><span>失敗</span><div class="track"><div id="bar-failure" class="bar failure"></div></div><strong id="bar-failure-label"></strong></div>
+        <div class="bar-row"><span>不跑</span><div class="track"><div id="bar-no-steal" class="bar neutral"></div></div><strong id="bar-no-steal-label"></strong></div>
+      </div>
+
+      <div class="formula">
+        <strong>盜壘損益兩平成功率</strong>
+        <code>p* = (V不跑 − V失敗) ÷ (V成功 − V失敗)</code>
+        <code id="aggregate-formula"></code>
+        <p class="muted">以三條路線的全體平均值計算為 <strong id="aggregate-threshold"></strong>；逐情境計算後的中位數為 <strong id="median-threshold"></strong>。兩者不同是因為「先平均再相除」不等於「先逐筆相除再取中位數」。</p>
+      </div>
+    </section>
+
+    <section id="validation-section" aria-labelledby="validation-title" hidden>
+      <h2 id="validation-title">方法驗證</h2>
+      <div class="panel">
+        <p class="muted">模型結果不是自說自話：模擬引擎跟真實資料算出的 RE24 逐格比對過，盜壘文字判讀也跟 CPBL 官方統計逐場逐隊對過帳。</p>
+        <div class="grid" id="validation-stats" style="margin-top:14px"></div>
+        <p class="muted" style="margin-top:14px" id="validation-note"></p>
+      </div>
+    </section>
+
+    <section aria-labelledby="personal-title">
+      <h2 id="personal-title">打者沒有被視為同一個人</h2>
+      <div class="panel">
+        <p>每位打者都有自己的 <code>1B / 2B / 3B / HR / BB-HBP / REACH / OUT</code> 機率。為避免少量打席失真，使用 50 打席的聯盟平均先驗：</p>
+        <div class="formula"><code>修正後機率 =（打者實際結果 + 50 打席 × 聯盟平均率）÷（打者實際打席 + 50）</code></div>
+        <p style="margin-top:18px">個人化的是打者及打序；目前使用聯盟平均的是同種打擊結果下的跑者推進、投手、守備、跑者速度與捕手阻殺能力。</p>
+        <div class="grid" style="margin-top:18px">
+          <article class="stat"><small>條件式出局成本</small><strong id="out-cost"></strong><span>非出局分支 EV − 出局分支 EV</span></article>
+          <article class="stat"><small>期望出局懲罰</small><strong id="out-penalty"></strong><span>條件式成本 × 該打者出局率</span></article>
+          <article class="stat"><small>保留打者平均差異</small><strong id="retention"></strong><span>失敗後同一打者下局先打的打序效果</span></article>
+          <article class="stat"><small>平滑先驗</small><strong id="prior-pa"></strong><span>主力打者仍主要由本人數據決定</span></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="segment-section" aria-labelledby="segment-title" hidden>
+      <h2 id="segment-title">棒次與打者類型如何影響門檻</h2>
+      <div class="panel">
+        <p class="muted">長打／選球分組只納入該季打席數 ≥ 100 的打者（<span id="segment-qualified"></span> 位），用聯盟中位數切成高/低兩組；門檻只計入落在 0-100% 之間、有意義的情境。</p>
+        <div class="grid" id="substitution-stats" style="margin-top:14px"></div>
+        <p class="muted" style="margin-top:10px">先發／代打交叉檢查：把「僅先發打者」跟「全部決策」分別算逐棒次門檻中位數，差異都在 1 個百分點以內，代打不會系統性扭曲下面的棒次分析。</p>
+
+        <h3 style="margin-top:22px">逐棒次（1–9）損益兩平門檻中位數</h3>
+        <div id="lineup-bars" style="margin-top:12px"></div>
+
+        <div class="formula" id="slot-interpretation">
+          <strong>為什麼門檻隨棒次起伏</strong>
+          <p class="muted" style="margin-top:8px">門檻幾乎完全由分子「V不跑－V失敗」決定，分母「V成功－V失敗」（盜壘成功能省下多少）在各棒次都差不多（<span id="denom-range"></span>）。分子大，代表「不跑但打席繼續」跟「盜壘刺、直接把打者保留到下一局」這兩者的差距特別大：</p>
+          <ul class="note-list" style="margin-top:12px; grid-template-columns:1fr">
+            <li><strong>第 <span id="peak-slot"></span> 棒（門檻最高，<span id="peak-value"></span>）</strong>：分子主要來自「他自己夠強」——這棒續打時常能靠自己的打擊在本半局多得分，但盜壘刺會立刻結束半局，等於白白放棄這個打席的價值。</li>
+            <li id="runner-up-item"><strong>第 <span id="runner-up-slot"></span> 棒（門檻 <span id="runner-up-value"></span>，全場次高）</strong>：分子主要來自「保留效應」——不管有沒有盜壘，只要這棒正常出局，下一局通常很快輪到全隊前段棒次開路；但盜壘刺會讓這棒自己被保留、下一局改由他先打，等於賠掉了讓前段棒次提前登場的機會。</li>
+            <li><strong>第 <span id="trough-slot"></span> 棒（門檻最低，<span id="trough-value"></span>）</strong>：不管盜壘失敗被保留、還是不跑正常出局後換下一棒，接手的都是實力相近的早段棒次，兩種情況的價值差不多，「這位打者自己多強」跟「保留效應」都不明顯，是全場相對最適合冒險盜壘的棒次。</li>
+          </ul>
+        </div>
+
+        <h3 style="margin-top:28px">分組比較</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>比較</th><th>組一</th><th>組二</th><th>差異（組一－組二）</th><th>p 值（Mann-Whitney U）</th></tr></thead>
+            <tbody id="segment-table"></tbody>
+          </table>
+        </div>
+        <p class="muted" style="margin-top:14px">高長打、高選球打者在場時，門檻都比對照組高，且在前段／後段棒次分開看仍然成立——換句話說，這位打者整體打擊能力愈強，愈不該冒險盜壘，長打力與選球力兩者方向一致，不是互相抵銷的兩股力量。以下是分開看的交叉表：</p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:14px">
+          <div class="table-wrap">
+            <table>
+              <caption class="muted" style="text-align:left; margin-bottom:8px">棒次 × 長打分組（門檻中位數）</caption>
+              <thead><tr><th>棒次</th><th>高長打</th><th>低長打</th></tr></thead>
+              <tbody id="cross-table-power"></tbody>
+            </table>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="muted" style="text-align:left; margin-bottom:8px">棒次 × 選球分組（門檻中位數）</caption>
+              <thead><tr><th>棒次</th><th>高選球</th><th>低選球</th></tr></thead>
+              <tbody id="cross-table-patience"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <h3 style="margin-top:28px">為什麼不直接用「上壘率」分組</h3>
+        <div class="panel" style="padding:0; box-shadow:none; border:none">
+          <div class="grid" style="grid-template-columns:repeat(2,1fr)">
+            <article class="stat"><small>ISO 與選球力（保送/觸身率）相關係數</small><strong id="corr-iso-bb"></strong><span>我們實際用來分組的指標</span></article>
+            <article class="stat"><small>ISO 與真上壘率（安打+保送）相關係數</small><strong id="corr-iso-obp"></strong><span>相關性更高，跟長打較難分開</span></article>
+          </div>
+          <div class="table-wrap" style="margin-top:16px">
+            <table>
+              <caption class="muted" style="text-align:left; margin-bottom:8px">棒次 × 真上壘率分組（門檻中位數）</caption>
+              <thead><tr><th>棒次</th><th>高上壘率</th><th>低上壘率</th></tr></thead>
+              <tbody id="cross-table-obp"></tbody>
+            </table>
+          </div>
+          <p class="muted" style="margin-top:14px">改用真上壘率（安打+保送）分組，結果的方向跟純選球力（保送/觸身率）<strong>相反</strong>：高上壘率組門檻反而較低，且效應主要出現在後段棒次。原因是上壘率把「安打」也算進去，而安打型打者本來就更容易靠自己在本半局把跑者送回來，這股力量跟「保送不太能直接送回一壘跑者」的效應方向相反、混在一起會互相抵銷，訊號變得不乾淨——這正是我們選用 ISO／BB% 而不是 SLG／OBP 分組的原因，不是隨意規定。</p>
+        </div>
+
+        <h3 style="margin-top:28px">用純單打率驗證「高上壘接觸型該不該跑」</h3>
+        <div class="panel" style="padding:0; box-shadow:none; border:none">
+          <p>把「安打」本身拆更細：只看單打率（<code>SingleRate_proxy = P_1B</code>），對應計畫書「高上壘接觸型——單打即可得分」的原始假設。這個指標跟長打幾乎是反方向（<span id="corr-iso-single"></span>，長打型打者安打常常直接是長打，單打占比反而低），是三個上壘相關指標裡跟 ISO 重疊最少、最乾淨的一個。</p>
+          <div class="table-wrap" style="margin-top:16px">
+            <table>
+              <caption class="muted" style="text-align:left; margin-bottom:8px">棒次 × 單打率分組（門檻中位數）</caption>
+              <thead><tr><th>棒次</th><th>高單打率（接觸型）</th><th>低單打率</th></tr></thead>
+              <tbody id="cross-table-contact"></tbody>
+            </table>
+          </div>
+          <p class="muted" style="margin-top:14px" id="contact-summary"></p>
+        </div>
+
+        <h3 style="margin-top:28px">TTO（三振＋全壘打＋保送）複合指標</h3>
+        <div class="panel" style="padding:0; box-shadow:none; border:none">
+          <p>TTO_proxy = P_三振 + P_全壘打 + P_保送觸身，三者都是「打席結果不太受野手守備影響」的事件。這類打者本質上是長打型與選球型的疊加（<span id="corr-iso-tto"></span>），用來檢驗複合指標是否比單一指標訊號更清楚，還是只是重複前面兩組分組。</p>
+          <div class="table-wrap" style="margin-top:16px">
+            <table>
+              <caption class="muted" style="text-align:left; margin-bottom:8px">棒次 × TTO 分組（門檻中位數）</caption>
+              <thead><tr><th>棒次</th><th>高 TTO</th><th>低 TTO</th></tr></thead>
+              <tbody id="cross-table-tto"></tbody>
+            </table>
+          </div>
+          <p class="muted" style="margin-top:14px" id="tto-summary"></p>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="explorer-title">
+      <h2 id="explorer-title">逐筆重算：換一位打者就會得到不同答案</h2>
+      <div class="panel">
+        <div class="controls">
+          <label>搜尋打者、球隊或場次
+            <input id="case-search" type="search" placeholder="例如：林安可、統一、Game 120">
+          </label>
+          <label>選擇一筆決策機會
+            <select id="case-select"></select>
+          </label>
+        </div>
+
+        <div class="case-title">
+          <div><strong id="case-heading"></strong><div id="case-subheading" class="muted"></div></div>
+          <div><span class="pill" id="case-actual"></span></div>
+        </div>
+
+        <div class="simulator">
+          <div>
+            <label for="success-rate">假設這次盜壘成功率：<span class="range-value" id="success-rate-value"></span></label>
+            <input id="success-rate" type="range" min="0" max="100" step="0.1">
+            <p class="muted">EV(盜壘) = p × V成功 + (1 − p) × V失敗</p>
+          </div>
+          <div id="decision-readout" class="decision-readout" aria-live="polite">
+            <strong id="decision-label"></strong>
+            <span id="decision-math"></span>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>此情境</th><th>V成功</th><th>V失敗</th><th>V不跑</th><th>損益兩平</th><th>出局成本</th><th>期望出局懲罰</th></tr></thead>
+            <tbody id="case-values"></tbody>
+          </table>
+        </div>
+        <div class="table-wrap" style="margin-top:18px">
+          <table>
+            <thead><tr><th>打者模型</th><th>PA</th><th>1B</th><th>2B</th><th>3B</th><th>HR</th><th>BB/HBP</th><th>其他上壘</th><th>OUT</th></tr></thead>
+            <tbody id="case-profile"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="scope-title">
+      <h2 id="scope-title">解讀邊界</h2>
+      <ul class="note-list">
+        <li>這是得分期望值（RE），不是勝率增加值（WPA）。</li>
+        <li>目前不估盜壘成功率；成功率由使用者或後續模型提供。</li>
+        <li>跑者速度、投捕手組合、比分與投手能力尚未個人化。</li>
+        <li>第八局下半沒有真實的下一次進攻；模型仍以假想下一半局維持比較尺度一致。</li>
+        <li>三條路線皆比較「目前半局剩餘 + 球隊下一次進攻半局」。</li>
+        <li>這份頁面是模型結果的可追溯說明，不代表教練當時的選擇一定正確或錯誤。</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer><div class="wrap">資料：CPBL 官網逐球紀錄 · 模型版本 batter-outcome-and-lineup-v1 · 產生時間 <span id="generated-at"></span></div></footer>
+
+  <script id="report-data" type="application/json">__REPORT_DATA__</script>
+  <script>
+/*__SCRIPT__*/
+  </script>
+</body>
+</html>
