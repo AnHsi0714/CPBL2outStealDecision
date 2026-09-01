@@ -199,6 +199,43 @@
       </div>
     </section>
 
+    <section id="runner-section" aria-labelledby="runner-title" hidden>
+      <h2 id="runner-title">符合門檻的跑者名單</h2>
+      <div class="panel">
+        <p class="muted">門檻不是單一數字——上一節已經看到門檻隨下一棒棒次從 <strong id="runner-threshold-min"></strong> 一路變到 <strong id="runner-threshold-max"></strong>。所以這裡不是「這位跑者達標或沒達標」的單一判定，而是每位跑者拿他<span id="runner-season-label"></span>單季「一壘盜二壘」的實際成功率（不含盜三壘、雙盜壘），逐一比對 1–9 棒各自的門檻：換到門檻低的棒次可能值得跑，換到門檻高的棒次可能不值得——同一個跑者，答案會因為現在是第幾棒在打擊而不同。只用單季資料，不跨季合併：球員可能轉型或老化，教練現在該不該派他跑，要看這一季的實際表現。嘗試次數低於 <strong id="runner-min-attempts"></strong> 次的樣本太少，另外標記「樣本不足」。</p>
+        <div class="grid" style="margin-top:14px">
+          <article class="stat"><small>任一棒次都可跑</small><strong id="runner-count-all"></strong><span>成功率高過全部 9 棒門檻</span></article>
+          <article class="stat"><small>視下一棒棒次而定</small><strong id="runner-count-depends"></strong><span>部分棒次值得跑，部分不值得</span></article>
+          <article class="stat"><small>任一棒次都不建議跑</small><strong id="runner-count-none"></strong><span>連門檻最低的棒次都不夠格</span></article>
+          <article class="stat"><small>樣本不足</small><strong id="runner-count-insufficient"></strong><span id="runner-min-attempts-note"></span></article>
+        </div>
+        <details style="margin-top:22px">
+          <summary>展開完整跑者名單（<span id="runner-total-count"></span> 人，可搜尋／篩選）</summary>
+          <div class="controls" style="grid-template-columns: 1fr 1fr; margin-top:18px">
+            <label>搜尋跑者或球隊
+              <input id="runner-search" type="search" placeholder="例如：潘傑楷、統一">
+            </label>
+            <label>篩選判定
+              <select id="runner-filter">
+                <option value="">全部</option>
+                <option value="任一棒次都可跑">只看任一棒次都可跑</option>
+                <option value="視下一棒棒次而定">只看視下一棒棒次而定</option>
+                <option value="任一棒次都不建議跑">只看任一棒次都不建議跑</option>
+                <option value="樣本不足">只看樣本不足</option>
+              </select>
+            </label>
+          </div>
+          <div class="table-wrap" style="margin-top:14px">
+            <table>
+              <thead><tr><th>跑者</th><th>球隊</th><th>嘗試</th><th>成功率</th><th>判定</th><th>1–9 棒：可跑（綠）／不建議（紅）</th></tr></thead>
+              <tbody id="runner-table"></tbody>
+            </table>
+          </div>
+          <p class="muted" style="margin-top:14px" id="runner-unresolved-note"></p>
+        </details>
+      </div>
+    </section>
+
     <section aria-labelledby="explorer-title">
       <h2 id="explorer-title">逐筆重算：換一位打者就會得到不同答案</h2>
       <div class="panel">
@@ -215,6 +252,7 @@
           <div><strong id="case-heading"></strong><div id="case-subheading" class="muted"></div></div>
           <div><span class="pill" id="case-actual"></span></div>
         </div>
+        <div id="case-type-badges" style="display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 6px"></div>
 
         <div class="simulator">
           <div>

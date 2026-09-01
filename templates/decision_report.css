@@ -118,6 +118,9 @@
     .note-list li { padding-left: 3px; }
     .muted { color: var(--muted); }
     .pill { display: inline-block; padding: 2px 9px; border: 1px solid var(--line); border-radius: 999px; font-size: .78rem; color: var(--muted); }
+    details summary { cursor: pointer; font-weight: 650; color: var(--success); list-style: revert; }
+    details summary::marker { color: var(--success); }
+    details[open] summary { margin-bottom: 4px; }
     footer { padding: 24px 0 50px; border-top: 1px solid var(--line); color: var(--muted); font-size: .88rem; }
     @media (max-width: 820px) {
       .grid { grid-template-columns: repeat(2, 1fr); }
