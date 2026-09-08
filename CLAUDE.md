@@ -18,7 +18,7 @@ Python 3.11+，純標準庫為主，僅兩個外部相依：
 pip install requests scipy
 ```
 
-`requests` 只有爬蟲（`getData.py`、`find_2out_first_base.py`）需要；`scipy.stats`（Mann-Whitney U）只有 `compare_groups.py` 需要。**刻意不使用 pandas/numpy**（計畫書第 2–3 週技術堆疊），目前資料量下標準庫足夠——新增分析時請沿用 `csv.DictReader` / `statistics` 的寫法。
+`requests` 只有爬蟲（`CPBL_steal_getData.py`、`KBO_steal_getData.py`、`MLB_steal_getData.py`、`find_2out_first_base.py`）需要；`scipy.stats`（Mann-Whitney U）只有 `compare_groups.py` 需要。**刻意不使用 pandas/numpy**（計畫書第 2–3 週技術堆疊），目前資料量下標準庫足夠——新增分析時請沿用 `csv.DictReader` / `statistics` 的寫法。
 
 測試用 unittest：
 
@@ -46,7 +46,23 @@ python -m unittest tests.test_model_batter_decisions
 6. `compare_groups.py` → `cpbl_group_comparison_{tag}.json`（注意：預設 `--input` 是 step 4 的檔案，要納入先發/代打欄位須顯式指定 step 5 的輸出）
 7. `generate_decision_report.py` → `reports/cpbl-steal-decision-{year}.html`（單檔互動報告，payload 內嵌 JSON）
 
-`getData.py` 是獨立的通用逐球匯出（playbyplay / scoreboard / batting CSV），不在上述管線內；參數寫死在檔案最下方，非 argparse。
+`CPBL_steal_getData.py`（原名 `getData.py`，跨聯盟整併時改名）是獨立的通用逐球匯出（playbyplay / scoreboard / batting CSV），不在上述管線內；參數寫死在檔案最下方，非 argparse。`KBO_steal_getData.py`／`MLB_steal_getData.py` 是同模式的另兩個聯盟爬蟲，`combine_leagues.py` 把三份 playbyplay 統一欄位後合併（**目前僅到合併，尚未跑出跨聯盟門檻結果**）。
+
+### 主管線之外的分析腳本
+
+都讀 `outputs/` 既有輸出，可獨立執行，結果會被 `generate_decision_report.py` 自動吸收進報告（找不到對應 JSON 時略過該區塊）：
+
+- `build_re24_matrix.py` → `generate_re24_report.py`：中職 RE24 24 格矩陣與互動熱力圖
+- `analyze_team_decisions.py`：六隊決策品質，用二項檢定判「跑對／跑錯」，不顯著就標「無法判定」
+- `analyze_runner_steal_rates.py`：符合門檻的跑者名單，**逐棒次比對而非比單一門檻**（門檻本身隨棒次變是核心發現，比單一中位數等於丟掉這個結論）
+- `validate_re24_simulation.py`：模擬 RE24 vs 真實 RE24 逐格比較。**引擎若無法重現真實 RE24 就不可繼續往下做**
+- `validate_steal_parsing.py`：文字判讀的盜壘數 vs CPBL 官方 box score 逐場逐隊對帳
+
+### 資料品質：公告列過濾（必讀）
+
+CPBL 逐球資料混有「換投手／代打／代跑／守備」等純公告列，其 `OutCnt` 與壘包欄位是殘留舊值，約佔全部列數 3%，未過濾會嚴重污染「兩出局、空壘」這格的 RE24。過濾邏輯在 `cpbl_row_filters.py`（獨立成模組是為避免與 `CPBL_steal_getData.py` 循環 import）。
+
+**任何新增的原始列解析都必須套用 `remove_administrative_rows`**，否則會重蹈這個 bug。2026-08-29 的 commit `28321aa` 修正此問題後，四季結果全部重跑過——若看到 `outputs/` 與 git 歷史對不上的數字，先確認是不是修正前的殘留。
 
 ### 各腳本預設年份不一致（常見陷阱）
 
