@@ -167,10 +167,12 @@ def batter_type_correlations(qualified_rows: list[dict[str, Any]]) -> dict[str, 
     bb = [float(row["BBpct_proxy"]) for row in unique_batters]
     obp = [float(row["OBP_proxy"]) for row in unique_batters]
     single = [float(row["SingleRate_proxy"]) for row in unique_batters]
+    tto = [float(row["TTO_proxy"]) for row in unique_batters]
     return {
         "iso_vs_bb": pearson_correlation(iso, bb),
         "iso_vs_obp": pearson_correlation(iso, obp),
         "iso_vs_single": pearson_correlation(iso, single),
+        "iso_vs_tto": pearson_correlation(iso, tto),
         "batters": len(iso),
     }
 
@@ -214,6 +216,9 @@ def main() -> int:
     high_contact = [row["_threshold"] for row in qualified_rows if row["ContactGroup"] == "high_1B"]
     low_contact = [row["_threshold"] for row in qualified_rows if row["ContactGroup"] == "low_1B"]
 
+    high_tto = [row["_threshold"] for row in qualified_rows if row["TTOGroup"] == "high_TTO"]
+    low_tto = [row["_threshold"] for row in qualified_rows if row["TTOGroup"] == "low_TTO"]
+
     summary = {
         "input_rows": len(rows),
         "valid_threshold_rows": len(valid_rows),
@@ -225,11 +230,13 @@ def main() -> int:
             compare_two_groups("patience_high_vs_low_BB", "high_BB", high_bb, "low_BB", low_bb),
             compare_two_groups("obp_high_vs_low_OBP", "high_OBP", high_obp, "low_OBP", low_obp),
             compare_two_groups("contact_high_vs_low_1B", "high_1B", high_contact, "low_1B", low_contact),
+            compare_two_groups("tto_high_vs_low_TTO", "high_TTO", high_tto, "low_TTO", low_tto),
         ],
         "cross_table_lineup_x_power": cross_table(qualified_rows, "LineupGroup", "PowerGroup"),
         "cross_table_lineup_x_patience": cross_table(qualified_rows, "LineupGroup", "PatienceGroup"),
         "cross_table_lineup_x_obp": cross_table(qualified_rows, "LineupGroup", "OBPGroup"),
         "cross_table_lineup_x_contact": cross_table(qualified_rows, "LineupGroup", "ContactGroup"),
+        "cross_table_lineup_x_tto": cross_table(qualified_rows, "LineupGroup", "TTOGroup"),
         "lineup_slot_breakdown": lineup_slot_breakdown(valid_rows),
         "lineup_substitution": substitution_stats(rows),
     }
