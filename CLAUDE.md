@@ -58,6 +58,11 @@ python -m unittest tests.test_model_batter_decisions
 - `validate_re24_simulation.py`：模擬 RE24 vs 真實 RE24 逐格比較。**引擎若無法重現真實 RE24 就不可繼續往下做**
 - `validate_steal_parsing.py`：文字判讀的盜壘數 vs CPBL 官方 box score 逐場逐隊對帳
 
+以下兩支只吃 `cpbl_decision_model_*.csv`（`analyze_batter_threshold_correlations.py` 另吃 `cpbl_batter_profiles_*.csv`），輸出 CSV＋文字結論寫進 README「跨年度穩定性檢查」一節，**不會**被 `generate_decision_report.py` 吸收進互動報告：
+
+- `analyze_retention_contribution.py`：逐棒次的保留效應貢獻（pp）。反事實直接重用 `model_batter_decisions.py` 每筆決策已算好但原本沒用上的 `ModelVIfBatterOut`（正常出局、下一局改由下一棒開局），不必重跑模擬
+- `analyze_batter_threshold_correlations.py`：打者層級門檻（該打者所有決策點 `BreakEvenSuccessRate` 中位數）跟 HR/長打/保送/單打率、打擊率、出局率的 Pearson 相關係數
+
 ### 資料品質：公告列過濾（必讀）
 
 CPBL 逐球資料混有「換投手／代打／代跑／守備」等純公告列，其 `OutCnt` 與壘包欄位是殘留舊值，約佔全部列數 3%，未過濾會嚴重污染「兩出局、空壘」這格的 RE24。過濾邏輯在 `cpbl_row_filters.py`（獨立成模組是為避免與 `CPBL_steal_getData.py` 循環 import）。
