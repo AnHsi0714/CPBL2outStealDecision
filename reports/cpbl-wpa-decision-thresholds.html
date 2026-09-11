@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WPA 版損益兩平門檻</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f1ea;
+      --surface: #fffdf8;
+      --text: #18201c;
+      --muted: #65706a;
+      --line: #d9d4c9;
+      --accent: #d59c25;
+      --shadow: 0 14px 35px rgba(43, 49, 45, .09);
+      --series-wpa: #2a78d6;
+      --series-re: #eb6834;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111512;
+        --surface: #1a201c;
+        --text: #edf2ee;
+        --muted: #aab5ae;
+        --line: #39423c;
+        --accent: #efbd55;
+        --shadow: none;
+        --series-wpa: #3987e5;
+        --series-re: #d95926;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      line-height: 1.65;
+    }
+    .wrap { width: min(1080px, calc(100% - 32px)); margin: 0 auto; }
+    header { padding: 56px 0 26px; border-bottom: 1px solid var(--line); }
+    .eyebrow { color: var(--accent); font-weight: 700; letter-spacing: .08em; }
+    h1 { max-width: 820px; margin: 8px 0 12px; font-size: clamp(1.8rem, 4.4vw, 3rem); line-height: 1.14; letter-spacing: -.03em; }
+    h2 { margin: 0 0 6px; font-size: clamp(1.2rem, 2.4vw, 1.5rem); }
+    p { margin: 0 0 12px; }
+    .lede { max-width: 740px; color: var(--muted); font-size: 1.03rem; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 20px; color: var(--muted); font-size: .88rem; }
+    main { padding: 34px 0 80px; }
+    section { margin: 0 0 48px; }
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 24px; }
+    h3 { margin: 0 0 10px; font-size: 1.05rem; }
+    code { font-family: "Cascadia Code", Consolas, monospace; background: var(--bg); padding: 1px 6px; border-radius: 5px; }
+    .grid { display: grid; gap: 14px; }
+    .stat { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+    .stat small { display: block; color: var(--muted); font-size: .82rem; }
+    .stat strong { display: block; margin: 4px 0; font-size: 1.5rem; line-height: 1.2; }
+    .stat span { color: var(--muted); font-size: .8rem; }
+
+    .legend { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 18px; font-size: .88rem; color: var(--muted); }
+    .legend-item { display: flex; align-items: center; gap: 8px; }
+    .legend-swatch { width: 22px; height: 3px; border-radius: 2px; flex: none; }
+    .legend-swatch.wpa { background: var(--series-wpa); }
+    .legend-swatch.re { width: 10px; height: 10px; border-radius: 2px; transform: rotate(45deg); background: var(--series-re); }
+
+    .panels { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+    .season-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 18px 18px 10px; }
+    .season-panel h3 { margin: 0 0 10px; font-size: 1rem; color: var(--text); }
+    .season-panel svg { width: 100%; height: auto; display: block; }
+
+    .mark { cursor: default; }
+    .mark:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .mark-tooltip {
+      position: relative;
+    }
+    .row-note { font-size: .68rem; fill: var(--muted); }
+    .axis-label { font-size: .66rem; fill: var(--muted); }
+    .gridline { stroke: var(--line); stroke-width: 1; }
+    .baseline { stroke: var(--muted); stroke-width: 1; opacity: .5; }
+
+    [data-tooltip] { position: relative; }
+    [data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--text);
+      color: var(--surface);
+      padding: 5px 9px;
+      border-radius: 7px;
+      font-size: .74rem;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .12s ease;
+      z-index: 5;
+      box-shadow: var(--shadow);
+    }
+    [data-tooltip]:hover::after, [data-tooltip]:focus::after { opacity: 1; }
+
+    .footnote { margin-top: 10px; font-size: .78rem; color: var(--muted); }
+
+    .table-wrap { overflow-x: auto; margin-top: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+    th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+    th { color: var(--muted); font-weight: 650; }
+    td.unreliable { color: var(--muted); }
+    .flag { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: .72rem; font-weight: 650; }
+    .flag.clear { background: color-mix(in srgb, var(--series-wpa) 16%, transparent); color: var(--series-wpa); }
+    .flag.overlap { background: color-mix(in srgb, var(--muted) 22%, transparent); color: var(--muted); }
+
+    details > summary { cursor: pointer; color: var(--muted); font-size: .88rem; margin-top: 4px; }
+
+    .note-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+    .note-list li { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: .88rem; color: var(--muted); }
+
+    footer { padding: 24px 0 50px; border-top: 1px solid var(--line); color: var(--muted); font-size: .85rem; }
+    @media (max-width: 760px) {
+      .panels { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr !important; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="eyebrow">CPBL 2023/2024/2025/2026 REGULAR SEASON</div>
+      <h1>WPA 版損益兩平門檻：哪幾局可以放心改用勝率判準</h1>
+      <p class="lede">把 WE 勝率矩陣接回三分支決策模型，算出用「勝率增值」而非「剩餘得分」當價值函數的損益兩平門檻，再用 bootstrap 信賴區間驗證結論站不站得住雜訊。每季各自獨立跑過一次，四季放在一起看方向是否一致。</p>
+      <div class="meta">
+        <span>四季合併驗證：2023 / 2024 / 2025 / 2026</span>
+        <span>bootstrap 1,000 次／季</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section aria-labelledby="finding-title">
+      <h2 id="finding-title">結論：從第 2 局起方向就一致，第 4 局起數字就穩定可信</h2>
+      <div class="panel">
+        <p>RE 版模型算出來的門檻幾乎不隨局數變（各局都落在 54–60% 左右），因為它只看「這次盜壘能不能幫本半局多得分」，不管這一分現在多值錢、也不管對手接下來會怎麼打。WPA 版把這兩件事都算進去後，門檻明顯偏低，而且從第 4 局起連點估計本身都很穩定（中位數落在自己 95% 信賴區間之內，四季皆然）：</p>
+        <div class="table-wrap" style="margin-top:14px">
+          <table>
+            <thead><tr><th>局</th><th>RE 門檻中位數（四季範圍）</th><th>WPA 門檻中位數（四季範圍）</th></tr></thead>
+            <tbody>
+              <tr><td>第 4 局</td><td>54–59%</td><td>39–45%</td></tr>
+              <tr><td>第 6 局</td><td>55–59%</td><td>31–39%</td></tr>
+              <tr><td>第 7 局</td><td>54–58%</td><td>20–25%</td></tr>
+              <tr><td>第 8 局</td><td>55–60%</td><td>29–30%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="margin-top:16px"><strong>對教練實務的意思</strong>：如果盜壘「該不該跑」的判斷基準是抓在 RE 版隱含的 55–60% 成功率上下，這份分析認為那個基準從第 4 局起就明顯偏保守。同一位跑者、同一個情境，用勝率當判準時可以接受的成功率其實低很多，第 6–8 局差距最大。<strong>第 2–3 局方向也一致（信賴區間一樣穩穩落在 RE 門檻之下，見下方逐局圖），但那兩局的「中位數」這個單一數字本身還不夠穩定，不建議拿來當精確數字用；真正能放心引用點估計的是第 4 局以後。</strong></p>
+
+        <h3 style="margin-top:24px">為什麼門檻會隨局數下降：同一分的份量變重了</h3>
+        <p>機制不是「晚局盜壘比較容易成功」，而是「讓這個半局現在結束（不管是盜壘刺、還是打者自己正常出局），代價隨局數變重」。同一個 1 分領先／落後，換算成勝率的意義完全不同：</p>
+        <div class="grid" style="margin-top:14px; grid-template-columns:repeat(3,1fr)">
+<article class="stat"><small>第 1–6 局．領先 1 分時的勝率</small><strong>59.0%</strong><span>n=546</span></article><article class="stat"><small>第 7 局．領先 1 分時的勝率</small><strong>72.2%</strong><span>n=90</span></article><article class="stat"><small>第 8 局．領先 1 分時的勝率</small><strong>79.4%</strong><span>n=85</span></article><article class="stat"><small>第 1–6 局．落後 1 分時的勝率</small><strong>24.9%</strong><span>n=453</span></article><article class="stat"><small>第 7 局．落後 1 分時的勝率</small><strong>15.9%</strong><span>n=85</span></article><article class="stat"><small>第 8 局．落後 1 分時的勝率</small><strong>9.3%</strong><span>n=81</span></article>
+        </div>
+        <p style="margin-top:14px">在前六局，領先 1 分只把勝率推到約六成；同樣領先 1 分，到了第 8 局勝率逼近八成。落後 1 分的殺傷力也同樣被放大（前六局約 25% 還能贏，第 8 局只剩不到一成）。門檻公式是 <code>(V不跑－V失敗)／(V成功－V失敗)</code>：當「現在讓半局結束」的代價（V失敗，換算對手視角）跟「打者繼續打、大機率還是出局收場」的代價（V不跑）幾乎一樣重時，分子被壓縮，盜壘失敗多賠的那一點點差距佔比就變小，門檻自然下降。RE 版模型完全看不到這件事，因為它假設每一分的價值到處都一樣。</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="runner-title">
+      <h2 id="runner-title">實際影響：RE 判「不建議跑」的跑者，換成 WPA 有多少人翻盤</h2>
+      <div class="panel">
+        <p>兩套判準會不會吵架，最終要看「同一位跑者、同一個情境，兩套判準的判定是不是同一個答案」。RE 版逐棒次門檻全部落在 54–60% 這個窄帶，能被判成<strong>任一棒次都不建議跑</strong>的跑者，本來就得是成功率明顯偏低的人；WPA 版第 4 局起的門檻只有 20–45%，同一批人換算到晚局，有多少其實夠格盜壘？</p>
+        <div class="table-wrap" style="margin-top:14px">
+          <table>
+            <thead><tr><th>年度</th><th>RE 判「任一棒次都不建議跑」人數</th><th>WPA 下至少一局翻盤</th><th>翻盤比例</th></tr></thead>
+            <tbody><tr><td>2023</td><td>5</td><td>5</td><td>100%</td></tr><tr><td>2024</td><td>3</td><td>2</td><td>67%</td></tr><tr><td>2025</td><td>16</td><td>14</td><td>88%</td></tr><tr><td>2026</td><td>2</td><td>1</td><td>50%</td></tr></tbody>
+          </table>
+        </div>
+        <p style="margin-top:14px">四季裡有兩季（2024、2026）這個「RE 判定不建議跑」的名單本身只有 2、3 人，翻盤比例（67%、50%）波動大是小樣本的正常現象，不必過度解讀單一年份的百分比；但四季合計看，這個群體裡多數人（尤其在第 7、8 局）換算 WPA 門檻後都夠格，方向沒有一季反過來。<strong>這代表 RE 版分析低估的不只是「晚局門檻該多低」，也低估了「有多少現有的跑者其實夠格在晚局盜壘」。</strong>教練名單上被 RE 分析歸類成「這個人別讓他跑」的球員，很大一部分並不是真的不夠快，只是被一套沒把局數／比分算進去的判準錯殺。</p>
+        <details style="margin-top:14px">
+          <summary>展開完整名單（RE 判「任一棒次都不建議跑」的跑者，逐局 WPA 判定）</summary>
+          <div class="table-wrap" style="margin-top:10px">
+            <table>
+              <thead><tr><th>年度</th><th>跑者</th><th>球隊</th><th>RE 成功率</th><th>嘗試次數</th><th>WPA 下夠格的局數</th></tr></thead>
+              <tbody><tr><td>2023</td><td>林靖凱</td><td>統一7-ELEVEn獅</td><td>50.0%</td><td>10</td><td>4局、5局、6局、7局、8局</td></tr><tr><td>2023</td><td>陳重羽</td><td>統一7-ELEVEn獅</td><td>50.0%</td><td>6</td><td>4局、5局、6局、7局、8局</td></tr><tr><td>2023</td><td>姚冠瑋</td><td>富邦悍將</td><td>40.0%</td><td>5</td><td>4局、5局、6局、7局、8局</td></tr><tr><td>2023</td><td>張仁瑋</td><td>中信兄弟</td><td>40.0%</td><td>5</td><td>4局、5局、6局、7局、8局</td></tr><tr><td>2023</td><td>周思齊</td><td>中信兄弟</td><td>33.3%</td><td>6</td><td>5局、7局、8局</td></tr><tr><td>2024</td><td>李宗賢</td><td>富邦悍將</td><td>52.9%</td><td>17</td><td>4局、5局、6局、7局、8局</td></tr><tr><td>2024</td><td>高宇杰</td><td>中信兄弟</td><td>50.0%</td><td>8</td><td>4局、5局、6局、7局、8局</td></tr><tr><td>2024</td><td>陳俊秀</td><td>中信兄弟</td><td>20.0%</td><td>5</td><td>無（各局皆不夠格）</td></tr><tr><td>2025</td><td>紀慶然</td><td>台鋼雄鷹</td><td>54.5%</td><td>11</td><td>4局、5局、6局、7局、8局</td></tr><tr><td>2025</td><td>張政禹</td><td>味全龍</td><td>52.2%</td><td>23</td><td>4局、5局、6局、7局、8局</td></tr><tr><td>2025</td><td>陳傑憲</td><td>統一7-ELEVEn獅</td><td>50.0%</td><td>8</td><td>4局、5局、6局、7局、8局</td></tr><tr><td>2025</td><td>李宗賢</td><td>富邦悍將</td><td>50.0%</td><td>6</td><td>4局、5局、6局、7局、8局</td></tr><tr><td>2025</td><td>林靖凱</td><td>統一7-ELEVEn獅</td><td>50.0%</td><td>6</td><td>4局、5局、6局、7局、8局</td></tr><tr><td>2025</td><td>岳政華</td><td>中信兄弟</td><td>47.8%</td><td>23</td><td>4局、5局、6局、7局、8局</td></tr><tr><td>2025</td><td>陳子豪</td><td>味全龍</td><td>45.5%</td><td>11</td><td>4局、5局、6局、7局、8局</td></tr><tr><td>2025</td><td>成晉</td><td>樂天桃猿</td><td>44.4%</td><td>9</td><td>5局、6局、7局、8局</td></tr><tr><td>2025</td><td>蘇智傑</td><td>統一7-ELEVEn獅</td><td>40.0%</td><td>5</td><td>6局、7局、8局</td></tr><tr><td>2025</td><td>朱育賢</td><td>味全龍</td><td>40.0%</td><td>5</td><td>6局、7局、8局</td></tr><tr><td>2025</td><td>蔡佳諺</td><td>富邦悍將</td><td>40.0%</td><td>5</td><td>6局、7局、8局</td></tr><tr><td>2025</td><td>孔念恩</td><td>富邦悍將</td><td>35.7%</td><td>14</td><td>7局、8局</td></tr><tr><td>2025</td><td>林智平</td><td>樂天桃猿</td><td>33.3%</td><td>9</td><td>7局、8局</td></tr><tr><td>2025</td><td>劉俊緯</td><td>味全龍</td><td>33.3%</td><td>6</td><td>7局、8局</td></tr><tr><td>2025</td><td>林澤彬</td><td>富邦悍將</td><td>14.3%</td><td>7</td><td>無（各局皆不夠格）</td></tr><tr><td>2025</td><td>許基宏</td><td>中信兄弟</td><td>0.0%</td><td>5</td><td>無（各局皆不夠格）</td></tr><tr><td>2026</td><td>陳傑憲</td><td>統一7-ELEVEn獅</td><td>36.4%</td><td>11</td><td>6局、7局、8局</td></tr><tr><td>2026</td><td>王念好</td><td>富邦悍將</td><td>20.0%</td><td>5</td><td>無（各局皆不夠格）</td></tr></tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section aria-labelledby="groups-title">
+      <h2 id="groups-title">棒次與打者類型分組：換成 WPA 還成不成立</h2>
+      <div class="panel">
+        <p>「棒次 × 打者類型分組分析」一節的結論（低點在 1、2 棒、高點在第 4 棒、高長打與高選球打者門檻都比對照組高）全部是用全部局數（1–8 局）的 RE 版門檻算出來的。這裡只用第 4–8 局的決策重算一次，RE 版也用同一個子集重算，兩邊才是同一批樣本、只差價值函數，比較才公平（`compare_wpa_groups.py`）。</p>
+
+        <h3 style="margin-top:22px">逐棒次門檻的最低點，四季不穩定</h3>
+        <p>RE 版在第 4–8 局子集裡仍然穩定重現「低點在 1、2 棒」；WPA 版逐棒次門檻的最低點，四季分別落在不同棒次，沒有共同模式。把已經有雜訊的 WPA 門檻再切成 9 個棒次子群、每群只剩 30–80 筆，訊噪比撐不住。<strong>棒次分析「1、2 棒相對適合冒險」的結論，目前只在 RE 版本上站得住，換成 WPA 還不能下結論。</strong></p>
+        <div class="table-wrap" style="margin-top:14px">
+          <table>
+            <thead><tr><th>年度</th><th>RE 門檻最低棒次</th><th>WPA 門檻最低棒次</th></tr></thead>
+            <tbody><tr><td>2023</td><td>第 2 棒（54.1%）</td><td>第 2 棒（26.4%）</td></tr><tr><td>2024</td><td>第 2 棒（54.3%）</td><td>第 9 棒（27.1%）</td></tr><tr><td>2025</td><td>第 1 棒（55.5%）</td><td>第 6 棒（25.7%）</td></tr><tr><td>2026</td><td>第 2 棒（50.5%）</td><td>第 2 棒（27.6%）</td></tr></tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top:26px">打者類型分組：三種不同結果</h3>
+        <p>五個分組軸換成 WPA 判準後，結果分三種情況，不是全部一致才算「WPA 有效」：</p>
+        <div class="table-wrap" style="margin-top:14px">
+          <table>
+            <thead><tr><th>分組</th><th>RE 方向（四季）</th><th>WPA 方向（四季）</th><th>結論</th></tr></thead>
+            <tbody><tr><td>長打力（ISO）</td><td>高組門檻較高（4/4 季）</td><td>高組門檻較高（3/4 季），3/4 季顯著</td><td><span class="flag clear">方向保留</span></td></tr><tr><td>選球力（BB%）</td><td>高組門檻較高（4/4 季）</td><td>高組門檻較高（4/4 季），2/4 季顯著</td><td><span class="flag clear">方向保留</span></td></tr><tr><td>真上壘率（OBP）</td><td>高組門檻較低（4/4 季）</td><td>高組門檻較高（4/4 季），3/4 季顯著</td><td><span class="flag overlap">方向反轉</span></td></tr><tr><td>單打率（接觸型）</td><td>高組門檻較低（4/4 季）</td><td>高組門檻較低（3/4 季），0/4 季顯著</td><td><span class="flag clear">方向保留，顯著性減弱</span></td></tr><tr><td>TTO 複合指標</td><td>高組門檻較高（4/4 季）</td><td>高組門檻較高（4/4 季），1/4 季顯著</td><td><span class="flag clear">方向保留，顯著性減弱</span></td></tr></tbody>
+          </table>
+        </div>
+        <p style="margin-top:14px"><strong>長打力與選球力方向大致保留</strong>，跟 RE 版「愈強打者愈不該冒險」的核心結論同調，代表這兩個發現有跨判準的穩健性。<strong>單打率與 TTO 方向也沒有反過來</strong>，只是樣本切到第 4–8 局、再拆高低兩組後，統計顯著性撐不住，比較精確的說法是「WPA 版目前的樣本量還驗證不了」，不是效應消失。</p>
+        <p style="margin-top:10px"><strong>真上壘率（OBP）分組是唯一一個方向真的反過來的</strong>，而且四季全部同向反轉，不太像純雜訊。RE 版本來就發現改用真上壘率分組時，結論會跟長打力／選球力方向相反（上壘率把安打也算進去，安打型打者本來就更容易靠自己把跑者送回來，這股力量的方向跟別的效應相反）；換成 WPA 後，同一個「安打把人送回來」的能力，換算對手視角後的相對重要性可能不同，導致再次反轉。這是值得再深入拆解的地方，目前資料只夠說「四季都反轉」，還不夠拆出真正機制。</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="chart-title">
+      <h2 id="chart-title">這站得住嗎：逐局 WPA 95% 信賴區間 vs RE 門檻中位數</h2>
+      <p class="lede" style="margin-bottom:14px">藍色線段是 WPA 門檻的 95% bootstrap 信賴區間（圓點＝中位數）；橘色菱形是同一局 RE 版模型的門檻中位數。只要橘色菱形落在藍色線段的範圍**之外**（在它右邊），代表這一局改用 WPA 判準的門檻明顯比 RE 低，而且不是抽樣雜訊。四張圖裡，第 2–8 局橘色菱形都清楚落在藍色區間右邊，只有第 1 局（標 † 的列）兩季重疊，數字不可信。</p>
+      <div class="legend">
+        <div class="legend-item"><span class="legend-swatch wpa"></span>WPA 門檻 95% CI（圓點＝中位數）</div>
+        <div class="legend-item"><span class="legend-swatch re"></span>RE 門檻中位數</div>
+      </div>
+      <div class="panels">
+<div class="season-panel"><h3>2023</h3><svg viewBox="0 0 460 312" role="img" aria-label="2023 年逐局 WPA 與 RE 門檻對照圖"><line class="gridline" x1="112.0" y1="14" x2="112.0" y2="286" /><text class="axis-label" x="112.0" y="302" text-anchor="middle">0%</text><line class="gridline" x1="184.9" y1="14" x2="184.9" y2="286" /><text class="axis-label" x="184.9" y="302" text-anchor="middle">20%</text><line class="gridline" x1="257.8" y1="14" x2="257.8" y2="286" /><text class="axis-label" x="257.8" y="302" text-anchor="middle">40%</text><line class="gridline" x1="330.7" y1="14" x2="330.7" y2="286" /><text class="axis-label" x="330.7" y="302" text-anchor="middle">60%</text><line class="gridline" x1="403.6" y1="14" x2="403.6" y2="286" /><text class="axis-label" x="403.6" y="302" text-anchor="middle">80%</text><text class="axis-label" x="6" y="35.0">第1局&#8224;</text><g class="mark" tabindex="0" data-tooltip="第1局 WPA 門檻中位數 71.7%（95% CI 42.7%–59.7%，n=87）"><line x1="267.6" y1="31.0" x2="329.7" y2="31.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="373.3" cy="31.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第1局 RE 門檻中位數 61.5%" transform="translate(336.2,31.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="69.0">第2局</text><g class="mark" tabindex="0" data-tooltip="第2局 WPA 門檻中位數 55.5%（95% CI 32.7%–48.6%，n=96）"><line x1="231.1" y1="65.0" x2="289.0" y2="65.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="314.4" cy="65.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第2局 RE 門檻中位數 60.4%" transform="translate(332.0,65.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="103.0">第3局</text><g class="mark" tabindex="0" data-tooltip="第3局 WPA 門檻中位數 42.3%（95% CI 29.9%–48.1%，n=101）"><line x1="221.0" y1="99.0" x2="287.3" y2="99.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="266.2" cy="99.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第3局 RE 門檻中位數 58.5%" transform="translate(325.2,99.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="137.0">第4局</text><g class="mark" tabindex="0" data-tooltip="第4局 WPA 門檻中位數 38.5%（95% CI 28.8%–44.6%，n=100）"><line x1="216.8" y1="133.0" x2="274.7" y2="133.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="252.3" cy="133.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第4局 RE 門檻中位數 59.3%" transform="translate(328.0,133.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="171.0">第5局</text><g class="mark" tabindex="0" data-tooltip="第5局 WPA 門檻中位數 32.3%（95% CI 26.4%–41.7%，n=118）"><line x1="208.1" y1="167.0" x2="264.0" y2="167.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="229.9" cy="167.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第5局 RE 門檻中位數 56.8%" transform="translate(319.1,167.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="205.0">第6局</text><g class="mark" tabindex="0" data-tooltip="第6局 WPA 門檻中位數 37.5%（95% CI 26.0%–42.4%，n=86）"><line x1="206.7" y1="201.0" x2="266.5" y2="201.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="248.7" cy="201.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第6局 RE 門檻中位數 58.6%" transform="translate(325.6,201.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="239.0">第7局</text><g class="mark" tabindex="0" data-tooltip="第7局 WPA 門檻中位數 23.1%（95% CI 19.0%–31.2%，n=88）"><line x1="181.1" y1="235.0" x2="225.5" y2="235.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="196.4" cy="235.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第7局 RE 門檻中位數 58.5%" transform="translate(325.0,235.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="273.0">第8局</text><g class="mark" tabindex="0" data-tooltip="第8局 WPA 門檻中位數 30.1%（95% CI 23.2%–33.1%，n=98）"><line x1="196.4" y1="269.0" x2="232.6" y2="269.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="221.7" cy="269.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第8局 RE 門檻中位數 60.3%" transform="translate(331.9,269.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g></svg></div>
+<div class="season-panel"><h3>2024</h3><svg viewBox="0 0 460 312" role="img" aria-label="2024 年逐局 WPA 與 RE 門檻對照圖"><line class="gridline" x1="112.0" y1="14" x2="112.0" y2="286" /><text class="axis-label" x="112.0" y="302" text-anchor="middle">0%</text><line class="gridline" x1="184.9" y1="14" x2="184.9" y2="286" /><text class="axis-label" x="184.9" y="302" text-anchor="middle">20%</text><line class="gridline" x1="257.8" y1="14" x2="257.8" y2="286" /><text class="axis-label" x="257.8" y="302" text-anchor="middle">40%</text><line class="gridline" x1="330.7" y1="14" x2="330.7" y2="286" /><text class="axis-label" x="330.7" y="302" text-anchor="middle">60%</text><line class="gridline" x1="403.6" y1="14" x2="403.6" y2="286" /><text class="axis-label" x="403.6" y="302" text-anchor="middle">80%</text><text class="axis-label" x="6" y="35.0">第1局&#8224;</text><g class="mark" tabindex="0" data-tooltip="第1局 WPA 門檻中位數 80.4%（95% CI 46.2%–61.0%，n=117）"><line x1="280.3" y1="31.0" x2="334.2" y2="31.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="405.1" cy="31.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第1局 RE 門檻中位數 58.6%" transform="translate(325.7,31.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="69.0">第2局</text><g class="mark" tabindex="0" data-tooltip="第2局 WPA 門檻中位數 66.1%（95% CI 37.6%–52.9%，n=112）"><line x1="249.1" y1="65.0" x2="304.6" y2="65.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="353.0" cy="65.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第2局 RE 門檻中位數 57.2%" transform="translate(320.6,65.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="103.0">第3局</text><g class="mark" tabindex="0" data-tooltip="第3局 WPA 門檻中位數 48.1%（95% CI 33.1%–47.8%，n=130）"><line x1="232.7" y1="99.0" x2="286.2" y2="99.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="287.4" cy="99.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第3局 RE 門檻中位數 56.4%" transform="translate(317.7,99.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="137.0">第4局</text><g class="mark" tabindex="0" data-tooltip="第4局 WPA 門檻中位數 42.7%（95% CI 29.1%–45.8%，n=112）"><line x1="218.1" y1="133.0" x2="278.8" y2="133.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="267.5" cy="133.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第4局 RE 門檻中位數 58.1%" transform="translate(323.7,133.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="171.0">第5局</text><g class="mark" tabindex="0" data-tooltip="第5局 WPA 門檻中位數 42.7%（95% CI 32.1%–46.3%，n=137）"><line x1="229.0" y1="167.0" x2="280.7" y2="167.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="267.5" cy="167.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第5局 RE 門檻中位數 56.4%" transform="translate(317.6,167.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="205.0">第6局</text><g class="mark" tabindex="0" data-tooltip="第6局 WPA 門檻中位數 39.2%（95% CI 28.7%–43.8%，n=121）"><line x1="216.4" y1="201.0" x2="271.6" y2="201.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="254.7" cy="201.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第6局 RE 門檻中位數 57.3%" transform="translate(321.0,201.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="239.0">第7局</text><g class="mark" tabindex="0" data-tooltip="第7局 WPA 門檻中位數 24.1%（95% CI 19.8%–30.9%，n=107）"><line x1="184.0" y1="235.0" x2="224.6" y2="235.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="199.9" cy="235.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第7局 RE 門檻中位數 57.7%" transform="translate(322.1,235.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="273.0">第8局</text><g class="mark" tabindex="0" data-tooltip="第8局 WPA 門檻中位數 30.0%（95% CI 23.3%–33.2%，n=123）"><line x1="196.8" y1="269.0" x2="233.1" y2="269.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="221.4" cy="269.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第8局 RE 門檻中位數 58.3%" transform="translate(324.4,269.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g></svg></div>
+<div class="season-panel"><h3>2025</h3><svg viewBox="0 0 460 312" role="img" aria-label="2025 年逐局 WPA 與 RE 門檻對照圖"><line class="gridline" x1="112.0" y1="14" x2="112.0" y2="286" /><text class="axis-label" x="112.0" y="302" text-anchor="middle">0%</text><line class="gridline" x1="184.9" y1="14" x2="184.9" y2="286" /><text class="axis-label" x="184.9" y="302" text-anchor="middle">20%</text><line class="gridline" x1="257.8" y1="14" x2="257.8" y2="286" /><text class="axis-label" x="257.8" y="302" text-anchor="middle">40%</text><line class="gridline" x1="330.7" y1="14" x2="330.7" y2="286" /><text class="axis-label" x="330.7" y="302" text-anchor="middle">60%</text><line class="gridline" x1="403.6" y1="14" x2="403.6" y2="286" /><text class="axis-label" x="403.6" y="302" text-anchor="middle">80%</text><text class="axis-label" x="6" y="35.0">第1局&#8224;</text><g class="mark" tabindex="0" data-tooltip="第1局 WPA 門檻中位數 76.4%（95% CI 41.8%–60.0%，n=95）"><line x1="264.2" y1="31.0" x2="330.7" y2="31.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="390.5" cy="31.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第1局 RE 門檻中位數 61.7%" transform="translate(337.0,31.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="69.0">第2局</text><g class="mark" tabindex="0" data-tooltip="第2局 WPA 門檻中位數 61.8%（95% CI 37.2%–51.5%，n=112）"><line x1="247.6" y1="65.0" x2="299.7" y2="65.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="337.2" cy="65.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第2局 RE 門檻中位數 58.6%" transform="translate(325.4,65.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="103.0">第3局</text><g class="mark" tabindex="0" data-tooltip="第3局 WPA 門檻中位數 50.1%（95% CI 32.5%–48.2%，n=125）"><line x1="230.3" y1="99.0" x2="287.6" y2="99.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="294.8" cy="99.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第3局 RE 門檻中位數 56.1%" transform="translate(316.5,99.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="137.0">第4局</text><g class="mark" tabindex="0" data-tooltip="第4局 WPA 門檻中位數 45.1%（95% CI 31.0%–45.4%，n=138）"><line x1="224.9" y1="133.0" x2="277.4" y2="133.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="276.3" cy="133.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第4局 RE 門檻中位數 58.6%" transform="translate(325.6,133.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="171.0">第5局</text><g class="mark" tabindex="0" data-tooltip="第5局 WPA 門檻中位數 42.3%（95% CI 29.0%–44.3%，n=133）"><line x1="217.8" y1="167.0" x2="273.4" y2="167.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="266.3" cy="167.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第5局 RE 門檻中位數 57.2%" transform="translate(320.6,167.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="205.0">第6局</text><g class="mark" tabindex="0" data-tooltip="第6局 WPA 門檻中位數 37.6%（95% CI 27.9%–42.6%，n=132）"><line x1="213.7" y1="201.0" x2="267.3" y2="201.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="249.1" cy="201.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第6局 RE 門檻中位數 59.4%" transform="translate(328.4,201.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="239.0">第7局</text><g class="mark" tabindex="0" data-tooltip="第7局 WPA 門檻中位數 24.7%（95% CI 21.4%–31.6%，n=119）"><line x1="190.1" y1="235.0" x2="227.2" y2="235.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="201.9" cy="235.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第7局 RE 門檻中位數 57.4%" transform="translate(321.0,235.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="273.0">第8局</text><g class="mark" tabindex="0" data-tooltip="第8局 WPA 門檻中位數 29.3%（95% CI 23.4%–32.6%，n=118）"><line x1="197.1" y1="269.0" x2="231.0" y2="269.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="218.9" cy="269.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第8局 RE 門檻中位數 58.3%" transform="translate(324.5,269.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g></svg></div>
+<div class="season-panel"><h3>2026</h3><svg viewBox="0 0 460 312" role="img" aria-label="2026 年逐局 WPA 與 RE 門檻對照圖"><line class="gridline" x1="112.0" y1="14" x2="112.0" y2="286" /><text class="axis-label" x="112.0" y="302" text-anchor="middle">0%</text><line class="gridline" x1="184.9" y1="14" x2="184.9" y2="286" /><text class="axis-label" x="184.9" y="302" text-anchor="middle">20%</text><line class="gridline" x1="257.8" y1="14" x2="257.8" y2="286" /><text class="axis-label" x="257.8" y="302" text-anchor="middle">40%</text><line class="gridline" x1="330.7" y1="14" x2="330.7" y2="286" /><text class="axis-label" x="330.7" y="302" text-anchor="middle">60%</text><line class="gridline" x1="403.6" y1="14" x2="403.6" y2="286" /><text class="axis-label" x="403.6" y="302" text-anchor="middle">80%</text><text class="axis-label" x="6" y="35.0">第1局&#8224;</text><g class="mark" tabindex="0" data-tooltip="第1局 WPA 門檻中位數 67.7%（95% CI 44.1%–60.7%，n=77）"><line x1="272.8" y1="31.0" x2="333.1" y2="31.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="358.7" cy="31.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第1局 RE 門檻中位數 55.8%" transform="translate(315.3,31.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="69.0">第2局</text><g class="mark" tabindex="0" data-tooltip="第2局 WPA 門檻中位數 55.1%（95% CI 31.6%–51.4%，n=68）"><line x1="227.0" y1="65.0" x2="299.3" y2="65.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="312.7" cy="65.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第2局 RE 門檻中位數 54.9%" transform="translate(312.1,65.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="103.0">第3局</text><g class="mark" tabindex="0" data-tooltip="第3局 WPA 門檻中位數 45.7%（95% CI 30.2%–50.2%，n=77）"><line x1="222.1" y1="99.0" x2="294.8" y2="99.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="278.4" cy="99.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第3局 RE 門檻中位數 53.7%" transform="translate(307.8,99.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="137.0">第4局</text><g class="mark" tabindex="0" data-tooltip="第4局 WPA 門檻中位數 40.0%（95% CI 27.7%–47.0%，n=73）"><line x1="212.9" y1="133.0" x2="283.1" y2="133.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="257.8" cy="133.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第4局 RE 門檻中位數 54.5%" transform="translate(310.5,133.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="171.0">第5局</text><g class="mark" tabindex="0" data-tooltip="第5局 WPA 門檻中位數 38.0%（95% CI 28.0%–45.7%，n=78）"><line x1="213.9" y1="167.0" x2="278.5" y2="167.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="250.5" cy="167.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第5局 RE 門檻中位數 52.7%" transform="translate(303.9,167.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="205.0">第6局</text><g class="mark" tabindex="0" data-tooltip="第6局 WPA 門檻中位數 31.3%（95% CI 24.3%–42.2%，n=74）"><line x1="200.7" y1="201.0" x2="265.9" y2="201.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="226.1" cy="201.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第6局 RE 門檻中位數 55.3%" transform="translate(313.5,201.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="239.0">第7局</text><g class="mark" tabindex="0" data-tooltip="第7局 WPA 門檻中位數 20.3%（95% CI 18.5%–30.7%，n=77）"><line x1="179.4" y1="235.0" x2="224.0" y2="235.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="185.9" cy="235.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第7局 RE 門檻中位數 53.6%" transform="translate(307.3,235.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g><text class="axis-label" x="6" y="273.0">第8局</text><g class="mark" tabindex="0" data-tooltip="第8局 WPA 門檻中位數 28.6%（95% CI 21.7%–32.7%，n=75）"><line x1="191.0" y1="269.0" x2="231.2" y2="269.0" stroke="var(--series-wpa)" stroke-width="5" stroke-linecap="round" /><circle cx="216.4" cy="269.0" r="5" fill="var(--series-wpa)" stroke="var(--surface)" stroke-width="2" /></g><g class="mark" tabindex="0" data-tooltip="第8局 RE 門檻中位數 54.9%" transform="translate(312.0,269.0) rotate(45)"><rect x="-5" y="-5" width="10" height="10" fill="var(--series-re)" stroke="var(--surface)" stroke-width="2" /></g></svg></div>
+      </div>
+      <p class="footnote">† 第 1 局分母（V成功－V失敗）中位數僅約 0.04，跟其標準誤同一量級，比值結構性不穩定，數字僅供參考。</p>
+    </section>
+
+    <section aria-labelledby="table-title">
+      <h2 id="table-title">完整資料表</h2>
+      <div class="panel">
+        <details open>
+          <summary>展開逐局逐季數字</summary>
+          <div class="table-wrap" style="margin-top:10px">
+            <table>
+              <thead><tr><th>年度</th><th>局</th><th>RE 門檻中位數</th><th>WPA 門檻中位數</th><th>WPA 95% CI</th><th>與 RE 重疊</th></tr></thead>
+              <tbody><tr class="unreliable"><td>2023</td><td>第1局</td><td>61.5%</td><td>71.7%</td><td>42.7%–59.7%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2023</td><td>第2局</td><td>60.4%</td><td>55.5%</td><td>32.7%–48.6%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2023</td><td>第3局</td><td>58.5%</td><td>42.3%</td><td>29.9%–48.1%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2023</td><td>第4局</td><td>59.3%</td><td>38.5%</td><td>28.8%–44.6%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2023</td><td>第5局</td><td>56.8%</td><td>32.3%</td><td>26.4%–41.7%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2023</td><td>第6局</td><td>58.6%</td><td>37.5%</td><td>26.0%–42.4%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2023</td><td>第7局</td><td>58.5%</td><td>23.1%</td><td>19.0%–31.2%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2023</td><td>第8局</td><td>60.3%</td><td>30.1%</td><td>23.2%–33.1%</td><td><span class="flag clear">未重疊</span></td></tr><tr class="unreliable"><td>2024</td><td>第1局</td><td>58.6%</td><td>80.4%</td><td>46.2%–61.0%</td><td><span class="flag overlap">重疊</span></td></tr><tr><td>2024</td><td>第2局</td><td>57.2%</td><td>66.1%</td><td>37.6%–52.9%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2024</td><td>第3局</td><td>56.4%</td><td>48.1%</td><td>33.1%–47.8%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2024</td><td>第4局</td><td>58.1%</td><td>42.7%</td><td>29.1%–45.8%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2024</td><td>第5局</td><td>56.4%</td><td>42.7%</td><td>32.1%–46.3%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2024</td><td>第6局</td><td>57.3%</td><td>39.2%</td><td>28.7%–43.8%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2024</td><td>第7局</td><td>57.7%</td><td>24.1%</td><td>19.8%–30.9%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2024</td><td>第8局</td><td>58.3%</td><td>30.0%</td><td>23.3%–33.2%</td><td><span class="flag clear">未重疊</span></td></tr><tr class="unreliable"><td>2025</td><td>第1局</td><td>61.7%</td><td>76.4%</td><td>41.8%–60.0%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2025</td><td>第2局</td><td>58.6%</td><td>61.8%</td><td>37.2%–51.5%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2025</td><td>第3局</td><td>56.1%</td><td>50.1%</td><td>32.5%–48.2%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2025</td><td>第4局</td><td>58.6%</td><td>45.1%</td><td>31.0%–45.4%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2025</td><td>第5局</td><td>57.2%</td><td>42.3%</td><td>29.0%–44.3%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2025</td><td>第6局</td><td>59.4%</td><td>37.6%</td><td>27.9%–42.6%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2025</td><td>第7局</td><td>57.4%</td><td>24.7%</td><td>21.4%–31.6%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2025</td><td>第8局</td><td>58.3%</td><td>29.3%</td><td>23.4%–32.6%</td><td><span class="flag clear">未重疊</span></td></tr><tr class="unreliable"><td>2026</td><td>第1局</td><td>55.8%</td><td>67.7%</td><td>44.1%–60.7%</td><td><span class="flag overlap">重疊</span></td></tr><tr><td>2026</td><td>第2局</td><td>54.9%</td><td>55.1%</td><td>31.6%–51.4%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2026</td><td>第3局</td><td>53.7%</td><td>45.7%</td><td>30.2%–50.2%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2026</td><td>第4局</td><td>54.5%</td><td>40.0%</td><td>27.7%–47.0%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2026</td><td>第5局</td><td>52.7%</td><td>38.0%</td><td>28.0%–45.7%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2026</td><td>第6局</td><td>55.3%</td><td>31.3%</td><td>24.3%–42.2%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2026</td><td>第7局</td><td>53.6%</td><td>20.3%</td><td>18.5%–30.7%</td><td><span class="flag clear">未重疊</span></td></tr><tr><td>2026</td><td>第8局</td><td>54.9%</td><td>28.6%</td><td>21.7%–32.7%</td><td><span class="flag clear">未重疊</span></td></tr></tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section aria-labelledby="method-title">
+      <h2 id="method-title">怎麼算的</h2>
+      <ul class="note-list">
+        <li><strong>V成功</strong>（盜壘成功、跑者上二壘）直接查 WE 表。WE 矩陣每一格本來就是「這個狀態到比賽結束」的經驗值。</li>
+        <li><strong>V失敗</strong>（跑者被封殺，半局立刻結束）＝ 1 − WE(對手下一次進攻起始狀態)。WPA 本質上是零和的，算勝率一定要換算對手視角，這是跟 RE 版模型最根本的差異。</li>
+        <li><strong>V不跑</strong>：打者用自己的打擊機率分布做「一步」蒙地卡羅，落到新狀態後查 WE 表。</li>
+        <li>信賴區間對每筆決策的三個 V 值各自加高斯雜訊（WE 表格子的二項標準誤＋一步模擬標準誤），再對決策列做 case resampling，重複 1,000 次取 2.5/97.5 百分位。</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer><div class="wrap">資料：CPBL 官網逐球紀錄，2023–2026 四季例行賽 · 由 model_wpa_decisions.py + bootstrap_wpa_threshold_ci.py 產生 · 詳細方法論見 README「WPA 版損益兩平門檻」一節</div></footer>
+</body>
+</html>

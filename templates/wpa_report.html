@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WPA 版損益兩平門檻</title>
+  <style>
+/*__STYLES__*/
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="eyebrow">CPBL __SEASON_RANGE__ REGULAR SEASON</div>
+      <h1>WPA 版損益兩平門檻：哪幾局可以放心改用勝率判準</h1>
+      <p class="lede">把 WE 勝率矩陣接回三分支決策模型，算出用「勝率增值」而非「剩餘得分」當價值函數的損益兩平門檻，再用 bootstrap 信賴區間驗證結論站不站得住雜訊。每季各自獨立跑過一次，四季放在一起看方向是否一致。</p>
+      <div class="meta">
+        <span>四季合併驗證：2023 / 2024 / 2025 / 2026</span>
+        <span>bootstrap 1,000 次／季</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section aria-labelledby="finding-title">
+      <h2 id="finding-title">結論：從第 2 局起方向就一致，第 4 局起數字就穩定可信</h2>
+      <div class="panel">
+        <p>RE 版模型算出來的門檻幾乎不隨局數變（各局都落在 54–60% 左右），因為它只看「這次盜壘能不能幫本半局多得分」，不管這一分現在多值錢、也不管對手接下來會怎麼打。WPA 版把這兩件事都算進去後，門檻明顯偏低，而且從第 4 局起連點估計本身都很穩定（中位數落在自己 95% 信賴區間之內，四季皆然）：</p>
+        <div class="table-wrap" style="margin-top:14px">
+          <table>
+            <thead><tr><th>局</th><th>RE 門檻中位數（四季範圍）</th><th>WPA 門檻中位數（四季範圍）</th></tr></thead>
+            <tbody>
+              <tr><td>第 4 局</td><td>__RE_RANGE_INNING4__</td><td>__WPA_RANGE_INNING4__</td></tr>
+              <tr><td>第 6 局</td><td>__RE_RANGE_INNING6__</td><td>__WPA_RANGE_INNING6__</td></tr>
+              <tr><td>第 7 局</td><td>__RE_RANGE_INNING7__</td><td>__WPA_RANGE_INNING7__</td></tr>
+              <tr><td>第 8 局</td><td>__RE_RANGE_INNING8__</td><td>__WPA_RANGE_INNING8__</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="margin-top:16px"><strong>對教練實務的意思</strong>：如果盜壘「該不該跑」的判斷基準是抓在 RE 版隱含的 55–60% 成功率上下，這份分析認為那個基準從第 4 局起就明顯偏保守。同一位跑者、同一個情境，用勝率當判準時可以接受的成功率其實低很多，第 6–8 局差距最大。<strong>第 2–3 局方向也一致（信賴區間一樣穩穩落在 RE 門檻之下，見下方逐局圖），但那兩局的「中位數」這個單一數字本身還不夠穩定，不建議拿來當精確數字用；真正能放心引用點估計的是第 4 局以後。</strong></p>
+
+        <h3 style="margin-top:24px">為什麼門檻會隨局數下降：同一分的份量變重了</h3>
+        <p>機制不是「晚局盜壘比較容易成功」，而是「讓這個半局現在結束（不管是盜壘刺、還是打者自己正常出局），代價隨局數變重」。同一個 1 分領先／落後，換算成勝率的意義完全不同：</p>
+        <div class="grid" style="margin-top:14px; grid-template-columns:repeat(3,1fr)">
+__LEVERAGE_CARDS__
+        </div>
+        <p style="margin-top:14px">在前六局，領先 1 分只把勝率推到約六成；同樣領先 1 分，到了第 8 局勝率逼近八成。落後 1 分的殺傷力也同樣被放大（前六局約 25% 還能贏，第 8 局只剩不到一成）。門檻公式是 <code>(V不跑－V失敗)／(V成功－V失敗)</code>：當「現在讓半局結束」的代價（V失敗，換算對手視角）跟「打者繼續打、大機率還是出局收場」的代價（V不跑）幾乎一樣重時，分子被壓縮，盜壘失敗多賠的那一點點差距佔比就變小，門檻自然下降。RE 版模型完全看不到這件事，因為它假設每一分的價值到處都一樣。</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="runner-title">
+      <h2 id="runner-title">實際影響：RE 判「不建議跑」的跑者，換成 WPA 有多少人翻盤</h2>
+      <div class="panel">
+        <p>兩套判準會不會吵架，最終要看「同一位跑者、同一個情境，兩套判準的判定是不是同一個答案」。RE 版逐棒次門檻全部落在 54–60% 這個窄帶，能被判成<strong>任一棒次都不建議跑</strong>的跑者，本來就得是成功率明顯偏低的人；WPA 版第 4 局起的門檻只有 20–45%，同一批人換算到晚局，有多少其實夠格盜壘？</p>
+        <div class="table-wrap" style="margin-top:14px">
+          <table>
+            <thead><tr><th>年度</th><th>RE 判「任一棒次都不建議跑」人數</th><th>WPA 下至少一局翻盤</th><th>翻盤比例</th></tr></thead>
+            <tbody>__RECLASSIFICATION_ROWS__</tbody>
+          </table>
+        </div>
+        <p style="margin-top:14px">四季裡有兩季（2024、2026）這個「RE 判定不建議跑」的名單本身只有 2、3 人，翻盤比例（67%、50%）波動大是小樣本的正常現象，不必過度解讀單一年份的百分比；但四季合計看，這個群體裡多數人（尤其在第 7、8 局）換算 WPA 門檻後都夠格，方向沒有一季反過來。<strong>這代表 RE 版分析低估的不只是「晚局門檻該多低」，也低估了「有多少現有的跑者其實夠格在晚局盜壘」。</strong>教練名單上被 RE 分析歸類成「這個人別讓他跑」的球員，很大一部分並不是真的不夠快，只是被一套沒把局數／比分算進去的判準錯殺。</p>
+        <details style="margin-top:14px">
+          <summary>展開完整名單（RE 判「任一棒次都不建議跑」的跑者，逐局 WPA 判定）</summary>
+          <div class="table-wrap" style="margin-top:10px">
+            <table>
+              <thead><tr><th>年度</th><th>跑者</th><th>球隊</th><th>RE 成功率</th><th>嘗試次數</th><th>WPA 下夠格的局數</th></tr></thead>
+              <tbody>__RECLASSIFICATION_RUNNER_ROWS__</tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section aria-labelledby="groups-title">
+      <h2 id="groups-title">棒次與打者類型分組：換成 WPA 還成不成立</h2>
+      <div class="panel">
+        <p>「棒次 × 打者類型分組分析」一節的結論（低點在 1、2 棒、高點在第 4 棒、高長打與高選球打者門檻都比對照組高）全部是用全部局數（1–8 局）的 RE 版門檻算出來的。這裡只用第 4–8 局的決策重算一次，RE 版也用同一個子集重算，兩邊才是同一批樣本、只差價值函數，比較才公平（`compare_wpa_groups.py`）。</p>
+
+        <h3 style="margin-top:22px">逐棒次門檻的最低點，四季不穩定</h3>
+        <p>RE 版在第 4–8 局子集裡仍然穩定重現「低點在 1、2 棒」；WPA 版逐棒次門檻的最低點，四季分別落在不同棒次，沒有共同模式。把已經有雜訊的 WPA 門檻再切成 9 個棒次子群、每群只剩 30–80 筆，訊噪比撐不住。<strong>棒次分析「1、2 棒相對適合冒險」的結論，目前只在 RE 版本上站得住，換成 WPA 還不能下結論。</strong></p>
+        <div class="table-wrap" style="margin-top:14px">
+          <table>
+            <thead><tr><th>年度</th><th>RE 門檻最低棒次</th><th>WPA 門檻最低棒次</th></tr></thead>
+            <tbody>__LINEUP_SLOT_ROWS__</tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top:26px">打者類型分組：三種不同結果</h3>
+        <p>五個分組軸換成 WPA 判準後，結果分三種情況，不是全部一致才算「WPA 有效」：</p>
+        <div class="table-wrap" style="margin-top:14px">
+          <table>
+            <thead><tr><th>分組</th><th>RE 方向（四季）</th><th>WPA 方向（四季）</th><th>結論</th></tr></thead>
+            <tbody>__GROUP_AXIS_ROWS__</tbody>
+          </table>
+        </div>
+        <p style="margin-top:14px"><strong>長打力與選球力方向大致保留</strong>，跟 RE 版「愈強打者愈不該冒險」的核心結論同調，代表這兩個發現有跨判準的穩健性。<strong>單打率與 TTO 方向也沒有反過來</strong>，只是樣本切到第 4–8 局、再拆高低兩組後，統計顯著性撐不住，比較精確的說法是「WPA 版目前的樣本量還驗證不了」，不是效應消失。</p>
+        <p style="margin-top:10px"><strong>真上壘率（OBP）分組是唯一一個方向真的反過來的</strong>，而且四季全部同向反轉，不太像純雜訊。RE 版本來就發現改用真上壘率分組時，結論會跟長打力／選球力方向相反（上壘率把安打也算進去，安打型打者本來就更容易靠自己把跑者送回來，這股力量的方向跟別的效應相反）；換成 WPA 後，同一個「安打把人送回來」的能力，換算對手視角後的相對重要性可能不同，導致再次反轉。這是值得再深入拆解的地方，目前資料只夠說「四季都反轉」，還不夠拆出真正機制。</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="chart-title">
+      <h2 id="chart-title">這站得住嗎：逐局 WPA 95% 信賴區間 vs RE 門檻中位數</h2>
+      <p class="lede" style="margin-bottom:14px">藍色線段是 WPA 門檻的 95% bootstrap 信賴區間（圓點＝中位數）；橘色菱形是同一局 RE 版模型的門檻中位數。只要橘色菱形落在藍色線段的範圍**之外**（在它右邊），代表這一局改用 WPA 判準的門檻明顯比 RE 低，而且不是抽樣雜訊。四張圖裡，第 2–8 局橘色菱形都清楚落在藍色區間右邊，只有第 1 局（標 † 的列）兩季重疊，數字不可信。</p>
+      <div class="legend">
+        <div class="legend-item"><span class="legend-swatch wpa"></span>WPA 門檻 95% CI（圓點＝中位數）</div>
+        <div class="legend-item"><span class="legend-swatch re"></span>RE 門檻中位數</div>
+      </div>
+      <div class="panels">
+__SEASON_PANELS__
+      </div>
+      <p class="footnote">† 第 1 局分母（V成功－V失敗）中位數僅約 0.04，跟其標準誤同一量級，比值結構性不穩定，數字僅供參考。</p>
+    </section>
+
+    <section aria-labelledby="table-title">
+      <h2 id="table-title">完整資料表</h2>
+      <div class="panel">
+        <details open>
+          <summary>展開逐局逐季數字</summary>
+          <div class="table-wrap" style="margin-top:10px">
+            <table>
+              <thead><tr><th>年度</th><th>局</th><th>RE 門檻中位數</th><th>WPA 門檻中位數</th><th>WPA 95% CI</th><th>與 RE 重疊</th></tr></thead>
+              <tbody>__TABLE_ROWS__</tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section aria-labelledby="method-title">
+      <h2 id="method-title">怎麼算的</h2>
+      <ul class="note-list">
+        <li><strong>V成功</strong>（盜壘成功、跑者上二壘）直接查 WE 表。WE 矩陣每一格本來就是「這個狀態到比賽結束」的經驗值。</li>
+        <li><strong>V失敗</strong>（跑者被封殺，半局立刻結束）＝ 1 − WE(對手下一次進攻起始狀態)。WPA 本質上是零和的，算勝率一定要換算對手視角，這是跟 RE 版模型最根本的差異。</li>
+        <li><strong>V不跑</strong>：打者用自己的打擊機率分布做「一步」蒙地卡羅，落到新狀態後查 WE 表。</li>
+        <li>信賴區間對每筆決策的三個 V 值各自加高斯雜訊（WE 表格子的二項標準誤＋一步模擬標準誤），再對決策列做 case resampling，重複 1,000 次取 2.5/97.5 百分位。</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer><div class="wrap">資料：CPBL 官網逐球紀錄，2023–2026 四季例行賽 · 由 model_wpa_decisions.py + bootstrap_wpa_threshold_ci.py 產生 · 詳細方法論見 README「WPA 版損益兩平門檻」一節</div></footer>
+</body>
+</html>
