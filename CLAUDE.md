@@ -62,6 +62,8 @@ python -m unittest tests.test_model_batter_decisions
 
 - `analyze_retention_contribution.py`：逐棒次的保留效應貢獻（pp）。反事實直接重用 `model_batter_decisions.py` 每筆決策已算好但原本沒用上的 `ModelVIfBatterOut`（正常出局、下一局改由下一棒開局），不必重跑模擬
 - `analyze_batter_threshold_correlations.py`：打者層級門檻（該打者所有決策點 `BreakEvenSuccessRate` 中位數）跟 HR/長打/保送/單打率、打擊率、出局率的 Pearson 相關係數
+- `bootstrap_threshold_ci.py`：整體/逐棒次/四組打者類型比較的 95% bootstrap 信賴區間。case resampling 之外，額外用 `ModelV*SE`（模擬標準誤，原本沒用上）對 V 值加常態雜訊，一次涵蓋樣本誤差與模擬雜訊兩種來源，不必重跑模擬
+- `analyze_hyperparameter_sensitivity.py`：讀「模擬次數/`prior_pa`/`minimum_transition_cell` 各變體」重跑出來的 `cpbl_decision_model_*_summary.json`（各自獨立 `--output-dir`，不寫回 `outputs/`）與「`min-pa` 各變體」的 `cpbl_group_comparison_*.json`，跟基準情境比較門檻中位數與顯著性判定是否翻轉——這三個模擬類超參數需要先用 `model_batter_decisions.py --output-dir <變體目錄>` 各跑一次，`min-pa` 則用 `analyze_batter_types.py`→`join_decision_batter_types.py`→`compare_groups.py` 三支串起來、同樣指到各自 `--output-dir`／`--output`
 
 ### 資料品質：公告列過濾（必讀）
 
