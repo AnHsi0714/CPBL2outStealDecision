@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>中職勝率增值（WE/WPA）矩陣</title>
+  <style>
+/*__STYLES__*/
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="eyebrow">CPBL __SEASON_RANGE__ REGULAR SEASON</div>
+      <h1>勝率矩陣：(局數、攻守方、分差、出局數、壘包) → 進攻方最終獲勝機率</h1>
+      <p class="lede">RE24 只回答「這個狀態平均能再拿幾分」，沒看比分與局數；WE 矩陣直接回答「這個狀態、這個分差、這個局數，進攻方最後贏球的機率是多少」——這是計畫書第 213 項待辦要用來取代 RE 當第 7–8 局盜壘判準的資料基礎。比分與勝負完全從逐球紀錄推回，不查 box score 總分欄位；CPBL 例行賽有極少數比賽因局數上限規則戰成和局，記為 0.5 勝。</p>
+      <div class="meta">
+        <span>合併球季 __SEASON_LIST__</span>
+        <span>__GAMES_PROCESSED__ 場已處理</span>
+        <span>__TOTAL_SEGMENTS__ 個 state 區段觀測值</span>
+        <span>分差上限 ±__SCORE_DIFF_CAP__</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section aria-labelledby="heatmap-title">
+      <h2 id="heatmap-title">勝率熱力圖</h2>
+      <div class="panel">
+        <div class="controls">
+          <label>局數
+            <select id="ctl-inning"></select>
+          </label>
+          <label>攻守方
+            <select id="ctl-side"></select>
+          </label>
+          <label>出局數
+            <select id="ctl-outs"></select>
+          </label>
+        </div>
+
+        <div class="heatmap" id="heatmap">
+          <div class="row-label"></div>
+          <div id="col-headers" style="display:contents"></div>
+          <div id="grid-cells" style="display:contents"></div>
+        </div>
+        <div class="legend">
+          <span>0%</span>
+          <div class="legend-bar"></div>
+          <span>100%</span>
+        </div>
+        <p class="lede" style="margin-top:14px; font-size:.86rem">顏色代表進攻方最終獲勝機率；每格滑鼠移過或 Tab 到該格可看到樣本數。虛線外框代表樣本數低於 20，數字仍照算但雜訊較大。空白格代表沒有樣本觀測到該狀態。</p>
+        <details style="margin-top:16px">
+          <summary>顯示目前篩選條件下的完整資料表</summary>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>分差</th><th>壘包狀態</th><th>勝率</th><th>N</th></tr></thead>
+              <tbody id="table-rows"></tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section id="validation-section" aria-labelledby="validation-title" hidden>
+      <h2 id="validation-title">矩陣品質檢查</h2>
+      <div class="panel">
+        <p class="lede">WE 矩陣是從真實比賽逐球資料直接算出的經驗值，沒有獨立的模擬引擎可以對照（不像 RE24 有 <code>validate_re24_simulation.py</code>），所以改用單調性（分差對進攻方愈有利，勝率理應愈高）與目標情境涵蓋度兩項檢查。</p>
+        <div class="grid" style="margin-top:14px">
+          <article class="stat"><small>單調性違反</small><strong id="val-violations"></strong><span id="val-violations-note"></span></article>
+          <article class="stat"><small>目標情境涵蓋度</small><strong id="val-coverage"></strong><span>2 出局、一/二壘有人、第 7–8 局</span></article>
+          <article class="stat"><small>低樣本格（n &lt; __MIN_N_COVERAGE__）</small><strong id="val-low-n"></strong><span>多集中在極端分差（±4、±5）</span></article>
+        </div>
+        <p class="lede" style="margin-top:14px" id="val-tied-note"></p>
+      </div>
+    </section>
+
+    <section aria-labelledby="scope-title">
+      <h2 id="scope-title">解讀邊界</h2>
+      <ul class="note-list">
+        <li>目前只是勝率矩陣本身，尚未接回盜壘決策模型——第 7–8 局用 WPA 當判準的損益兩平公式還沒算，這份頁面只回答「勝率查表結果」。</li>
+        <li>局數只細分第 7、8 局，第 1–6 局合併為一桶、第 9 局以後合併為一桶，避免格子（2640 格）在樣本數（約 9.7 萬個 state 區段）下稀疏到失去意義。</li>
+        <li>分差在 ±__SCORE_DIFF_CAP__ 之外一律歸到同一桶（例如「領先5+」涵蓋領先 5、6、7... 分的所有情況）。</li>
+        <li>攻守方＝「客隊進攻」固定對應上半局、「主隊進攻」固定對應下半局，兩者本來就隱含了「有沒有再見優勢」，不需要再另外拆一個上/下半局欄位。</li>
+        <li>這是全聯盟不分球隊、不分打者的平均值；跟 RE24 矩陣一樣，個人化留給決策模型層次處理。</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer><div class="wrap">資料：CPBL 官網逐球紀錄，__SEASON_LIST__ 例行賽 · 勝負判定對齊逐球紀錄推回的最終比分，不用 box score 總分欄位 · 由 build_win_expectancy_matrix.py 產生</div></footer>
+
+  <script id="report-data" type="application/json">__REPORT_DATA__</script>
+  <script>
+/*__SCRIPT__*/
+  </script>
+</body>
+</html>

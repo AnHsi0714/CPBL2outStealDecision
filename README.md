@@ -24,6 +24,9 @@
 │
 ├── build_re24_matrix.py                    # 中職 RE24 24 格矩陣
 ├── generate_re24_report.py                 # RE24 互動熱力圖報告
+├── build_win_expectancy_matrix.py          # 中職 WE 勝率矩陣（局數×攻守方×分差×出局×壘包）
+├── validate_win_expectancy_matrix.py       # 驗證：WE 矩陣單調性與目標情境涵蓋度
+├── generate_we_report.py                   # WE 互動熱力圖報告
 ├── analyze_team_decisions.py               # 六隊決策品質評估（含二項檢定）
 ├── analyze_runner_steal_rates.py           # 符合門檻的跑者名單
 ├── validate_re24_simulation.py             # 驗證：模擬能否重現真實 RE24
@@ -164,6 +167,22 @@ python generate_re24_report.py --year 2025 --start 1 --end 360
 - `generate_re24_report.py`：把矩陣畫成互動熱力圖（`reports/cpbl-re24-matrix-2025.html`），純 HTML/CSS，不依賴圖表套件；每格可 hover／Tab 顯示樣本數與標準差，並附完整資料表供核對。
 
 可直接用瀏覽器開啟 [reports/cpbl-re24-matrix-2025.html](reports/cpbl-re24-matrix-2025.html)。
+
+## WE 勝率矩陣與熱力圖
+
+RE24 不看比分與局數，沒辦法回答「落後 2 分的第 8 局」跟「平手的第 3 局」該不該用同一套盜壘門檻（計畫書失效條件第 213 項）。WE（win expectancy）矩陣直接從真實比賽算出「(局數桶、攻守方、分差桶、出局數、壘包組合) → 進攻方最終獲勝機率」的經驗值：
+
+```bash
+python build_win_expectancy_matrix.py
+python validate_win_expectancy_matrix.py
+python generate_we_report.py
+```
+
+- `build_win_expectancy_matrix.py`：沿用 `build_re24_matrix.py` 的半局 state 切分邏輯，額外記錄每個區段的「當下分差」（起算比分對齊 RE24 同一套起算點原則）以及「這個半局最終是誰贏」。勝負判定**完全從逐球紀錄推回最終比分**（比對雙方最後一列的累積分數），不查 box score 總分欄位，跟計畫書 3.0 節「得分起算不用聚合欄位」的原則一致；CPBL 例行賽少數因局數上限戰成和局的比賽記為 0.5 勝。局數只細分第 7、8 局，第 1–6 局與第 9 局以後（含延長賽）各自合併成一桶；分差超過 ±5 一律歸到同一桶——格子數（2112 格）遠多於 RE24 的 24 格，預設一次合併四季（2023–2026）快取才撐得住樣本數，共取得 **96,814** 個 state 區段觀測值（跟同期 RE24 矩陣的區段數完全一致，是切分邏輯正確的內部交叉驗證）。
+- `validate_win_expectancy_matrix.py`：WE 矩陣是經驗值，沒有像 RE24 那樣可以拿模擬引擎逐格對照，改做兩項檢查：①單調性——固定其他維度，勝率理應隨分差遞增，n≥15 的相鄰分差對中有 88 處違反，且集中在分差桶邊界（±4→±5，這桶本身就是「4 分以上」的混合桶，出現非嚴格遞增不代表有 bug）；②本研究實際會用到的格子（2 出局、一／二壘有人、第 7–8 局，共 88 格）涵蓋度——32% 的格子 n < 20，幾乎全部落在極端分差（±3 到 ±5），呼應第 211 項已經量出的「大分差盜壘嘗試本來就很少」。額外印出平手時攻守方勝率當主場優勢粗檢查：客隊進攻（上半局）48.0%、主隊進攻（下半局）58.7%（n 分別為 15,049／12,718），「再見」優勢方向正確。
+- `generate_we_report.py`：互動熱力圖（`reports/cpbl-win-expectancy-matrix.html`），局數／攻守方／出局數三個下拉選單即時切換要看哪一張分差×壘包的網格，樣本數 < 20 的格子加虛線外框提醒。
+
+可直接用瀏覽器開啟 [reports/cpbl-win-expectancy-matrix.html](reports/cpbl-win-expectancy-matrix.html)。**目前只到勝率查表**：把這張表接回 `model_batter_decisions.py`、算出用 WPA 當價值函數的第 7–8 局損益兩平門檻，是計畫書第 213 項還沒做完的最後一步。
 
 ## 引擎驗證：模擬能否重現真實 RE24
 

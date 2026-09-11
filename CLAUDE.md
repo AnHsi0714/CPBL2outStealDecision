@@ -53,6 +53,7 @@ python -m unittest tests.test_model_batter_decisions
 都讀 `outputs/` 既有輸出，可獨立執行，結果會被 `generate_decision_report.py` 自動吸收進報告（找不到對應 JSON 時略過該區塊）：
 
 - `build_re24_matrix.py` → `generate_re24_report.py`：中職 RE24 24 格矩陣與互動熱力圖
+- `build_win_expectancy_matrix.py` → `validate_win_expectancy_matrix.py` → `generate_we_report.py`：中職 WE（勝率增值）矩陣——(局數桶 1-6/7/8/9+ × 攻守方 × 分差桶 ±5 × 出局數 × 壘包) → 進攻方最終獲勝機率，全部從逐球紀錄推回最終比分（不查 box score 總分欄位），對應計畫書第 213 項「第 7–8 局應改用 WPA 而非 RE 當判準」。跟 RE24 不同，預設一次合併四季（`--seasons` 可覆寫），因為格子數（2112）遠多於 RE24 的 24 格；validate 腳本做單調性與目標情境（2 出局、一/二壘有人、第 7–8 局）涵蓋度檢查，因為沒有獨立模擬引擎可對照。**目前只到勝率查表，尚未接回 `model_batter_decisions.py` 算 WPA 版損益兩平門檻**
 - `analyze_team_decisions.py`：六隊決策品質，用二項檢定判「跑對／跑錯」，不顯著就標「無法判定」
 - `analyze_runner_steal_rates.py`：符合門檻的跑者名單，**逐棒次比對而非比單一門檻**（門檻本身隨棒次變是核心發現，比單一中位數等於丟掉這個結論）
 - `validate_re24_simulation.py`：模擬 RE24 vs 真實 RE24 逐格比較。**引擎若無法重現真實 RE24 就不可繼續往下做**
