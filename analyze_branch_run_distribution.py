@@ -156,7 +156,7 @@ def main() -> int:
         print(f"警告：{unmatched} 筆決策找不到對應原始資料，已略過")
 
     print(f"\n{tag}：{len(decisions) - unmatched} 筆決策計入、{len(cache)} 個不重複(打線,棒次)情境\n")
-    header = f"{'分支':>8} | {'0分':>7} | {'1分':>7} | {'2分':>7} | {'3分+':>7} | {'≥1分':>7} | {'≥2分':>7}"
+    header = f"{'分支':>8} | {'0分':>7} | {'1分':>7} | {'2分':>7} | {'3分+':>7} | {'>=1分':>7} | {'>=2分':>7}"
     print(header)
     rows_out: list[dict[str, Any]] = []
     for branch in ("success", "no_steal", "failure"):
