@@ -15,7 +15,7 @@ import argparse
 import json
 import random
 from pathlib import Path
-from statistics import mean, pstdev
+from statistics import mean
 from typing import Any
 
 from model_batter_decisions import (

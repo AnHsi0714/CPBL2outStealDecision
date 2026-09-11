@@ -4,11 +4,10 @@
 來源，一次 bootstrap 迭代做兩件事：
 
 1. **決策樣本的抽樣誤差**——對決策列做 case resampling（取後放回）。
-2. **蒙地卡羅模擬雜訊**——`model_batter_decisions.py` 的 `branch_stats` 其實已經
-   算出每筆決策 `ModelVSuccess`/`ModelVFailure`/`ModelVNoSteal` 各自的標準誤
-   （`*SE` 欄位，模擬次數不夠多時這個值較大），只是原本沒用上。這裡對每個被抽中
-   的決策，用常態分布依 SE 對三個 V 值加雜訊，模擬「如果那天模擬次數不同，這筆
-   決策的門檻會抖動多少」，再算門檻——比只做 case resampling 更完整。
+2. **蒙地卡羅模擬雜訊**——`model_batter_decisions.py` 的 `branch_stats` 早就算出
+   每筆決策 `ModelVSuccess`/`ModelVFailure`/`ModelVNoSteal` 各自的標準誤（`*SE`
+   欄位，模擬次數不夠多時較大），只是原本沒用上。對每個被抽中的決策，用常態分布
+   依 SE 對三個 V 值加雜訊再算門檻，比只做 case resampling 更完整。
 
 讀 `cpbl_decision_with_types_*.csv`（需要棒次與打者類型分組欄位），不需要重跑
 模擬、不需要原始 JSON 快取。

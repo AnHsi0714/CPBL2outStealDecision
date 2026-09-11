@@ -12,9 +12,8 @@ import argparse
 import csv
 import json
 from pathlib import Path
-from typing import Any
 
-from find_2out_first_base import as_int, half_key
+from find_2out_first_base import as_int
 
 
 def starters_by_game(cache_dir: Path) -> dict[int, dict[tuple[str, int], str]]:

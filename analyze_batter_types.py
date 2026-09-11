@@ -12,17 +12,13 @@
 再算出 SingleRate_proxy = P_1B（純單打率），對應計畫書 1.4 節「高上壘接觸型」（單打即可得分）
 的概念——這個指標刻意排除長打，跟 ISO 是負相關，比 OBP 更乾淨，是驗證 1.4 節假設最直接的指標。
 
-最後算出 TTO_proxy = P_K + P_HR + P_BB_HBP（三振率+全壘打率+保送觸身率，Three True Outcomes），
-對應計畫書第 4-6 週工作項目：三振率不進 P_OUT 之外另計，三者皆是「打席結果不太受野手守備影響」
-的事件。TTO 型打者本質上是 ISO 型與 BBpct 型的疊加（高長打、高選球通常也伴隨高三振），
-因此 TTO 分組預期方向會與 PowerGroup／PatienceGroup 一致（TTO 高→門檻高），
-用來檢驗「複合純三真傾向」是否比單一指標訊號更強或只是重複。
+最後算出 TTO_proxy = P_K + P_HR + P_BB_HBP（三振率+全壘打率+保送觸身率，Three True
+Outcomes，三者皆是「打席結果不太受野手守備影響」的事件），對應計畫書第 4-6 週工作項目，
+用來檢驗這個複合指標是否比單一指標訊號更強、或只是 ISO 與 BBpct 的重複。
 
-另外算出 PrimaryLineupGroup（前段1-5／後段6-9），用該打者當季全部完成打席裡最常見的
-HitterLineup 棒次決定——這是「這位打者本人是什麼類型」的固定標籤，跟決策當下那一局
-剛好排第幾棒無關（同一位打者九成場次打第 3 棒，某天代打排第 8 棒，他還是「前段棒次型」
-打者，不會因為那天的排法而變成後段棒次型）。跟 PowerGroup/PatienceGroup/...一樣是球員
-本身的固定屬性，不是每筆決策各自重算的情境變數。
+另外算出 PrimaryLineupGroup（前段1-5／後段6-9），用該打者當季最常見的 HitterLineup
+棒次決定——這是打者本人的固定屬性，跟決策當下那一局排第幾棒無關（跟 PowerGroup/
+PatienceGroup/... 一樣，不是每筆決策各自重算的情境變數）。
 """
 
 from __future__ import annotations

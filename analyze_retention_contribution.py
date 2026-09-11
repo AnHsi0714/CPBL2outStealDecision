@@ -1,13 +1,10 @@
 """逐棒次量化「保留效應」對損益兩平門檻的貢獻（單位：pp）。
 
-`model_batter_decisions.py` 的「盜壘刺」分支本來就會模擬到「打者的打席被保留、
-下一局由同一位打者開局」（`ModelVFailure`）；同一筆決策它也順便算出了另一個沒有
-用上的反事實──「若這球是打者正常出局、下一局改由下一棒開局」（`ModelVIfBatterOut`，
-`out_cost_metrics` 原本拿它去分解 `ModelVNoSteal`/`ModelVSuccess`）。這兩個值的
-唯一差別就是「這個打席有沒有被保留」，所以不必重跑模擬：只要把 `ModelVFailure`
-換成 `ModelVIfBatterOut`、用同一個損益兩平公式重算一次門檻，兩個門檻的差就是保留
-效應本身對這筆決策門檻的貢獻（pp）。逐棒次取中位數即可得到跟「門檻中位數」同一
-套統計口徑的保留貢獻表。
+`ModelVFailure`（盜壘刺，打席被保留、下一局同一位打者開局）與 `ModelVIfBatterOut`
+（`out_cost_metrics` 原本用來分解 `ModelVNoSteal`/`ModelVSuccess` 的反事實：正常
+出局、下一局改由下一棒開局）唯一的差別就是「這個打席有沒有被保留」，所以不必重跑
+模擬：把 `ModelVFailure` 換成 `ModelVIfBatterOut`、用同一個損益兩平公式重算門檻，
+兩個門檻的差就是保留效應對這筆決策的貢獻（pp）。逐棒次取中位數即得保留貢獻表。
 
 依賴 `model_batter_decisions.py` 產生的 `cpbl_decision_model_*.csv`，不需要重跑
 模擬、不需要原始 JSON 快取。
