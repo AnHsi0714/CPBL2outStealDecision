@@ -18,7 +18,7 @@ Python 3.11+，純標準庫為主，僅兩個外部相依：
 pip install requests scipy
 ```
 
-`requests` 只有爬蟲（`CPBL_steal_getData.py`、`KBO_steal_getData.py`、`MLB_steal_getData.py`、`find_2out_first_base.py`）需要；`scipy.stats`（Mann-Whitney U）只有 `compare_groups.py` 需要。**刻意不使用 pandas/numpy**（計畫書第 2–3 週技術堆疊），目前資料量下標準庫足夠——新增分析時請沿用 `csv.DictReader` / `statistics` 的寫法。
+`requests` 只有爬蟲（`CPBL_steal_getData.py`、`KBO_steal_getData.py`、`MLB_steal_getData.py`、`find_2out_first_base.py`）需要；`scipy.stats`（Mann-Whitney U）只有 `compare_groups.py` 需要。**刻意不使用 pandas/numpy**（計畫書第 2–3 週技術堆疊），目前資料量下標準庫足夠；新增分析時請沿用 `csv.DictReader` / `statistics` 的寫法。
 
 測試用 unittest：
 
@@ -53,8 +53,8 @@ python -m unittest tests.test_model_batter_decisions
 都讀 `outputs/` 既有輸出，可獨立執行，結果會被 `generate_decision_report.py` 自動吸收進報告（找不到對應 JSON 時略過該區塊）：
 
 - `build_re24_matrix.py` → `generate_re24_report.py`：中職 RE24 24 格矩陣與互動熱力圖
-- `build_win_expectancy_matrix.py` → `validate_win_expectancy_matrix.py` → `generate_we_report.py`：中職 WE（勝率增值）矩陣——(局數桶 1-6/7/8/9+ × 攻守方 × 分差桶 ±5 × 出局數 × 壘包) → 進攻方最終獲勝機率，全部從逐球紀錄推回最終比分（不查 box score 總分欄位）。跟 RE24 不同，預設一次合併四季（`--seasons` 可覆寫），因為格子數（2112）遠多於 RE24 的 24 格；validate 腳本做單調性與目標情境（2 出局、一/二壘有人、第 7–8 局）涵蓋度檢查，因為沒有獨立模擬引擎可對照
-- `model_wpa_decisions.py` → `bootstrap_wpa_threshold_ci.py` → `generate_wpa_report.py`（`reports/cpbl-wpa-decision-thresholds.html`，四季逐局信賴區間比較圖）：把 WE 矩陣接回三分支模型，對應計畫書第 213 項「第 7–8 局應改用 WPA 而非 RE 當判準」。V成功／V失敗直接查 WE 表（WE 每格本來就是「這個狀態到比賽結束」的經驗值，不必再模擬），V不跑用打者個人機率分布做「一步」蒙地卡羅落到新狀態後查表——關鍵是 V失敗必須換算成**對手視角**（`1 - WE(對手下一次進攻)`），RE 版模型完全沒有這個機制（RE 版失敗分支只模擬「自己隊下一次進攻」，不管對手，因為 RE 不是零和的）。門檻是比值，分母很小時對雜訊極敏感，所以 bootstrap 腳本對每筆決策的三個 V 值各自用其標準誤（WE 格子二項標準誤＋一步模擬標準誤）加雜訊再 case resampling，算 95% CI。**四季結果**：逐局把 CI 上界跟同局 RE 門檻中位數比，第 2–8 局四季都碰不到（0/4 重疊），只有第 1 局 2/4 季重疊——分母（V成功－V失敗）中位數只有 0.04、跟標準誤同量級，比值結構性不穩定，不是樣本不夠。**結論：第 2–8 局方向都站得住，不是只有 7–8 局**；但點估計本身第 2–3 局落在自己 CI *之外*（跟第 1 局同一種分母不穩問題，只是較輕），**第 4 局起中位數才穩定落在自己 CI 之內**，此後數字才適合直接引用（第 6/7/8 局 CI 約 24–44%／19–32%／21–33%，RE 版 54–60%）。機制：同一分的份量隨局數變重（領先1分勝率：1-6局59%→7局72%→8局79%），讓半局現在結束的代價上升，壓縮門檻公式分子。另外第 7–8 局 V成功查表仍有 44–55% 退化到忽略局數桶的合併值（理論上稀釋、不誇大結論）。`analyze_wpa_runner_reclassification.py` 把這個門檻接回實際球員：RE 判「任一棒次都不建議跑」的跑者裡，四季分別有 100%／67%／88%／50%（2024、2026 兩季名單本身只有 2、3 人，波動是小樣本正常現象）在第 4–8 局至少一局的 WPA 門檻下其實夠格，說明 RE 版判準不只低估晚局門檻該多低，也低估了現有跑者裡有多少人夠格晚局盜壘。`compare_wpa_groups.py` 把「棒次 × 打者類型分組分析」的既有 RE 結論換成 WPA（只用第 4-8 局子集，兩邊用同一批決策才公平）：棒次分析的「低點在 1、2 棒」在這個切法下不穩定（四季最低點落在不同棒次），暫不能下結論；長打力／選球力分組方向大致保留（跟 RE 同調）；單打率／TTO 分組方向不變但顯著性消失（樣本切太細撐不住，不是效應消失）；**真上壘率（OBP）分組方向四季一致反轉**（RE 說高 OBP 門檻較低，WPA 說高 OBP 門檻較高，3/4 季顯著），這是唯一一個真的翻過來的分組，值得再深入拆解機制。詳見 README「WPA 版損益兩平門檻」一節
+- `build_win_expectancy_matrix.py` → `validate_win_expectancy_matrix.py` → `generate_we_report.py`：中職 WE（勝率增值）矩陣：(局數桶 1-6/7/8/9+ × 攻守方 × 分差桶 ±5 × 出局數 × 壘包) → 進攻方最終獲勝機率，全部從逐球紀錄推回最終比分（不查 box score 總分欄位）。跟 RE24 不同，預設一次合併四季（`--seasons` 可覆寫），因為格子數（2112）遠多於 RE24 的 24 格；validate 腳本做單調性與目標情境（2 出局、一/二壘有人、第 7–8 局）涵蓋度檢查，因為沒有獨立模擬引擎可對照
+- `model_wpa_decisions.py` → `bootstrap_wpa_threshold_ci.py` → `generate_wpa_report.py`（`reports/cpbl-wpa-decision-thresholds.html`，四季逐局信賴區間比較圖）：把 WE 矩陣接回三分支模型，對應計畫書第 213 項「第 7–8 局應改用 WPA 而非 RE 當判準」。V成功／V失敗直接查 WE 表（WE 每格本來就是「這個狀態到比賽結束」的經驗值，不必再模擬），V不跑用打者個人機率分布做「一步」蒙地卡羅落到新狀態後查表：關鍵是 V失敗必須換算成**對手視角**（`1 - WE(對手下一次進攻)`），RE 版模型完全沒有這個機制（RE 版失敗分支只模擬「自己隊下一次進攻」，不管對手，因為 RE 不是零和的）。門檻是比值，分母很小時對雜訊極敏感，所以 bootstrap 腳本對每筆決策的三個 V 值各自用其標準誤（WE 格子二項標準誤＋一步模擬標準誤）加雜訊再 case resampling，算 95% CI。**四季結果**：逐局把 CI 上界跟同局 RE 門檻中位數比，第 2–8 局四季都碰不到（0/4 重疊），只有第 1 局 2/4 季重疊；分母（V成功－V失敗）中位數只有 0.04、跟標準誤同量級，比值結構性不穩定，不是樣本不夠。**結論：第 2–8 局方向都站得住，不是只有 7–8 局**；但點估計本身第 2–3 局落在自己 CI *之外*（跟第 1 局同一種分母不穩問題，只是較輕），**第 4 局起中位數才穩定落在自己 CI 之內**，此後數字才適合直接引用（第 6/7/8 局 CI 約 24–44%／19–32%／21–33%，RE 版 54–60%）。機制：同一分的份量隨局數變重（領先1分勝率：1-6局59%→7局72%→8局79%），讓半局現在結束的代價上升，壓縮門檻公式分子。另外第 7–8 局 V成功查表仍有 44–55% 退化到忽略局數桶的合併值（理論上稀釋、不誇大結論）。`analyze_wpa_runner_reclassification.py` 把這個門檻接回實際球員：RE 判「任一棒次都不建議跑」的跑者裡，四季分別有 100%／67%／88%／50%（2024、2026 兩季名單本身只有 2、3 人，波動是小樣本正常現象）在第 4–8 局至少一局的 WPA 門檻下其實夠格，說明 RE 版判準不只低估晚局門檻該多低，也低估了現有跑者裡有多少人夠格晚局盜壘。`compare_wpa_groups.py` 把「棒次 × 打者類型分組分析」的既有 RE 結論換成 WPA（只用第 4-8 局子集，兩邊用同一批決策才公平）：棒次分析的「低點在 1、2 棒」在這個切法下不穩定（四季最低點落在不同棒次），暫不能下結論；長打力／選球力分組方向大致保留（跟 RE 同調）；單打率／TTO 分組方向不變但顯著性消失（樣本切太細撐不住，不是效應消失）；**真上壘率（OBP）分組方向四季一致反轉**（RE 說高 OBP 門檻較低，WPA 說高 OBP 門檻較高，3/4 季顯著），這是唯一一個真的翻過來的分組，值得再深入拆解機制。詳見 README「WPA 版損益兩平門檻」一節
 - `analyze_team_decisions.py`：六隊決策品質，用二項檢定判「跑對／跑錯」，不顯著就標「無法判定」
 - `analyze_runner_steal_rates.py`：符合門檻的跑者名單，**逐棒次比對而非比單一門檻**（門檻本身隨棒次變是核心發現，比單一中位數等於丟掉這個結論）
 - `validate_re24_simulation.py`：模擬 RE24 vs 真實 RE24 逐格比較。**引擎若無法重現真實 RE24 就不可繼續往下做**
@@ -65,13 +65,13 @@ python -m unittest tests.test_model_batter_decisions
 - `analyze_retention_contribution.py`：逐棒次的保留效應貢獻（pp）。反事實直接重用 `model_batter_decisions.py` 每筆決策已算好但原本沒用上的 `ModelVIfBatterOut`（正常出局、下一局改由下一棒開局），不必重跑模擬
 - `analyze_batter_threshold_correlations.py`：打者層級門檻（該打者所有決策點 `BreakEvenSuccessRate` 中位數）跟 HR/長打/保送/單打率、打擊率、出局率的 Pearson 相關係數
 - `bootstrap_threshold_ci.py`：整體/逐棒次/四組打者類型比較的 95% bootstrap 信賴區間。case resampling 之外，額外用 `ModelV*SE`（模擬標準誤，原本沒用上）對 V 值加常態雜訊，一次涵蓋樣本誤差與模擬雜訊兩種來源，不必重跑模擬
-- `analyze_hyperparameter_sensitivity.py`：讀「模擬次數/`prior_pa`/`minimum_transition_cell` 各變體」重跑出來的 `cpbl_decision_model_*_summary.json`（各自獨立 `--output-dir`，不寫回 `outputs/`）與「`min-pa` 各變體」的 `cpbl_group_comparison_*.json`，跟基準情境比較門檻中位數與顯著性判定是否翻轉——這三個模擬類超參數需要先用 `model_batter_decisions.py --output-dir <變體目錄>` 各跑一次，`min-pa` 則用 `analyze_batter_types.py`→`join_decision_batter_types.py`→`compare_groups.py` 三支串起來、同樣指到各自 `--output-dir`／`--output`
+- `analyze_hyperparameter_sensitivity.py`：讀「模擬次數/`prior_pa`/`minimum_transition_cell` 各變體」重跑出來的 `cpbl_decision_model_*_summary.json`（各自獨立 `--output-dir`，不寫回 `outputs/`）與「`min-pa` 各變體」的 `cpbl_group_comparison_*.json`，跟基準情境比較門檻中位數與顯著性判定是否翻轉；這三個模擬類超參數需要先用 `model_batter_decisions.py --output-dir <變體目錄>` 各跑一次，`min-pa` 則用 `analyze_batter_types.py`→`join_decision_batter_types.py`→`compare_groups.py` 三支串起來、同樣指到各自 `--output-dir`／`--output`
 
 ### 資料品質：公告列過濾（必讀）
 
 CPBL 逐球資料混有「換投手／代打／代跑／守備」等純公告列，其 `OutCnt` 與壘包欄位是殘留舊值，約佔全部列數 3%，未過濾會嚴重污染「兩出局、空壘」這格的 RE24。過濾邏輯在 `cpbl_row_filters.py`（獨立成模組是為避免與 `CPBL_steal_getData.py` 循環 import）。
 
-**任何新增的原始列解析都必須套用 `remove_administrative_rows`**，否則會重蹈這個 bug。2026-08-29 的 commit `28321aa` 修正此問題後，四季結果全部重跑過——若看到 `outputs/` 與 git 歷史對不上的數字，先確認是不是修正前的殘留。
+**任何新增的原始列解析都必須套用 `remove_administrative_rows`**，否則會重蹈這個 bug。2026-08-29 的 commit `28321aa` 修正此問題後，四季結果全部重跑過；若看到 `outputs/` 與 git 歷史對不上的數字，先確認是不是修正前的殘留。
 
 ### 各腳本預設年份不一致（常見陷阱）
 
@@ -81,7 +81,7 @@ CPBL 逐球資料混有「換投手／代打／代跑／守備」等純公告列
 
 `data/raw/cpbl/2025_A/`（1–360）、`data/raw/cpbl/2026_A/`（1–240）已在本機快取。重跑管線不需重爬；只有補新場次時才會發網路請求（`--refresh` 會忽略快取全部重抓，慎用）。
 
-`data/raw/`、`outputs/`、`*.csv`、`*.json` 都在 `.gitignore` 內——**分析輸出不進版控**，只有程式碼、文件與 `reports/*.html` 進。
+`data/raw/`、`outputs/`、`*.csv`、`*.json` 都在 `.gitignore` 內：**分析輸出不進版控**，只有程式碼、文件與 `reports/*.html` 進。
 
 ## 方法論不可違反的約束
 
@@ -100,7 +100,11 @@ CPBL 逐球資料混有「換投手／代打／代跑／守備」等純公告列
 
 ## 報告產生
 
-`generate_decision_report.py` 找不到 `cpbl_group_comparison_{tag}.json` 時，會略過「棒次與打者類型」區塊並印出提醒，其餘照常產生——所以看到報告缺區塊，先確認 step 6 是否跑過、tag 是否對得上。
+`generate_decision_report.py` 找不到 `cpbl_group_comparison_{tag}.json` 時，會略過「棒次與打者類型」區塊並印出提醒，其餘照常產生；所以看到報告缺區塊，先確認 step 6 是否跑過、tag 是否對得上。
+
+## 文字輸出風格
+
+產生的 md／html／code 裡的**說明文字**不要用 `--` 當破折號用（例如「A -- B」），改用冒號或其他標點代替。此規則不影響命令列參數語法（如 `--year`）與 Markdown 語法本身（如表格分隔線 `---`），這些是必要的語法字元，不是可替換的標點。
 
 ## Git commit 慣例
 
