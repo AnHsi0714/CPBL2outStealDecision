@@ -8,3 +8,6 @@ __pycache__/
 data/raw/
 outputs/
 *.csv
+
+# 慣用手對照表來自 CPBL 官網球員頁，無法由逐球快取重建，需進版控。
+!data/player_handedness.csv
