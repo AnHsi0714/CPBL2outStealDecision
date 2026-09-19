@@ -5,6 +5,9 @@
 League/GameId/GameDate/AwayTeam/HomeTeam/Inning/HalfInning/BattingTeam/BatterName/
 Outs/On1B/On2B/On3B/ResultText/HasStealMention
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent)); import pathsetup  # noqa: E402,F401
 import csv
 import glob
 import os

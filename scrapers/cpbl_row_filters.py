@@ -7,6 +7,9 @@ import；把過濾邏輯抽到這個沒有專案內部依賴的模組，兩邊�
 
 from __future__ import annotations
 
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent)); import pathsetup  # noqa: E402,F401
 from typing import Any
 
 
