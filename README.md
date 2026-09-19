@@ -16,7 +16,7 @@ cd CPBL2outStealDecision
 pip install requests scipy
 ```
 
-`requests` 只有爬蟲腳本需要；`scipy.stats` 只有 `compare_groups.py` 需要，其餘分析刻意只用標準庫（`csv.DictReader` / `statistics`）。
+`requests` 只有爬蟲腳本需要；`scipy.stats` 只有 `pipeline/compare_groups.py` 需要，其餘分析刻意只用標準庫（`csv.DictReader` / `statistics`）。
 
 ## 使用方式
 
@@ -37,23 +37,23 @@ pip install requests scipy
 
 | 步驟 | 腳本 | 說明 | 輸出 |
 |---|---|---|---|
-| ① | `find_2out_first_base.py` | 爬取＋篩出目標情境 | `cpbl_2out_first_base_{tag}.csv` |
-| ② | `model_batter_decisions.py` | 模擬三分支，算損益兩平門檻 | `cpbl_decision_model_{tag}.csv` |
-| ③ | `analyze_batter_types.py` | 打者類型分組 | `cpbl_batter_types_{tag}.csv` |
-| ④ | `join_decision_batter_types.py` | 貼上棒次與打者類型 | `cpbl_decision_with_types_{tag}.csv` |
-| ⑤ | `flag_lineup_substitutions.py` | 標記先發/代打 | `cpbl_decision_with_starter_flag_{tag}.csv` |
-| ⑥ | `compare_groups.py` | 分組檢定 | `cpbl_group_comparison_{tag}.json` |
-| ⑦ | `generate_decision_report.py` | 產出互動 HTML 報告 | `reports/cpbl-steal-decision-{year}.html` |
+| ① | `scrapers/find_2out_first_base.py` | 爬取＋篩出目標情境 | `cpbl_2out_first_base_{tag}.csv` |
+| ② | `pipeline/model_batter_decisions.py` | 模擬三分支，算損益兩平門檻 | `cpbl_decision_model_{tag}.csv` |
+| ③ | `pipeline/analyze_batter_types.py` | 打者類型分組 | `cpbl_batter_types_{tag}.csv` |
+| ④ | `pipeline/join_decision_batter_types.py` | 貼上棒次與打者類型 | `cpbl_decision_with_types_{tag}.csv` |
+| ⑤ | `pipeline/flag_lineup_substitutions.py` | 標記先發/代打 | `cpbl_decision_with_starter_flag_{tag}.csv` |
+| ⑥ | `pipeline/compare_groups.py` | 分組檢定 | `cpbl_group_comparison_{tag}.json` |
+| ⑦ | `pipeline/generate_decision_report.py` | 產出互動 HTML 報告 | `reports/cpbl-steal-decision-{year}.html` |
 
 ```bash
-python find_2out_first_base.py --year 2025 --start 1 --end 360
-python model_batter_decisions.py --year 2025 --start 1 --end 360
-python analyze_batter_types.py --year 2025 --start 1 --end 360
-python join_decision_batter_types.py --year 2025 --start 1 --end 360
-python flag_lineup_substitutions.py --year 2025 --start 1 --end 360
-python compare_groups.py --year 2025 --start 1 --end 360 \
+python scrapers/find_2out_first_base.py --year 2025 --start 1 --end 360
+python pipeline/model_batter_decisions.py --year 2025 --start 1 --end 360
+python pipeline/analyze_batter_types.py --year 2025 --start 1 --end 360
+python pipeline/join_decision_batter_types.py --year 2025 --start 1 --end 360
+python pipeline/flag_lineup_substitutions.py --year 2025 --start 1 --end 360
+python pipeline/compare_groups.py --year 2025 --start 1 --end 360 \
   --input outputs/cpbl_decision_with_starter_flag_2025_A_1-360.csv
-python generate_decision_report.py --year 2025 --start 1 --end 360
+python pipeline/generate_decision_report.py --year 2025 --start 1 --end 360
 ```
 
 測試：
@@ -65,21 +65,21 @@ python -m unittest discover -s tests
 ### 主管線之外的分析腳本
 
 以下都讀 `outputs/` 既有輸出即可獨立執行，不必重跑主管線；找不到對應檔案時，
-`generate_decision_report.py` 只會略過該區塊，不影響其餘內容產生。各腳本詳細參數
+`pipeline/generate_decision_report.py` 只會略過該區塊，不影響其餘內容產生。各腳本詳細參數
 與方法論見計畫書與腳本內的說明。
 
 | 分析 | 腳本 | 結果 |
 |---|---|---|
-| RE24 矩陣熱力圖 | `build_re24_matrix.py` → `generate_re24_report.py` | `reports/cpbl-re24-matrix-{year}.html` |
-| WE 勝率矩陣熱力圖 | `build_win_expectancy_matrix.py` → `validate_win_expectancy_matrix.py` → `generate_we_report.py` | `reports/cpbl-win-expectancy-matrix.html` |
-| WPA 版損益兩平門檻 | `model_wpa_decisions.py` → `bootstrap_wpa_threshold_ci.py` → `generate_wpa_report.py` | `reports/cpbl-wpa-decision-thresholds.html` |
-| 六隊決策品質、符合門檻的跑者名單 | `analyze_team_decisions.py`、`analyze_runner_steal_rates.py` | 併入 `reports/cpbl-steal-decision-{year}.html` |
-| bootstrap 信賴區間、超參數敏感度 | `bootstrap_threshold_ci.py`、`analyze_hyperparameter_sensitivity.py` 等 | 無獨立報告，結論見計畫書「跨年度穩定性檢查」一節 |
-| 左右投對跑者的影響 | `analyze_pitcher_handedness.py` | `outputs/cpbl_runner_handedness_{tag}.csv`／`_summary.json` |
+| RE24 矩陣熱力圖 | `re24/build_re24_matrix.py` → `re24/generate_re24_report.py` | `reports/cpbl-re24-matrix-{year}.html` |
+| WE 勝率矩陣熱力圖 | `win_expectancy/build_win_expectancy_matrix.py` → `win_expectancy/validate_win_expectancy_matrix.py` → `win_expectancy/generate_we_report.py` | `reports/cpbl-win-expectancy-matrix.html` |
+| WPA 版損益兩平門檻 | `wpa/model_wpa_decisions.py` → `wpa/bootstrap_wpa_threshold_ci.py` → `wpa/generate_wpa_report.py` | `reports/cpbl-wpa-decision-thresholds.html` |
+| 六隊決策品質、符合門檻的跑者名單 | `analysis/analyze_team_decisions.py`、`analysis/analyze_runner_steal_rates.py` | 併入 `reports/cpbl-steal-decision-{year}.html` |
+| bootstrap 信賴區間、超參數敏感度 | `analysis/bootstrap_threshold_ci.py`、`analysis/analyze_hyperparameter_sensitivity.py` 等 | 無獨立報告，結論見計畫書「跨年度穩定性檢查」一節 |
+| 左右投對跑者的影響 | `analysis/analyze_pitcher_handedness.py` | `outputs/cpbl_runner_handedness_{tag}.csv`／`_summary.json` |
 
 ### 左右投對跑者的影響
 
-`analyze_pitcher_handedness.py` 只回答一件事：**投手慣用手如何影響跑者盜二壘**。
+`analysis/analyze_pitcher_handedness.py` 只回答一件事：**投手慣用手如何影響跑者盜二壘**。
 左投面對一壘跑者是正面朝向，牽制視野好、起跑時機難抓。
 
 **這影響的是跑者跑不跑得掉（實際成功率），不是門檻**——門檻由打者的打擊結果分布決定，
@@ -88,14 +88,14 @@ python -m unittest discover -s tests
 
 ```bash
 # 單季（逐跑者拆左右投後多數人樣本不足，主要看聯盟層級數字）
-python analyze_pitcher_handedness.py --year 2025 --start 1 --end 360
+python analysis/analyze_pitcher_handedness.py --year 2025 --start 1 --end 360
 
 # 合併四季（逐跑者名單用這個；門檻仍取 --year 指定球季）
-python analyze_pitcher_handedness.py --year 2025 --start 1 --end 360 \
+python analysis/analyze_pitcher_handedness.py --year 2025 --start 1 --end 360 \
   --pool-years 2023,2024,2025,2026
 ```
 
-範圍與 `analyze_runner_steal_rates.py` 一致（只算一壘跑者盜二壘，不含盜三壘、雙盜壘），
+範圍與 `analysis/analyze_runner_steal_rates.py` 一致（只算一壘跑者盜二壘，不含盜三壘、雙盜壘），
 但**不限兩出局**——跑者能力與出局數無關，用全部一壘有人的球數才有足夠樣本做逐跑者拆分
 （四季 2,228 次嘗試 vs 兩出局子集的 772 次）。慣用手來自 `data/player_handedness.csv`。
 
