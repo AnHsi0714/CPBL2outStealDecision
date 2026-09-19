@@ -6,9 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 2026 台灣棒球數據分析競賽參賽專案（現場分析戰術組）。研究「第 1–8 局、兩出局、僅一壘有人」情境下發動盜壘的**損益兩平成功率門檻**，以及該門檻如何隨棒次與打者類型變化。
 
-兩份必讀文件：
-- `兩出局一壘有人盜壘決策_專案計畫書.md`：研究定位、方法論、13 週工作分解（用 checkbox 追蹤進度，改動程式碼後應同步更新對應項目）
-- `README.md`：使用方式與已完成的 2025 分析結論
+三份必讀文件：
+- `兩出局一壘有人盜壘決策_專案計畫書.md`：研究定位、方法論、13 週工作分解（用 checkbox 追蹤進度）。**checkbox 項目只寫任務描述與一句話結論，不放完整數字**，改動程式碼後同步更新對應項目即可，不必補回數字
+- `分析發現.md`：計畫書各項分析的完整數字、結論與方法細節。**新增或更新分析結果一律寫進這裡，不要寫回計畫書**，計畫書要留給評審看，太多數字會拖累可讀性
+- `README.md`：使用方式與已完成的分析結論摘要
 
 ## 程式碼目錄結構
 
@@ -66,7 +67,7 @@ python -m unittest tests.test_model_batter_decisions
 
 - `re24/build_re24_matrix.py` → `re24/generate_re24_report.py`：中職 RE24 24 格矩陣與互動熱力圖
 - `win_expectancy/build_win_expectancy_matrix.py` → `win_expectancy/validate_win_expectancy_matrix.py` → `win_expectancy/generate_we_report.py`：中職 WE（勝率增值）矩陣：(局數桶 1-6/7/8/9+ × 攻守方 × 分差桶 ±5 × 出局數 × 壘包) → 進攻方最終獲勝機率，全部從逐球紀錄推回最終比分（不查 box score 總分欄位）。跟 RE24 不同，預設一次合併四季（`--seasons` 可覆寫），因為格子數（2112）遠多於 RE24 的 24 格；validate 腳本做單調性與目標情境（2 出局、一/二壘有人、第 7–8 局）涵蓋度檢查，因為沒有獨立模擬引擎可對照
-- `wpa/model_wpa_decisions.py` → `wpa/bootstrap_wpa_threshold_ci.py` → `wpa/generate_wpa_report.py`（`reports/cpbl-wpa-decision-thresholds.html`，四季逐局信賴區間比較圖）：把 WE 矩陣接回三分支模型，對應計畫書第 213 項「第 7–8 局應改用 WPA 而非 RE 當判準」。V成功／V失敗直接查 WE 表（WE 每格本來就是「這個狀態到比賽結束」的經驗值，不必再模擬），V不跑用打者個人機率分布做「一步」蒙地卡羅落到新狀態後查表：關鍵是 V失敗必須換算成**對手視角**（`1 - WE(對手下一次進攻)`），RE 版模型完全沒有這個機制（RE 版失敗分支只模擬「自己隊下一次進攻」，不管對手，因為 RE 不是零和的）。門檻是比值，分母很小時對雜訊極敏感，所以 bootstrap 腳本對每筆決策的三個 V 值各自用其標準誤（WE 格子二項標準誤＋一步模擬標準誤）加雜訊再 case resampling，算 95% CI。**四季結果**：逐局把 CI 上界跟同局 RE 門檻中位數比，第 2–8 局四季都碰不到（0/4 重疊），只有第 1 局 2/4 季重疊；分母（V成功－V失敗）中位數只有 0.04、跟標準誤同量級，比值結構性不穩定，不是樣本不夠。**結論：第 2–8 局方向都站得住，不是只有 7–8 局**；但點估計本身第 2–3 局落在自己 CI *之外*（跟第 1 局同一種分母不穩問題，只是較輕），**第 4 局起中位數才穩定落在自己 CI 之內**，此後數字才適合直接引用（第 6/7/8 局 CI 約 24–44%／19–32%／21–33%，RE 版 54–60%）。機制：同一分的份量隨局數變重（領先1分勝率：1-6局59%→7局72%→8局79%），讓半局現在結束的代價上升，壓縮門檻公式分子。另外第 7–8 局 V成功查表仍有 44–55% 退化到忽略局數桶的合併值（理論上稀釋、不誇大結論）。`wpa/analyze_wpa_runner_reclassification.py` 把這個門檻接回實際球員：RE 判「任一棒次都不建議跑」的跑者裡，四季分別有 100%／67%／88%／50%（2024、2026 兩季名單本身只有 2、3 人，波動是小樣本正常現象）在第 4–8 局至少一局的 WPA 門檻下其實夠格，說明 RE 版判準不只低估晚局門檻該多低，也低估了現有跑者裡有多少人夠格晚局盜壘。`wpa/compare_wpa_groups.py` 把「棒次 × 打者類型分組分析」的既有 RE 結論換成 WPA（只用第 4-8 局子集，兩邊用同一批決策才公平）：棒次分析的「低點在 1、2 棒」在這個切法下不穩定（四季最低點落在不同棒次），暫不能下結論；長打力／選球力分組方向大致保留（跟 RE 同調）；單打率／TTO 分組方向不變但顯著性消失（樣本切太細撐不住，不是效應消失）；**真上壘率（OBP）分組方向四季一致反轉**（RE 說高 OBP 門檻較低，WPA 說高 OBP 門檻較高，3/4 季顯著），這是唯一一個真的翻過來的分組，值得再深入拆解機制。詳見 README「WPA 版損益兩平門檻」一節
+- `wpa/model_wpa_decisions.py` → `wpa/bootstrap_wpa_threshold_ci.py` → `wpa/generate_wpa_report.py`（`reports/cpbl-wpa-decision-thresholds.html`，四季逐局信賴區間比較圖）：把 WE 矩陣接回三分支模型算 WPA 版損益兩平門檻。V成功／V失敗直接查 WE 表（WE 每格本來就是「這個狀態到比賽結束」的經驗值，不必再模擬），V不跑用打者個人機率分布做「一步」蒙地卡羅落到新狀態後查表：關鍵是 V失敗必須換算成**對手視角**（`1 - WE(對手下一次進攻)`），RE 版模型完全沒有這個機制（RE 版失敗分支只模擬「自己隊下一次進攻」，因為 RE 不是零和的）。門檻是比值，分母很小時對雜訊極敏感，所以 bootstrap 腳本對每筆決策的三個 V 值各自用其標準誤（WE 格子二項標準誤＋一步模擬標準誤）加雜訊再 case resampling，算 95% CI。`wpa/analyze_wpa_runner_reclassification.py` 把門檻接回實際跑者名單，`wpa/compare_wpa_groups.py` 把棒次×打者類型分組換成 WPA 重算。**四季結果與完整數字見 `分析發現.md`**
 - `analysis/analyze_team_decisions.py`：六隊決策品質，用二項檢定判「跑對／跑錯」，不顯著就標「無法判定」
 - `analysis/analyze_runner_steal_rates.py`：符合門檻的跑者名單，**逐棒次比對而非比單一門檻**（門檻本身隨棒次變是核心發現，比單一中位數等於丟掉這個結論）
 - `re24/validate_re24_simulation.py`：模擬 RE24 vs 真實 RE24 逐格比較。**引擎若無法重現真實 RE24 就不可繼續往下做**
@@ -75,10 +76,10 @@ python -m unittest tests.test_model_batter_decisions
 
 ### 左右投：必須分清楚的兩件事
 
-- **投手慣用手影響的是「跑不跑得掉」（實際成功率），不是門檻。** 門檻由打者的打擊結果分布決定，模型裡完全沒有用到投手。所以把現有結果按投手左右投分兩堆比較，門檻會幾乎一樣——那是算法造成的，不是真的沒差異。
+- **投手慣用手影響的是「跑不跑得掉」（實際成功率），不是門檻。** 門檻由打者的打擊結果分布決定，模型裡完全沒有用到投手。所以把現有結果按投手左右投分兩堆比較，門檻會幾乎一樣，那是算法造成的，不是真的沒差異。
 - 若真要讓門檻隨投手變，必須把打者成績依對戰關係分開建檔，而且**platoon 效應是「打者手 × 投手手」的對戰關係，不是投手手別本身**：把所有打者合起來看「對左投的成績」，右打者（逆向有利）與左打者（同手不利）會互相抵銷，得到「幾乎沒差異」的假結論。這條路因樣本不足（要湊 100 個對左投打席需全年 400 打席，四季只有 17/22/15/0 位打者達標）目前未採用。
 
-以下兩支只吃 `cpbl_decision_model_*.csv`（`analysis/analyze_batter_threshold_correlations.py` 另吃 `cpbl_batter_profiles_*.csv`），輸出 CSV＋文字結論寫進 README「跨年度穩定性檢查」一節，**不會**被 `pipeline/generate_decision_report.py` 吸收進互動報告：
+以下兩支只吃 `cpbl_decision_model_*.csv`（`analysis/analyze_batter_threshold_correlations.py` 另吃 `cpbl_batter_profiles_*.csv`），輸出 CSV＋文字結論寫進 `分析發現.md`，**不會**被 `pipeline/generate_decision_report.py` 吸收進互動報告：
 
 - `analysis/analyze_retention_contribution.py`：逐棒次的保留效應貢獻（pp）。反事實直接重用 `pipeline/model_batter_decisions.py` 每筆決策已算好但原本沒用上的 `ModelVIfBatterOut`（正常出局、下一局改由下一棒開局），不必重跑模擬
 - `analysis/analyze_batter_threshold_correlations.py`：打者層級門檻（該打者所有決策點 `BreakEvenSuccessRate` 中位數）跟 HR/長打/保送/單打率、打擊率、出局率的 Pearson 相關係數
@@ -108,7 +109,7 @@ CPBL 逐球資料混有「換投手／代打／代跑／守備」等純公告列
 - **得分歸屬起算點是「盜壘成功的那一球」**，不是打席或半局開頭（計畫書 3.0）。絕不可用半局總得分或 scoreboard 逐局比分做 RE 計算，會把盜壘前的得分算進去而高估。
 - **保留效應是本研究核心貢獻**：盜壘失敗造成第三出局時，該打者的打席保留到下一局重新開始，等於打序整體延後一棒。三分支模擬（成功／失敗／不跑）都必須模擬到「同隊下一個進攻半局結束」才能捕捉這個效應。
 - **第 9 局與延長賽排除**（保留效應不存在），資料篩選階段已處理，勿放寬。
-- **球員以 `HitterAcnt` 為主鍵**，不用姓名 join。投手與打者的投打習慣見 `data/player_handedness.csv`（497 人，以 `Acnt` 為主鍵）——這是 `data/` 底下唯一進版控的檔案，來自 CPBL 官網球員頁，**無法由逐球快取重建**，`.gitignore` 有對應例外，勿誤刪。
+- **球員以 `HitterAcnt` 為主鍵**，不用姓名 join。投手與打者的投打習慣見 `data/player_handedness.csv`（497 人，以 `Acnt` 為主鍵），這是 `data/` 底下唯一進版控的檔案，來自 CPBL 官網球員頁，**無法由逐球快取重建**，`.gitignore` 有對應例外，勿誤刪。
 - **打者類型分組刻意用 `ISO_proxy` / `BBpct_proxy` 而非 SLG/OBP**（計畫書 3.2）：OBP 同時混入方向相反的安打與保送成分，訊號較髒。`SingleRate_proxy` 對應計畫書 1.4 節的「高上壘接觸型」假設。三者不是同一個假設，分析與簡報須講清楚驗證的是哪一個（README 有完整對照表）。
 - **盜壘沒有結構化欄位**，是從 `Content` 自由文字解析（`is_steal_success` / `is_steal_failure`），並用壘包狀態變化交叉驗證。改動文字判定規則時務必補 `tests/test_find_2out_first_base.py` 的案例。
 
@@ -122,7 +123,7 @@ CPBL 逐球資料混有「換投手／代打／代跑／守備」等純公告列
 
 ## 文字輸出風格
 
-產生的 md／html／code 裡的**說明文字**不要用 `--` 當破折號用（例如「A -- B」），改用冒號或其他標點代替。此規則不影響命令列參數語法（如 `--year`）與 Markdown 語法本身（如表格分隔線 `---`），這些是必要的語法字元，不是可替換的標點。
+產生的 md／html／code 裡的**說明文字**不要用 `--` 或 `——`（全形雙破折號）當破折號用（例如「A -- B」「A——B」），改用冒號、逗號或其他標點代替。此規則不影響命令列參數語法（如 `--year`）與 Markdown 語法本身（如表格分隔線 `---`），這些是必要的語法字元，不是可替換的標點。
 
 ## Git commit 慣例
 

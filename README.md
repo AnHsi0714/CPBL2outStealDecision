@@ -1,4 +1,4 @@
-# 兩出局該不該跑？中職教練的跑壘決策指南
+# 兩出局一壘有人，該不該跑？中職教練的跑壘決策指南
 
 2026 台灣棒球數據分析競賽（現場分析戰術組）參賽專案。研究在**第 1–8 局、兩出局、僅一壘有人**的情境下，發動盜壘的損益兩平成功率門檻是多少，以及這個門檻如何隨打者棒次、打者類型、局數/比分（勝率視角）改變。
 
@@ -66,7 +66,7 @@ python -m unittest discover -s tests
 
 以下都讀 `outputs/` 既有輸出即可獨立執行，不必重跑主管線；找不到對應檔案時，
 `pipeline/generate_decision_report.py` 只會略過該區塊，不影響其餘內容產生。各腳本詳細參數
-與方法論見計畫書與腳本內的說明。
+見腳本內說明，完整結果數字見 [分析發現.md](./分析發現.md)。
 
 | 分析 | 腳本 | 結果 |
 |---|---|---|
@@ -74,7 +74,7 @@ python -m unittest discover -s tests
 | WE 勝率矩陣熱力圖 | `win_expectancy/build_win_expectancy_matrix.py` → `win_expectancy/validate_win_expectancy_matrix.py` → `win_expectancy/generate_we_report.py` | `reports/cpbl-win-expectancy-matrix.html` |
 | WPA 版損益兩平門檻 | `wpa/model_wpa_decisions.py` → `wpa/bootstrap_wpa_threshold_ci.py` → `wpa/generate_wpa_report.py` | `reports/cpbl-wpa-decision-thresholds.html` |
 | 六隊決策品質、符合門檻的跑者名單 | `analysis/analyze_team_decisions.py`、`analysis/analyze_runner_steal_rates.py` | 併入 `reports/cpbl-steal-decision-{year}.html` |
-| bootstrap 信賴區間、超參數敏感度 | `analysis/bootstrap_threshold_ci.py`、`analysis/analyze_hyperparameter_sensitivity.py` 等 | 無獨立報告，結論見計畫書「跨年度穩定性檢查」一節 |
+| bootstrap 信賴區間、超參數敏感度 | `analysis/bootstrap_threshold_ci.py`、`analysis/analyze_hyperparameter_sensitivity.py` 等 | 無獨立報告，結論見 [分析發現.md](./分析發現.md) |
 | 左右投對跑者的影響 | `analysis/analyze_pitcher_handedness.py` | `outputs/cpbl_runner_handedness_{tag}.csv`／`_summary.json` |
 
 ### 左右投對跑者的影響
@@ -82,7 +82,7 @@ python -m unittest discover -s tests
 `analysis/analyze_pitcher_handedness.py` 只回答一件事：**投手慣用手如何影響跑者盜二壘**。
 左投面對一壘跑者是正面朝向，牽制視野好、起跑時機難抓。
 
-**這影響的是跑者跑不跑得掉（實際成功率），不是門檻**——門檻由打者的打擊結果分布決定，
+**這影響的是跑者跑不跑得掉（實際成功率），不是門檻**：門檻由打者的打擊結果分布決定，
 跟投手是誰無關。簡報上把「面對左投門檻要調高」跟「面對左投比較難跑」混為一談會被問倒，
 正確說法是**門檻不動，是你達不達得到門檻在變**。
 
@@ -96,7 +96,7 @@ python analysis/analyze_pitcher_handedness.py --year 2025 --start 1 --end 360 \
 ```
 
 範圍與 `analysis/analyze_runner_steal_rates.py` 一致（只算一壘跑者盜二壘，不含盜三壘、雙盜壘），
-但**不限兩出局**——跑者能力與出局數無關，用全部一壘有人的球數才有足夠樣本做逐跑者拆分
+但**不限兩出局**：跑者能力與出局數無關，用全部一壘有人的球數才有足夠樣本做逐跑者拆分
 （四季 2,228 次嘗試 vs 兩出局子集的 772 次）。慣用手來自 `data/player_handedness.csv`。
 
 四季結果：
@@ -146,4 +146,4 @@ python analysis/analyze_pitcher_handedness.py --year 2025 --start 1 --end 360 \
 
 - CPBL 官網資料屬自行爬蟲取得，請留意其使用條款並控制爬取頻率；原始資料與程式碼分開管理，不進版控。
 - 球員投打習慣（`data/player_handedness.csv`，497 人）取自 CPBL 官網球員頁的「投打習慣」欄位，逐球資料本身沒有這個欄位。這份對照表無法由逐球快取重建，因此是 `data/` 底下唯一進版控的檔案（`.gitignore` 有對應例外）。以 `Acnt` 為主鍵，不用姓名 join。
-- 盜壘沒有結構化欄位，是從逐球自由文字 `Content` 解析出來的，非官方直接提供的事件標記。解析邏輯已對帳 CPBL 官方 box score（2025 年 720 個場次×球隊組合，盜壘成功/刺殺數字 100% 相符），詳見計畫書與報告內說明。
+- 盜壘沒有結構化欄位，是從逐球自由文字 `Content` 解析出來的，非官方直接提供的事件標記。解析邏輯已對帳 CPBL 官方 box score（2025 年 720 個場次×球隊組合，盜壘成功/刺殺數字 100% 相符），詳見 [分析發現.md](./分析發現.md) 與報告內說明。
