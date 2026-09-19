@@ -18,6 +18,9 @@
 
 from __future__ import annotations
 
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent)); import pathsetup  # noqa: E402,F401
 import argparse
 import csv
 import json
@@ -27,7 +30,7 @@ from typing import Any
 from analyze_runner_steal_rates import TIER_NO_SLOTS, classify_slots
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 RELIABLE_INNINGS = (4, 5, 6, 7, 8)
 
 

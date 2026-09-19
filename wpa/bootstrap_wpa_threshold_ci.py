@@ -12,6 +12,9 @@ WE 格子雜訊也算進去了）對三個 V 值加常態雜訊，兩種不確�
 
 from __future__ import annotations
 
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent)); import pathsetup  # noqa: E402,F401
 import argparse
 import json
 import random

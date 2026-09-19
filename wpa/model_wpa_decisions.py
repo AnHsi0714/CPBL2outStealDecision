@@ -30,6 +30,9 @@ WE 矩陣格子數（2112 格）遠比實際觀測到的決策情境組合稀疏
 
 from __future__ import annotations
 
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent)); import pathsetup  # noqa: E402,F401
 import argparse
 import csv
 import json
