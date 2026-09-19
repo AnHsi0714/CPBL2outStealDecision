@@ -16,6 +16,9 @@ WE 矩陣是從真實比賽逐球資料直接算出的經驗值（不像 RE24 �
 
 from __future__ import annotations
 
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent)); import pathsetup  # noqa: E402,F401
 import argparse
 import json
 from pathlib import Path

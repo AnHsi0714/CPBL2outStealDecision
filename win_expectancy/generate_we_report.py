@@ -11,6 +11,9 @@ skill 的單一藍色相序列色，因為勝率固定落在 0–1，色階可�
 
 from __future__ import annotations
 
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent)); import pathsetup  # noqa: E402,F401
 import argparse
 import json
 from pathlib import Path
@@ -19,7 +22,7 @@ from typing import Any
 from generate_re24_report import SEQUENTIAL_STEPS_DARK, SEQUENTIAL_STEPS_LIGHT, build_cell_styles
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE_PATH = ROOT / "templates" / "we_report.html"
 STYLE_PATH = ROOT / "templates" / "we_report.css"
 SCRIPT_PATH = ROOT / "templates" / "we_report.js"
