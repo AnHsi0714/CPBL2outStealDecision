@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>兩出局一壘有人盜壘決策：整合報告</title>
+  <link rel="stylesheet" href="cpbl-full-report.css">
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="title-row">
+        <h1>兩出局、僅一壘有人，盜壘該不該跑？</h1>
+        <div class="eyebrow">CPBL · 2 OUT, RUNNER ON FIRST</div>
+      </div>
+      <div class="tabs-row">
+        <nav class="tabs" id="primary-tabs"><button type="button" class="tab" data-cat="decision" aria-selected="true">盜壘決策報告</button><button type="button" class="tab" data-cat="re24" aria-selected="false">RE24 矩陣</button><button type="button" class="tab" data-cat="we" aria-selected="false">勝率增值矩陣（WE）</button><button type="button" class="tab" data-cat="wpa" aria-selected="false">WPA 版損益兩平門檻</button></nav>
+        <div class="sub-tabs" id="secondary-tabs" hidden></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="frame-panel">
+      <div class="frame-toolbar">
+        <span id="frame-current-label" class="frame-label"></span>
+        <a id="frame-open-new" href="#" target="_blank" rel="noopener">在新分頁開啟 ↗</a>
+      </div>
+      <iframe id="report-frame" class="report-frame" title="報告內容"></iframe>
+    </div>
+  </main>
+
+  <script id="categories-data" type="application/json">[{"id": "decision", "label": "盜壘決策報告", "description": "三分支模擬（成功／失敗／不跑）、棒次 × 打者類型分組、六隊決策品質、符合門檻的跑者名單。", "variants": [{"year": "2023", "file": "cpbl-steal-decision-2023.html"}, {"year": "2024", "file": "cpbl-steal-decision-2024.html"}, {"year": "2025", "file": "cpbl-steal-decision-2025.html"}, {"year": "2026", "file": "cpbl-steal-decision-2026.html"}], "defaultIndex": 2}, {"id": "re24", "label": "RE24 矩陣", "description": "24 格 base-out 期望得分熱力圖，以及未計保留效應的基礎損益兩平門檻。", "variants": [{"year": "2023", "file": "cpbl-re24-matrix-2023.html"}, {"year": "2024", "file": "cpbl-re24-matrix-2024.html"}, {"year": "2025", "file": "cpbl-re24-matrix-2025.html"}, {"year": "2026", "file": "cpbl-re24-matrix-2026.html"}], "defaultIndex": 2}, {"id": "we", "label": "勝率增值矩陣（WE）", "description": "局數 × 攻守方 × 分差 × 出局 × 壘包，合併四季推回的進攻方最終獲勝機率。", "variants": [{"year": null, "file": "cpbl-win-expectancy-matrix.html"}], "defaultIndex": 0}, {"id": "wpa", "label": "WPA 版損益兩平門檻", "description": "第 2–8 局改以勝率增值取代得分期望值當判準，含四季逐局 bootstrap 信賴區間比較。", "variants": [{"year": null, "file": "cpbl-wpa-decision-thresholds.html"}], "defaultIndex": 0}]</script>
+  <script src="cpbl-full-report.js"></script>
+</body>
+</html>
