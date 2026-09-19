@@ -125,20 +125,22 @@ python analyze_pitcher_handedness.py --year 2025 --start 1 --end 360 \
 
 ## 分析報告
 
-用瀏覽器直接開啟即可，皆為單檔互動報告：
+以下連結指向 GitHub Pages 線上版，點了直接看到渲染後的頁面（GitHub 檔案檢視預設只會顯示 HTML 原始碼，不會執行）。
+本機 clone 後也可以直接用瀏覽器開同一份 `reports/*.html`，效果相同。
 
-| 報告                                                                           | 內容                                                           |
-| ------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| [cpbl-steal-decision-2023.html](reports/cpbl-steal-decision-2023.html)         | 2023 年損益兩平門檻、棒次/打者類型分組                         |
-| [cpbl-steal-decision-2024.html](reports/cpbl-steal-decision-2024.html)         | 2024 年損益兩平門檻、棒次/打者類型分組                         |
-| [cpbl-steal-decision-2025.html](reports/cpbl-steal-decision-2025.html)         | 2025 年損益兩平門檻、棒次/打者類型分組、球隊決策品質、跑者名單 |
-| [cpbl-steal-decision-2026.html](reports/cpbl-steal-decision-2026.html)         | 2026 年（球季進行中）損益兩平門檻                              |
-| [cpbl-re24-matrix-2023.html](reports/cpbl-re24-matrix-2023.html)               | 2023 中職 RE24 矩陣熱力圖                                      |
-| [cpbl-re24-matrix-2024.html](reports/cpbl-re24-matrix-2024.html)               | 2024 中職 RE24 矩陣熱力圖                                      |
-| [cpbl-re24-matrix-2025.html](reports/cpbl-re24-matrix-2025.html)               | 2025 中職 RE24 矩陣熱力圖                                      |
-| [cpbl-re24-matrix-2026.html](reports/cpbl-re24-matrix-2026.html)               | 2026 中職 RE24 矩陣熱力圖                                      |
-| [cpbl-win-expectancy-matrix.html](reports/cpbl-win-expectancy-matrix.html)     | 中職勝率（WE）矩陣熱力圖（2023–2026 合併）                     |
-| [cpbl-wpa-decision-thresholds.html](reports/cpbl-wpa-decision-thresholds.html) | WPA 版損益兩平門檻 vs RE 版，逐局信賴區間比較                  |
+| 報告                                                                                                                       | 內容                                                           |
+| --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| [cpbl-full-report.html（整合入口）](https://anhsi0714.github.io/CPBL2outStealDecision/reports/cpbl-full-report.html)         | 單頁整合以下全部報告，上方分類＋年份頁籤切換                   |
+| [cpbl-steal-decision-2023.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/cpbl-steal-decision-2023.html)   | 2023 年損益兩平門檻、棒次/打者類型分組                         |
+| [cpbl-steal-decision-2024.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/cpbl-steal-decision-2024.html)   | 2024 年損益兩平門檻、棒次/打者類型分組                         |
+| [cpbl-steal-decision-2025.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/cpbl-steal-decision-2025.html)   | 2025 年損益兩平門檻、棒次/打者類型分組、球隊決策品質、跑者名單 |
+| [cpbl-steal-decision-2026.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/cpbl-steal-decision-2026.html)   | 2026 年（球季進行中）損益兩平門檻                              |
+| [cpbl-re24-matrix-2023.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/cpbl-re24-matrix-2023.html)         | 2023 中職 RE24 矩陣熱力圖                                      |
+| [cpbl-re24-matrix-2024.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/cpbl-re24-matrix-2024.html)         | 2024 中職 RE24 矩陣熱力圖                                      |
+| [cpbl-re24-matrix-2025.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/cpbl-re24-matrix-2025.html)         | 2025 中職 RE24 矩陣熱力圖                                      |
+| [cpbl-re24-matrix-2026.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/cpbl-re24-matrix-2026.html)         | 2026 中職 RE24 矩陣熱力圖                                      |
+| [cpbl-win-expectancy-matrix.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/cpbl-win-expectancy-matrix.html) | 中職勝率（WE）矩陣熱力圖（2023–2026 合併）                     |
+| [cpbl-wpa-decision-thresholds.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/cpbl-wpa-decision-thresholds.html) | WPA 版損益兩平門檻 vs RE 版，逐局信賴區間比較                  |
 
 ## 資料使用注意事項
 
