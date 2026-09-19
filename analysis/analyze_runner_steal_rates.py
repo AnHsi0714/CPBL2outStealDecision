@@ -25,6 +25,9 @@ find_2out_first_base.py／model_batter_decisions.py 對這個欄位的既有觀�
 
 from __future__ import annotations
 
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent)); import pathsetup  # noqa: E402,F401
 import argparse
 import csv
 import json
@@ -35,7 +38,7 @@ from typing import Any
 from cpbl_row_filters import remove_administrative_rows
 from find_2out_first_base import as_int, is_steal_failure, is_steal_success
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_MIN_ATTEMPTS = 5
 
 

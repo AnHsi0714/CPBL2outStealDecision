@@ -17,6 +17,9 @@ CPBL 官方自己統計的盜壘成功/失敗數——這是跟研究範圍無�
 
 from __future__ import annotations
 
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent)); import pathsetup  # noqa: E402,F401
 import argparse
 import json
 import re
