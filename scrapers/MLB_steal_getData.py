@@ -14,6 +14,7 @@ session.headers.update({
 
 SCHEDULE_URL = "https://statsapi.mlb.com/api/v1/schedule"
 GAMEFEED_URL = "https://baseballsavant.mlb.com/gf"
+LIVE_FEED_URL = "https://statsapi.mlb.com/api/v1.1/game/{game_pk}/feed/live"
 DATA_DIR = "mlb_data"
 
 
@@ -44,6 +45,15 @@ def get_schedule(start_date: str, end_date: str) -> list[dict]:
 def get_game_feed(game_pk: int) -> dict:
     """單場比賽的 Statcast 逐球資料（Baseball Savant /gf 端點，pybaseball 底層也用這個）"""
     resp = session.get(GAMEFEED_URL, params={"game_pk": game_pk}, timeout=15)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_live_feed(game_pk: int) -> dict:
+    """MLB 官方 Gumbo 逐局回應：跟 Savant /gf 不同，plays.allPlays[].result 有逐打席累積比分
+    （awayScore/homeScore），playEvents[] 有逐球事件含盜壘標記，matchup 有前後壘包狀態。
+    RE 計算需要的「事件當下累積比分」只有這個端點有，/gf 完全沒有比分欄位。"""
+    resp = session.get(LIVE_FEED_URL.format(game_pk=game_pk), timeout=15)
     resp.raise_for_status()
     return resp.json()
 
