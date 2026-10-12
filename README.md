@@ -156,7 +156,39 @@ bash pipeline/run_mlb_season.sh 2025
 bash pipeline/run_kbo_season.sh 2025
 ```
 
-報告在 `reports/mlb-*.html`、`reports/kbo-*.html`（入口頁 `mlb-full-report.html`、`kbo-full-report.html`）。MLB 單季決策報告約 10MB，載入較慢。
+MLB 單季決策報告約 10MB，載入較慢。連結同樣指向 GitHub Pages 線上版（需 push 後才會更新）。
+
+### MLB 報告
+
+| 報告 | 內容 |
+| --- | --- |
+| [mlb-full-report.html（整合入口）](https://anhsi0714.github.io/CPBL2outStealDecision/reports/mlb-full-report.html) | 單頁整合以下全部報告，上方分類＋年份頁籤切換 |
+| [mlb-steal-decision-2023.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/mlb-steal-decision-2023.html) | 2023 年損益兩平門檻、棒次/打者類型分組、球隊決策品質、跑者名單 |
+| [mlb-steal-decision-2024.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/mlb-steal-decision-2024.html) | 2024 年損益兩平門檻、棒次/打者類型分組、球隊決策品質、跑者名單 |
+| [mlb-steal-decision-2025.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/mlb-steal-decision-2025.html) | 2025 年損益兩平門檻、棒次/打者類型分組、球隊決策品質、跑者名單 |
+| [mlb-steal-decision-2026.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/mlb-steal-decision-2026.html) | 2026 年損益兩平門檻、棒次/打者類型分組、球隊決策品質、跑者名單 |
+| [mlb-re24-matrix-2023.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/mlb-re24-matrix-2023.html) | 2023 MLB RE24 矩陣熱力圖 |
+| [mlb-re24-matrix-2024.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/mlb-re24-matrix-2024.html) | 2024 MLB RE24 矩陣熱力圖 |
+| [mlb-re24-matrix-2025.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/mlb-re24-matrix-2025.html) | 2025 MLB RE24 矩陣熱力圖 |
+| [mlb-re24-matrix-2026.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/mlb-re24-matrix-2026.html) | 2026 MLB RE24 矩陣熱力圖 |
+| [mlb-win-expectancy-matrix.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/mlb-win-expectancy-matrix.html) | MLB勝率（WE）矩陣熱力圖（2023–2026 合併） |
+| [mlb-wpa-decision-thresholds.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/mlb-wpa-decision-thresholds.html) | WPA 版損益兩平門檻 vs RE 版，逐局信賴區間比較 |
+
+### KBO 報告
+
+| 報告 | 內容 |
+| --- | --- |
+| [kbo-full-report.html（整合入口）](https://anhsi0714.github.io/CPBL2outStealDecision/reports/kbo-full-report.html) | 單頁整合以下全部報告，上方分類＋年份頁籤切換 |
+| [kbo-steal-decision-2023.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/kbo-steal-decision-2023.html) | 2023 年損益兩平門檻、棒次/打者類型分組、球隊決策品質、跑者名單 |
+| [kbo-steal-decision-2024.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/kbo-steal-decision-2024.html) | 2024 年損益兩平門檻、棒次/打者類型分組、球隊決策品質、跑者名單 |
+| [kbo-steal-decision-2025.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/kbo-steal-decision-2025.html) | 2025 年損益兩平門檻、棒次/打者類型分組、球隊決策品質、跑者名單 |
+| [kbo-steal-decision-2026.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/kbo-steal-decision-2026.html) | 2026 年損益兩平門檻、棒次/打者類型分組、球隊決策品質、跑者名單 |
+| [kbo-re24-matrix-2023.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/kbo-re24-matrix-2023.html) | 2023 KBO RE24 矩陣熱力圖 |
+| [kbo-re24-matrix-2024.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/kbo-re24-matrix-2024.html) | 2024 KBO RE24 矩陣熱力圖 |
+| [kbo-re24-matrix-2025.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/kbo-re24-matrix-2025.html) | 2025 KBO RE24 矩陣熱力圖 |
+| [kbo-re24-matrix-2026.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/kbo-re24-matrix-2026.html) | 2026 KBO RE24 矩陣熱力圖 |
+| [kbo-win-expectancy-matrix.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/kbo-win-expectancy-matrix.html) | KBO勝率（WE）矩陣熱力圖（2023–2026 合併） |
+| [kbo-wpa-decision-thresholds.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/kbo-wpa-decision-thresholds.html) | WPA 版損益兩平門檻 vs RE 版，逐局信賴區間比較 |
 
 ## 資料使用注意事項
 
