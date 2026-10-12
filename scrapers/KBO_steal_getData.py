@@ -175,6 +175,7 @@ def parse_game(game_meta: dict, html: str) -> list[dict]:
     }
 
     inning, half, batting_team, batter_name = None, None, None, None
+    batter_slot = None
     outs = 0
     # 壘包狀態用「目前佔用者的姓名」追蹤，沒辦法分辨「原本那個跑者離開」跟「新打者剛上壘」，會把新打者也一起清掉
     # eg. 2026-08-20 두산@NC 第2局，博건우 1루打→이우성 觸身球擠到一壘→박건우 被動→2壘，就是這樣算錯
@@ -200,6 +201,7 @@ def parse_game(game_meta: dict, html: str) -> list[dict]:
             continue
 
         if _BATTER_INTRO_RE.match(text):
+            batter_slot = int(_BATTER_INTRO_RE.match(text).group(1))
             batter_name = _BATTER_INTRO_RE.match(text).group(2)
             continue
 
@@ -218,7 +220,7 @@ def parse_game(game_meta: dict, html: str) -> list[dict]:
             row = {
                 **game_id, "Inning": inning, "HalfInning": half,
                 "BattingTeam": batting_team, "BattingTeam_zh": TEAM_NAME_ZH.get(batting_team, batting_team),
-                "BatterName": batter_name, "Outs": outs,
+                "BatterName": batter_name, "BatterSlot": batter_slot, "Outs": outs,
                 "On1B": base[1] is not None, "On2B": base[2] is not None, "On3B": base[3] is not None,
                 "EventType": "runner_movement", "RawText": text,
                 "RawText_zh": text_zh, "RawText_zh_Complete": text_zh_full,
@@ -261,14 +263,17 @@ def parse_game(game_meta: dict, html: str) -> list[dict]:
             row = {
                 **game_id, "Inning": inning, "HalfInning": half,
                 "BattingTeam": batting_team, "BattingTeam_zh": TEAM_NAME_ZH.get(batting_team, batting_team),
-                "BatterName": batter_name, "Outs": outs,
+                "BatterName": batter_name, "BatterSlot": batter_slot, "Outs": outs,
                 "On1B": base[1] is not None, "On2B": base[2] is not None, "On3B": base[3] is not None,
                 "EventType": "batter_outcome", "RawText": text,
                 "RawText_zh": text_zh, "RawText_zh_Complete": text_zh_full,
                 "HasStealMention": "도루" in text,
             }
 
-            if "아웃" in result:
+            # 「스트라이크 낫아웃 폭투／포일／다른주자 수비로 출루」是振落逃過：打者三振但上到一壘，
+            # 不是出局。單用「아웃」是否出現來判斷會把它誤算成一個出局。
+            dropped_third_strike = re.search(r'낫\s?아웃\s*(폭투|포일|다른주자)', result) is not None
+            if "아웃" in result and not dropped_third_strike:
                 outs += 1
                 row["Parsed"] = True
             elif "홈런" in result:
@@ -281,7 +286,7 @@ def parse_game(game_meta: dict, html: str) -> list[dict]:
                     dest = 1
                 elif "볼넷" in result or "몸에 맞는 볼" in result or "고의4구" in result:
                     dest = 1
-                elif "출루" in result:  # 失策/野手選擇上壘
+                elif "출루" in result or dropped_third_strike:  # 失策/野手選擇上壘/振落逃過
                     dest = 1
                 else:
                     dest = None

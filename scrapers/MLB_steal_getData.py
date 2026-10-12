@@ -23,9 +23,11 @@ def polite_sleep(base: float = 1.5, jitter: float = 1.5):
     time.sleep(base + random.uniform(0, jitter))
 
 
-def get_schedule(start_date: str, end_date: str) -> list[dict]:
-    """抓日期區間內的比賽（gamePk、日期），用來確認要抓哪些場次"""
+def get_schedule(start_date: str, end_date: str, game_type: str | None = None) -> list[dict]:
+    """抓日期區間內的比賽（gamePk、日期），用來確認要抓哪些場次。game_type 例如 "R" 只取例行賽"""
     params = {"sportId": 1, "startDate": start_date, "endDate": end_date}
+    if game_type:
+        params["gameType"] = game_type
     resp = session.get(SCHEDULE_URL, params=params, timeout=15)
     resp.raise_for_status()
     data = resp.json()
@@ -39,7 +41,9 @@ def get_schedule(start_date: str, end_date: str) -> list[dict]:
                 "AwayTeam": g["teams"]["away"]["team"]["name"],
                 "HomeTeam": g["teams"]["home"]["team"]["name"],
             })
-    return games
+    # 延期賽會在原定日與補賽日各出現一次（同一個 gamePk），保留較晚的日期（實際打完的那天），
+    # 否則同一場比賽會被分析兩次、決策樣本重複計算。
+    return list({game["GamePk"]: game for game in games}.values())
 
 
 def get_game_feed(game_pk: int) -> dict:

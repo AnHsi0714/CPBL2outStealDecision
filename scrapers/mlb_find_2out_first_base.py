@@ -42,9 +42,17 @@ def half_key(play: dict[str, Any]) -> tuple[int, bool]:
 def build_event_stream(half_plays: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """把一個半局的 plays 拆成逐事件清單，每個事件對應一次會改變壘包或出局數的
     playEvent。base 狀態靠 runners[] 的移動紀錄重建（Gumbo 沒有逐球壘包欄位）；
-    outs 直接用 playEvent 自己的 count.outs，不用手動累加。"""
-    base: dict[int, int | None] = {1: None, 2: None, 3: None}
+    outs 同樣靠 runners[] 裡 isOut 的移動逐事件累加，不用 playEvent 的 count.outs：
+    投球事件的 count.outs 是事件前的出局數，但「牽制盜壘出局」這類非投球事件的 count.outs
+    是事件後的出局數，直接用會把 1 出局的牽制盜壘失敗誤歸到 2 出局。累加結果與每個
+    play 結尾的 count.outs 逐 play 比對過完全一致。"""
+    base: dict[int, Any] = {1: None, 2: None, 3: None}
     events: list[dict[str, Any]] = []
+    outs_so_far = 0
+    # 延長賽（第 10 局起）每個半局開始時二壘有人（placed runner），Gumbo 不會單獨給一個事件，
+    # 只會在該跑者第一次移動時出現 start=="2B"。用佔位符先放上去，跑者移動時才能對得上。
+    if half_plays and as_int(half_plays[0].get("about", {}).get("inning")) >= 10:
+        base[2] = "placed"
 
     for play in half_plays:
         batter = play.get("matchup", {}).get("batter", {})
@@ -63,7 +71,7 @@ def build_event_stream(half_plays: list[dict[str, Any]]) -> list[dict[str, Any]]
                 end = move.get("end")
                 if start in ("1B", "2B", "3B"):
                     slot = int(start[0])
-                    if base.get(slot) == runner_id:
+                    if base.get(slot) == runner_id or base.get(slot) == "placed":
                         base[slot] = None
                 if not move.get("isOut") and end in ("1B", "2B", "3B"):
                     base[int(end[0])] = runner_id
@@ -73,27 +81,36 @@ def build_event_stream(half_plays: list[dict[str, Any]]) -> list[dict[str, Any]]
             movements_here = by_index.get(idx, [])
             details = pe.get("details", {})
             event_name = details.get("event") or ""
+            # 盜壘發生在投球事件上時（例如對方暴傳前的盜壘、三振同時盜壘），playEvent 自己沒有
+            # event 名稱，盜壘標記只出現在 runners[] 的 details.event，所以兩邊都要看。
+            steal_names = [
+                (m.get("details", {}).get("event") or "") for m in movements_here
+                if any(name in (m.get("details", {}).get("event") or "") for name in STEAL_EVENT_NAMES)
+            ]
             events.append({
-                "outs": as_int(pe.get("count", {}).get("outs")),
+                "outs": outs_so_far,
                 "on1b": base[1] is not None,
                 "on2b": base[2] is not None,
                 "on3b": base[3] is not None,
                 "runnerOnFirstId": base[1],
                 "batterId": batter.get("id"),
                 "batterName": batter.get("fullName"),
-                "eventText": details.get("description") or event_name,
-                "hasStealMention": any(name in event_name for name in STEAL_EVENT_NAMES),
+                "eventText": details.get("description") or event_name or (steal_names[0] if steal_names else ""),
+                "hasStealMention": bool(steal_names) or any(name in event_name for name in STEAL_EVENT_NAMES),
                 "movements": movements_here,
                 "afterScore": play.get("result", {}).get("awayScore"),
                 "afterScoreHome": play.get("result", {}).get("homeScore"),
                 "isPlayComplete": pe is play.get("playEvents", [])[-1],
+                "runs": sum(1 for m in movements_here if m.get("movement", {}).get("end") == "score"),
             })
             apply(movements_here)
+            outs_so_far += sum(1 for m in movements_here if m.get("movement", {}).get("isOut"))
             applied_indices.add(idx)
 
         leftover = [m for key, ms in by_index.items() if key not in applied_indices for m in ms]
         if leftover:
             apply(leftover)
+            outs_so_far += sum(1 for m in leftover if m.get("movement", {}).get("isOut"))
 
     return events
 
@@ -138,24 +155,28 @@ def build_pa_records(feed: dict[str, Any]) -> list[dict[str, Any]]:
             is_strikeout = event_type in ("strikeout", "strikeout_double_play")
             has_runner_event = any(e["hasStealMention"] for e in events[pe_cursor:pe_cursor + n_events])
 
-            next_play = half_plays[play_index + 1] if play_index + 1 < len(half_plays) else None
-            if next_play is not None:
-                outs_after = as_int(next_play.get("count", {}).get("outs"), pre_state["outs"])
-                next_pre = events[pe_cursor + n_events] if pe_cursor + n_events < len(events) else None
-                bases_after = 0
-                if next_pre is not None:
-                    bases_after = (
-                        (1 if next_pre["on1b"] else 0)
-                        | (2 if next_pre["on2b"] else 0)
-                        | (4 if next_pre["on3b"] else 0)
-                    )
+            # 打席後狀態 = 下一個打席開始前的狀態快照；半局最後一個打席固定是 3 出局、空壘。
+            # 以前用 next_play.count.outs 取出局數，但 play.count 是「該 play 結束時」的計數，
+            # 會誤取到下一個打席結束後的出局數，所以改用 build_event_stream 累加的出局數。
+            next_pre = events[pe_cursor + n_events] if pe_cursor + n_events < len(events) else None
+            if next_pre is not None:
+                outs_after = next_pre["outs"]
+                bases_after = (
+                    (1 if next_pre["on1b"] else 0)
+                    | (2 if next_pre["on2b"] else 0)
+                    | (4 if next_pre["on3b"] else 0)
+                )
             else:
                 outs_after, bases_after = 3, 0
 
             batter = play.get("matchup", {}).get("batter", {})
-            is_away_batting = is_top
-            score_before = team_score_for(half_plays[play_index - 1], is_away_batting) if play_index > 0 else 0
-            score_after = team_score_for(play, is_away_batting)
+            # 得分數直接數 runners[] 裡 end=="score" 的移動。以前用「本 play 結束比分－前一個 play
+            # 結束比分」，但半局第一個打席沒有前一個 play，被當成 0，結果等於該隊累積總分
+            # （例如第 5 局第一個打席被算成 3 分），會污染兩出局以外所有「空壘」起點的推進池。
+            play_runs = sum(
+                1 for runner in play.get("runners", [])
+                if runner.get("movement", {}).get("end") == "score"
+            )
 
             records.append({
                 "inning": inning,
@@ -166,7 +187,7 @@ def build_pa_records(feed: dict[str, Any]) -> list[dict[str, Any]]:
                 "start_outs": pre_state["outs"],
                 "start_bases": (1 if pre_state["on1b"] else 0) | (2 if pre_state["on2b"] else 0) | (4 if pre_state["on3b"] else 0),
                 "outcome": outcome,
-                "runs": max(0, score_after - score_before),
+                "runs": play_runs,
                 "outs_after": min(3, outs_after),
                 "bases_after": bases_after,
                 "has_runner_event": has_runner_event,
@@ -232,8 +253,11 @@ def analyze_game(game_meta: dict[str, Any], feed: dict[str, Any]) -> list[dict[s
             continue
 
         state_event = target[0]
-        # 半局開始時，這一隊當半局分數必為 0，狀態形成前的比分基準就是 0。
-        before_state_score = 0
+        # 狀態形成前的比分基準 = 這一隊上一個進攻半局結束的累積比分 + 本半局在狀態形成前已發生的得分。
+        # half_end_scores 是整場累積比分，不是單一半局得分，所以不能把基準當 0。
+        prev_own_end_score = half_end_scores.get((inning - 1, is_top), 0)
+        state_position = next(i for i, e in enumerate(events) if e is state_event)
+        before_state_score = prev_own_end_score + sum(e["runs"] for e in events[:state_position])
 
         outcome = "no_steal"
         event_index_in_target: int | None = None
@@ -262,7 +286,9 @@ def analyze_game(game_meta: dict[str, Any], feed: dict[str, Any]) -> list[dict[s
         current_from_state = current_end_score - before_state_score
 
         if outcome == "steal_success":
-            current_after_decision = current_end_score - before_state_score
+            steal_position = next(i for i, e in enumerate(events) if e is target[event_index_in_target])
+            score_after_steal = prev_own_end_score + sum(e["runs"] for e in events[:steal_position + 1])
+            current_after_decision = current_end_score - score_after_steal
         elif outcome == "steal_failure":
             current_after_decision = 0
         else:
@@ -295,6 +321,10 @@ def analyze_game(game_meta: dict[str, Any], feed: dict[str, Any]) -> list[dict[s
         results.append({
             "Season": game_meta.get("Season"),
             "GamePk": game_meta.get("GamePk"),
+            # 與 CPBL 版欄位對齊：GameSno／StateRowIndex 是 compare_wpa_groups 等跨腳本 join 用的主鍵。
+            # 每個半局最多一筆決策，所以 (GamePk, 半局序號) 就能唯一識別。
+            "GameSno": game_meta.get("GamePk"),
+            "StateRowIndex": inning * 2 + (0 if is_top else 1),
             "GameDate": game_meta.get("GameDate"),
             "AwayTeam": away_team,
             "HomeTeam": home_team,
@@ -388,6 +418,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--start-date", default=DEFAULT_START_DATE)
     parser.add_argument("--end-date", default=DEFAULT_END_DATE)
+    parser.add_argument("--game-type", default="R", help="MLB gameType，預設 R 只取例行賽；傳空字串則不篩選")
     parser.add_argument("--delay", type=float, default=1.5)
     parser.add_argument("--jitter", type=float, default=1.5)
     parser.add_argument("--retries", type=int, default=3)
@@ -399,7 +430,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    games = MLB_steal_getData.get_schedule(args.start_date, args.end_date)
+    games = MLB_steal_getData.get_schedule(args.start_date, args.end_date, args.game_type or None)
     print(f"賽程找到 {len(games)} 場，開始抓取。")
 
     cache_dir = args.cache_dir / f"{args.start_date}_{args.end_date}"
