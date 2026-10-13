@@ -45,7 +45,7 @@ def sample_row(outcome="no_steal"):
 
 
 class DecisionReportTests(unittest.TestCase):
-    def test_payload_keeps_cases_and_recomputes_break_even(self):
+    def test_payload_recomputes_break_even(self):
         summary = {
             "year": 2025,
             "games_with_raw_data": 360,
@@ -63,7 +63,7 @@ class DecisionReportTests(unittest.TestCase):
         self.assertEqual(payload["aggregate"]["outcomes"]["steal_failure"], 1)
         self.assertAlmostEqual(payload["aggregate"]["aggregateThreshold"], 0.5)
         self.assertAlmostEqual(payload["aggregate"]["medianThreshold"], 0.5)
-        self.assertEqual(payload["cases"][0]["hitter"], "測試打者")
+        self.assertNotIn("cases", payload)
 
     def test_payload_carries_validation_data_when_provided(self):
         summary = {

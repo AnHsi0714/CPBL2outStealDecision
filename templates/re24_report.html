@@ -58,5 +58,68 @@
   </main>
 
   <footer><div class="wrap">資料：CPBL 官網逐球紀錄，__YEAR__ 例行賽 GameSno __RANGE__</div></footer>
+  <script>
+    // 嵌在整合入口的 iframe 內時，回報目前停在哪個區塊，並接受入口頁要求捲回同一區塊。
+    (function () {
+      if (window.parent === window) return;
+      function anchor() {
+        var y = window.scrollY, found = null;
+        document.querySelectorAll('section[aria-labelledby]').forEach(function (sec) {
+          if (sec.hidden || sec.offsetParent === null) return;
+          var top = sec.getBoundingClientRect().top + y;
+          if (top <= y + 80) found = { id: sec.getAttribute('aria-labelledby'), offset: y - top };
+        });
+        return { y: y, section: found };
+      }
+      var ticking = false;
+      window.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        setTimeout(function () {
+          ticking = false;
+          parent.postMessage({ type: 'report-anchor', anchor: anchor() }, '*');
+        }, 50);
+      });
+      window.addEventListener('message', function (e) {
+        if (!e.data || e.data.type !== 'report-restore' || !e.data.anchor) return;
+        var a = e.data.anchor;
+        function go() {
+          if (a.section) {
+            var h = document.getElementById(a.section.id);
+            var sec = h && h.closest('section');
+            if (sec && !sec.hidden) {
+              var top = sec.getBoundingClientRect().top + window.scrollY;
+              window.scrollTo(0, Math.max(0, top + Math.min(a.section.offset, sec.offsetHeight - 80)));
+              return;
+            }
+          }
+          window.scrollTo(0, a.y);
+        }
+        go();
+        setTimeout(go, 150);
+      });
+      parent.postMessage({ type: 'report-ready' }, '*');
+    })();
+  </script>
+  <script>
+    // 內容區塊與長條在第一次捲動到時才播放進場動畫（不支援或要求減少動態時不做任何事）。
+    (function () {
+      if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      var fired = false;
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          fired = true;
+          entry.target.classList.add('in');
+          io.unobserve(entry.target);
+        });
+      }, { rootMargin: '0px 0px -8% 0px', threshold: 0 });
+      document.querySelectorAll('main section').forEach(function (el) { el.classList.add('reveal'); io.observe(el); });
+      document.querySelectorAll('.bar').forEach(function (el) { el.classList.add('barr'); io.observe(el); });
+      document.documentElement.classList.add('js-reveal');
+      // 保險：觀察器一直沒有回報（例如被瀏覽器節流）時，直接顯示全部內容，避免頁面空白。
+      setTimeout(function () { if (!fired) document.documentElement.classList.remove('js-reveal'); }, 1500);
+    })();
+  </script>
 </body>
 </html>

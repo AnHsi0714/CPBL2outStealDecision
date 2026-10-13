@@ -37,70 +37,6 @@ def average(rows: list[dict[str, str]], key: str) -> float:
     return mean(values)
 
 
-def load_batter_types(path: Path) -> dict[str, dict[str, str]]:
-    if not path.exists():
-        return {}
-    with path.open("r", encoding="utf-8-sig", newline="") as handle:
-        return {row["HitterAcnt"]: row for row in csv.DictReader(handle)}
-
-
-def compact_case(
-    row: dict[str, str], index: int, batter_types: dict[str, dict[str, str]]
-) -> dict[str, Any]:
-    numeric_keys = (
-        "ProfilePA",
-        "ModelP_1B",
-        "ModelP_2B",
-        "ModelP_3B",
-        "ModelP_HR",
-        "ModelP_BB_HBP",
-        "ModelP_REACH",
-        "ModelP_OUT",
-        "ModelVSuccess",
-        "ModelVFailure",
-        "ModelVNoSteal",
-        "ModelVIfBatterOut",
-        "RetentionValue",
-        "ConditionalOutCostNoSteal",
-        "ExpectedOutPenaltyNoSteal",
-        "BreakEvenSuccessRate",
-    )
-    data: dict[str, Any] = {
-        "id": index,
-        "game": int(row["GameSno"]),
-        "date": row["GameDate"],
-        "inning": int(row["InningSeq"]),
-        "team": row["BattingTeam"],
-        "away": row["VisitingTeam"],
-        "home": row["HomeTeam"],
-        "hitter": row["HitterName"],
-        "lineup": int(row["HitterLineup"]),
-        "runner": row["RunnerOnFirst"],
-        "pitcher": row["PitcherName"],
-        "actual": row["Outcome"],
-        "simulations": int(row["Simulations"]),
-        "thresholdStatus": row["ThresholdStatus"],
-    }
-    for key in numeric_keys:
-        value = as_float(row, key)
-        data[key] = None if value is None else round(value, 6)
-
-    # 這一組是「這位打者本人」的固定屬性（球員類型），跟這一局剛好排第幾棒無關——
-    # 上面的 data["lineup"] 才是這一筆決策當下的實際棒次（情境事實）。
-    type_row = batter_types.get(row.get("HitterAcnt", ""))
-    data["batterTypeQualified"] = type_row is not None
-    for group_key, source_key in (
-        ("typicalLineupGroup", "PrimaryLineupGroup"),
-        ("powerGroup", "PowerGroup"),
-        ("patienceGroup", "PatienceGroup"),
-        ("obpGroup", "OBPGroup"),
-        ("contactGroup", "ContactGroup"),
-        ("ttoGroup", "TTOGroup"),
-    ):
-        data[group_key] = type_row[source_key] if type_row and type_row.get(source_key) else None
-    return data
-
-
 def load_re24_validation(path: Path) -> dict[str, Any] | None:
     if not path.exists():
         return None
@@ -191,7 +127,6 @@ def build_payload(
     steal_validation: dict[str, Any] | None = None,
     team_decisions: dict[str, Any] | None = None,
     runner_qualification: dict[str, Any] | None = None,
-    batter_types: dict[str, dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     outcome_counts = {"steal_success": 0, "steal_failure": 0, "no_steal": 0}
     for row in rows:
@@ -204,14 +139,7 @@ def build_payload(
         if (value := as_float(row, "BreakEvenSuccessRate")) is not None
         and 0 <= value <= 1
     ]
-    cases = [compact_case(row, index, batter_types or {}) for index, row in enumerate(rows)]
     threshold_median = median(valid_thresholds)
-    default_case = min(
-        range(len(cases)),
-        key=lambda index: abs(
-            (cases[index]["BreakEvenSuccessRate"] or threshold_median) - threshold_median
-        ),
-    )
 
     v_success = average(rows, "ModelVSuccess")
     v_failure = average(rows, "ModelVFailure")
@@ -242,8 +170,6 @@ def build_payload(
             "expectedOutPenalty": round(average(rows, "ExpectedOutPenaltyNoSteal"), 6),
             "outcomes": outcome_counts,
         },
-        "defaultCase": default_case,
-        "cases": cases,
         "segments": build_segments(comparison),
         "validation": {
             "re24": re24_validation,
@@ -263,7 +189,6 @@ def generate_report(
     steal_validation_csv: Path | None = None,
     team_decisions_json: Path | None = None,
     runner_qualification_json: Path | None = None,
-    batter_types_csv: Path | None = None,
 ) -> dict[str, Any]:
     with model_csv.open("r", encoding="utf-8-sig", newline="") as handle:
         rows = list(csv.DictReader(handle))
@@ -293,7 +218,7 @@ def generate_report(
 
     team_decisions = load_team_decisions(team_decisions_json) if team_decisions_json else None
     if team_decisions_json is not None and team_decisions is None:
-        print(f"提醒：找不到 {team_decisions_json}，報告將略過六隊決策品質評估區塊"
+        print(f"提醒：找不到 {team_decisions_json}，報告將略過各隊決策品質評估區塊"
               f"（可先執行 analyze_team_decisions.py）")
 
     runner_qualification = (
@@ -303,11 +228,6 @@ def generate_report(
         print(f"提醒：找不到 {runner_qualification_json}，報告將略過符合門檻的跑者名單區塊"
               f"（可先執行 analyze_runner_steal_rates.py）")
 
-    batter_types = load_batter_types(batter_types_csv) if batter_types_csv else {}
-    if batter_types_csv is not None and not batter_types:
-        print(f"提醒：找不到 {batter_types_csv}，逐筆重算區塊將略過打者類型標籤"
-              f"（可先執行 analyze_batter_types.py）")
-
     payload = build_payload(
         rows,
         summary,
@@ -316,7 +236,6 @@ def generate_report(
         steal_validation,
         team_decisions,
         runner_qualification,
-        batter_types,
     )
     payload_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     payload_json = payload_json.replace("</", "<\\/")
@@ -324,6 +243,14 @@ def generate_report(
     document = template.replace("/*__STYLES__*/", STYLE_PATH.read_text(encoding="utf-8").rstrip("\n"))
     document = document.replace("/*__SCRIPT__*/", SCRIPT_PATH.read_text(encoding="utf-8").rstrip("\n"))
     document = document.replace("__REPORT_DATA__", payload_json)
+    # 範本把年份寫死成 2025（標題、眉標、概況標題），依實際球季換掉。
+    year = str(payload["meta"]["year"])
+    for old, new in (
+        ("<title>2025 CPBL", f"<title>{year} CPBL"),
+        ("CPBL · 2025 REGULAR SEASON", f"CPBL · {year} REGULAR SEASON"),
+        (">2025 資料概況<", f">{year} 資料概況<"),
+    ):
+        document = document.replace(old, new)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(document, encoding="utf-8", newline="\n")
@@ -343,7 +270,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--steal-validation-csv", type=Path)
     parser.add_argument("--team-decisions-json", type=Path)
     parser.add_argument("--runner-qualification-json", type=Path)
-    parser.add_argument("--batter-types-csv", type=Path)
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
 
@@ -366,7 +292,6 @@ def main() -> int:
     runner_qualification_json = (
         args.runner_qualification_json or ROOT / "outputs" / f"cpbl_runner_steal_rates_{stem}.json"
     )
-    batter_types_csv = args.batter_types_csv or ROOT / "outputs" / f"cpbl_batter_types_{stem}.csv"
     output = args.output or ROOT / "reports" / f"cpbl-steal-decision-{args.year}.html"
     payload = generate_report(
         model_csv,
@@ -377,10 +302,9 @@ def main() -> int:
         steal_validation_csv,
         team_decisions_json,
         runner_qualification_json,
-        batter_types_csv,
     )
     print(
-        f"Wrote {output} with {payload['meta']['samples']} cases; "
+        f"Wrote {output} with {payload['meta']['samples']} 決策樣本；"
         f"median threshold={payload['aggregate']['medianThreshold']:.3%}"
     )
     return 0

@@ -12,7 +12,7 @@
   <header>
     <div class="wrap">
       <div class="eyebrow">CPBL · 2025 REGULAR SEASON</div>
-      <h1>兩出局、僅一壘有人時，盜壘值不值得？</h1>
+      <h1><span style="display:inline-block">兩出局、僅一壘有人時，</span><span style="display:inline-block">盜壘值不值得？</span></h1>
       <p class="lede">把同一個比賽瞬間拆成「成功、失敗、不跑」三條平行路線，以當前打者及後續打序的個人化打擊分布，估算一致時間範圍內的期望得分。</p>
       <div class="meta">
         <span id="meta-games"></span><span id="meta-pa"></span><span id="meta-batters"></span><span id="meta-sims"></span>
@@ -48,12 +48,6 @@
         </article>
       </div>
 
-      <div class="panel" style="margin-top: 18px">
-        <div class="bar-row"><span>成功</span><div class="track"><div id="bar-success" class="bar success"></div></div><strong id="bar-success-label"></strong></div>
-        <div class="bar-row"><span>失敗</span><div class="track"><div id="bar-failure" class="bar failure"></div></div><strong id="bar-failure-label"></strong></div>
-        <div class="bar-row"><span>不跑</span><div class="track"><div id="bar-no-steal" class="bar neutral"></div></div><strong id="bar-no-steal-label"></strong></div>
-      </div>
-
       <div class="formula">
         <strong>盜壘損益兩平成功率</strong>
         <code>p* = (V不跑 − V失敗) ÷ (V成功 − V失敗)</code>
@@ -74,7 +68,7 @@
     <section aria-labelledby="personal-title">
       <h2 id="personal-title">打者沒有被視為同一個人</h2>
       <div class="panel">
-        <p>每位打者用自己的打擊結果機率（1B／2B／3B／HR／BB／OUT）模擬，打席少的打者以 50 打席的聯盟平均先驗平滑。跑者推進、投手、守備與捕手則使用聯盟平均。</p>
+        <p>每位打者用自己的打擊結果機率（1B／2B／3B／HR／BB／OUT）模擬，打席少的打者以 <span id="prior-pa-text"></span> 打席的聯盟平均先驗平滑。跑者推進、投手、守備與捕手則使用聯盟平均。</p>
         <div class="grid" style="margin-top:18px">
           <article class="stat"><small>條件式出局成本</small><strong id="out-cost"></strong><span>非出局分支 EV − 出局分支 EV</span></article>
           <article class="stat"><small>期望出局懲罰</small><strong id="out-penalty"></strong><span>條件式成本 × 該打者出局率</span></article>
@@ -106,7 +100,7 @@
     </section>
 
     <section id="team-decisions-section" aria-labelledby="team-decisions-title" hidden>
-      <h2 id="team-decisions-title">六隊決策品質評估</h2>
+      <h2 id="team-decisions-title">各隊決策品質評估</h2>
       <div class="panel">
         <p class="muted">以各隊的門檻中位數對照實際盜壘成功率，二項檢定 p &lt; 0.05 才判「跑對」或「跑錯」，其餘標「無法判定」。全聯盟：<span id="team-league-summary"></span>。</p>
         <div class="table-wrap" style="margin-top:14px">
@@ -164,51 +158,6 @@
       </div>
     </section>
 
-    <section aria-labelledby="explorer-title">
-      <h2 id="explorer-title">逐筆重算：換一位打者就會得到不同答案</h2>
-      <div class="panel">
-        <div class="controls">
-          <label>搜尋打者、球隊或場次
-            <input id="case-search" type="search" placeholder="例如：林安可、統一、Game 120">
-          </label>
-          <label>選擇一筆決策機會
-            <select id="case-select"></select>
-          </label>
-        </div>
-
-        <div class="case-title">
-          <div><strong id="case-heading"></strong><div id="case-subheading" class="muted"></div></div>
-          <div><span class="pill" id="case-actual"></span></div>
-        </div>
-        <div id="case-type-badges" style="display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 6px"></div>
-
-        <div class="simulator">
-          <div>
-            <label for="success-rate">假設這次盜壘成功率：<span class="range-value" id="success-rate-value"></span></label>
-            <input id="success-rate" type="range" min="0" max="100" step="0.1">
-            <p class="muted">EV(盜壘) = p × V成功 + (1 − p) × V失敗</p>
-          </div>
-          <div id="decision-readout" class="decision-readout" aria-live="polite">
-            <strong id="decision-label"></strong>
-            <span id="decision-math"></span>
-          </div>
-        </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>此情境</th><th>V成功</th><th>V失敗</th><th>V不跑</th><th>損益兩平</th><th>出局成本</th><th>期望出局懲罰</th></tr></thead>
-            <tbody id="case-values"></tbody>
-          </table>
-        </div>
-        <div class="table-wrap" style="margin-top:18px">
-          <table>
-            <thead><tr><th>打者模型</th><th>PA</th><th>1B</th><th>2B</th><th>3B</th><th>HR</th><th>BB/HBP</th><th>其他上壘</th><th>OUT</th></tr></thead>
-            <tbody id="case-profile"></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
     <section aria-labelledby="scope-title">
       <h2 id="scope-title">解讀邊界</h2>
       <ul class="note-list">
@@ -223,6 +172,69 @@
   <script id="report-data" type="application/json">__REPORT_DATA__</script>
   <script>
 /*__SCRIPT__*/
+  </script>
+  <script>
+    // 嵌在整合入口的 iframe 內時，回報目前停在哪個區塊，並接受入口頁要求捲回同一區塊。
+    (function () {
+      if (window.parent === window) return;
+      function anchor() {
+        var y = window.scrollY, found = null;
+        document.querySelectorAll('section[aria-labelledby]').forEach(function (sec) {
+          if (sec.hidden || sec.offsetParent === null) return;
+          var top = sec.getBoundingClientRect().top + y;
+          if (top <= y + 80) found = { id: sec.getAttribute('aria-labelledby'), offset: y - top };
+        });
+        return { y: y, section: found };
+      }
+      var ticking = false;
+      window.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        setTimeout(function () {
+          ticking = false;
+          parent.postMessage({ type: 'report-anchor', anchor: anchor() }, '*');
+        }, 50);
+      });
+      window.addEventListener('message', function (e) {
+        if (!e.data || e.data.type !== 'report-restore' || !e.data.anchor) return;
+        var a = e.data.anchor;
+        function go() {
+          if (a.section) {
+            var h = document.getElementById(a.section.id);
+            var sec = h && h.closest('section');
+            if (sec && !sec.hidden) {
+              var top = sec.getBoundingClientRect().top + window.scrollY;
+              window.scrollTo(0, Math.max(0, top + Math.min(a.section.offset, sec.offsetHeight - 80)));
+              return;
+            }
+          }
+          window.scrollTo(0, a.y);
+        }
+        go();
+        setTimeout(go, 150);
+      });
+      parent.postMessage({ type: 'report-ready' }, '*');
+    })();
+  </script>
+  <script>
+    // 內容區塊與長條在第一次捲動到時才播放進場動畫（不支援或要求減少動態時不做任何事）。
+    (function () {
+      if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      var fired = false;
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          fired = true;
+          entry.target.classList.add('in');
+          io.unobserve(entry.target);
+        });
+      }, { rootMargin: '0px 0px -8% 0px', threshold: 0 });
+      document.querySelectorAll('main section').forEach(function (el) { el.classList.add('reveal'); io.observe(el); });
+      document.querySelectorAll('.bar').forEach(function (el) { el.classList.add('barr'); io.observe(el); });
+      document.documentElement.classList.add('js-reveal');
+      // 保險：觀察器一直沒有回報（例如被瀏覽器節流）時，直接顯示全部內容，避免頁面空白。
+      setTimeout(function () { if (!fired) document.documentElement.classList.remove('js-reveal'); }, 1500);
+    })();
   </script>
 </body>
 </html>

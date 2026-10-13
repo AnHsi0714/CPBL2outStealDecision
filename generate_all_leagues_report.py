@@ -93,8 +93,9 @@ activateLeague(location.hash.replace("#", ""));
     extra_css = """
     .league-tabs { display: flex; gap: 6px; margin-left: auto; }
     .league-tabs button { font: inherit; font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-      padding: 5px 14px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--text); cursor: pointer; }
-    .league-tabs button[aria-selected="true"] { background: var(--text); color: var(--surface); border-color: var(--text); }
+      padding: 5px 14px; border: 1px solid var(--line); border-radius: 0; background: transparent; color: var(--text); cursor: pointer; }
+    .league-tabs button:hover { background: color-mix(in srgb, var(--text) 14%, transparent); border-color: var(--text); }
+    .league-tabs button[aria-selected="true"], .league-tabs button[aria-selected="true"]:hover { background: var(--text); color: var(--surface); border-color: var(--text); }
     .league-tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .title-row { align-items: center; }
 """
