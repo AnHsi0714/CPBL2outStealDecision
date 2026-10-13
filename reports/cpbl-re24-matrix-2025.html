@@ -220,7 +220,7 @@
     <div class="wrap">
       <div class="eyebrow">CPBL 2025 REGULAR SEASON</div>
       <h1>中職 RE24 得分期望值矩陣</h1>
-      <p class="lede">24 種出局數與壘包組合，各自從該狀態起算到半局結束的平均得分。顏色越深，這個局面越值錢。</p>
+      <p class="lede">24 種出局數與壘包組合，各自從該狀態起算到半局結束的平均得分。顏色越深，代表從這個局面起算平均還能再拿越多分。</p>
       <div class="meta">
         <span>360 場</span>
         <span>27,699 個局面樣本</span>
@@ -244,6 +244,10 @@
         </div>
         <p class="lede" style="margin-top:14px; font-size:.86rem">每格是平均還能再拿幾分：橫向看壘包，縱向看出局數。滑鼠移到格子上（手機請點一下）可看樣本數與標準差。</p>
         <details style="margin-top:16px">
+          <summary>看範例：怎麼讀一格</summary>
+          <p class="lede" id="re24-example" style="margin-top:10px; font-size:.92rem"></p>
+        </details>
+        <details style="margin-top:16px">
           <summary>顯示完整資料表</summary>
           <div class="table-wrap">
             <table>
@@ -263,6 +267,22 @@
   </main>
 
   <footer><div class="wrap">資料：CPBL 官網逐球紀錄，2025 例行賽</div></footer>
+  <script>
+    // 範例文字由熱力圖格子的提示文字組出來，數字永遠跟上面的圖一致。
+    (function () {
+      var found = {};
+      document.querySelectorAll('.cell[data-tooltip]').forEach(function (el) {
+        var m = /^(\d) 出局・(.+?)｜平均 ([\d.]+) 分/.exec(el.getAttribute('data-tooltip'));
+        if (m) found[m[1] + '|' + m[2]] = parseFloat(m[3]);
+      });
+      var one = found['2|一壘'], two = found['2|二壘'], target = document.getElementById('re24-example');
+      if (!target) return;
+      if (one === undefined || two === undefined) { target.closest('details').hidden = true; return; }
+      target.textContent = '例：「2 出局、一壘有人」這格是 ' + one.toFixed(3) + '，代表這種局面平均還能再拿約 ' + one.toFixed(2) +
+        ' 分。跑者盜上二壘後變成「2 出局、二壘有人」，這格是 ' + two.toFixed(3) + '，多了 ' + (two - one).toFixed(3) +
+        ' 分，這就是盜壘成功的好處；被刺殺則半局結束，剩餘得分是 0。顏色越深，代表平均還能再拿越多分。';
+    })();
+  </script>
   <script>
 (function () {
   'use strict';

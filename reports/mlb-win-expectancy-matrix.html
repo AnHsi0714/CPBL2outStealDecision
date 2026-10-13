@@ -277,6 +277,10 @@
         </div>
         <p class="lede" style="margin-top:14px; font-size:.86rem">每格是進攻方最終贏球機率：橫向看壘包，縱向看分差（上方是領先）。滑鼠移到格子上（手機請點一下）可看樣本數；虛線外框代表樣本數低於 20，空白格代表沒有觀測。</p>
         <details style="margin-top:16px">
+          <summary>看範例：怎麼讀一格</summary>
+          <p class="lede" id="we-example" style="margin-top:10px; font-size:.92rem"></p>
+        </details>
+        <details style="margin-top:16px">
           <summary>顯示目前篩選條件下的完整資料表</summary>
           <div class="table-wrap">
             <table>
@@ -432,6 +436,30 @@ if (payload.validation) {
   document.getElementById("val-tied-note").textContent =
     `平手時勝率（主場優勢粗檢查）：${tiedParts.join("　vs　")}`;
 }
+
+// 範例：從資料中挑一組「2 出局、一壘 vs 二壘」，條件是樣本數都夠多、且盜上二壘確實較有利，用來說明怎麼讀一格。
+(function () {
+  const target = document.getElementById("we-example");
+  if (!target) return;
+  let best = null;
+  for (const inning of payload.inningBuckets) {
+    if (inning === "9+") continue;
+    for (const side of ["1", "2"]) {
+      for (let diff = -2; diff <= 2; diff += 1) {
+        const one = cellIndex.get([inning, side, diff, 2, 1].join("|"));
+        const two = cellIndex.get([inning, side, diff, 2, 2].join("|"));
+        if (!one || !two) continue;
+        const n = Math.min(one.n, two.n);
+        if (n < 30 || two.winRate <= one.winRate) continue;
+        if (!best || n > best.n) best = { inning, side, diff, one, two, n };
+      }
+    }
+  }
+  if (!best) { target.closest("details").hidden = true; return; }
+  const pct = (v) => `${(v * 100).toFixed(1)}%`;
+  const diffText = best.diff === 0 ? "平手" : (best.diff > 0 ? `領先 ${best.diff} 分` : `落後 ${-best.diff} 分`);
+  target.textContent = `例：「${INNING_LABELS[best.inning]}、${SIDE_LABELS[best.side]}、${diffText}、2 出局、一壘有人」這格是 ${pct(best.one.winRate)}，代表進攻方在這種局面下，最後贏球的機率約 ${pct(best.one.winRate)}（觀測 ${best.one.n.toLocaleString()} 次）。跑者盜上二壘後，同樣條件變成 ${pct(best.two.winRate)}，多了 ${((best.two.winRate - best.one.winRate) * 100).toFixed(1)} 個百分點，這就是盜壘成功在勝率上的好處。顏色越深，勝率越高。`;
+})();
   </script>
   <script>
 (function () {
