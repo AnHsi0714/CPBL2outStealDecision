@@ -232,6 +232,10 @@
   pointer-events: none; opacity: 0; transition: opacity .12s ease; white-space: normal; text-align: left; font-weight: 400; }
 .rc-tip.show { opacity: 1; }
 .rc-goto { font-weight: 650; }
+th:focus-visible, .stat small:focus-visible, .pill:focus-visible, .branch-head h3:focus-visible, .formula > strong:focus-visible, #segment-table td:first-child:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+.rc-drawer a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   </style>
 </head>
 <body>
@@ -580,6 +584,7 @@ if (payload.validation) {
   function ensureTip() {
     if (!tipEl) {
       tipEl = doc.createElement('div');
+      tipEl.id = 'rc-tip';
       tipEl.className = 'rc-tip';
       tipEl.setAttribute('role', 'tooltip');
       doc.body.appendChild(tipEl);
@@ -588,12 +593,13 @@ if (payload.validation) {
   }
   var TIP_TARGETS = 'th, .stat small, .pill, #segment-table td:first-child, .branch-head h3, .formula > strong';
   var currentTarget = null;
-  doc.addEventListener('mouseover', function (e) {
-    var t = e.target.closest && e.target.closest(TIP_TARGETS);
-    if (!t || t === currentTarget) return;
+  var canHover = !!(window.matchMedia && window.matchMedia('(hover: hover)').matches);
+  function showTip(t) {
     var text = lookup(t.textContent);
     if (!text) return;
+    if (currentTarget && currentTarget !== t) currentTarget.removeAttribute('aria-describedby');
     currentTarget = t;
+    t.setAttribute('aria-describedby', 'rc-tip');
     var tip = ensureTip();
     tip.textContent = text;
     var r = t.getBoundingClientRect();
@@ -605,26 +611,59 @@ if (payload.validation) {
     tip.style.left = left + 'px';
     tip.style.top = top + 'px';
     tip.classList.add('show');
-  });
-  // 觸控裝置沒有 hover：點一下顯示提示，點別處關閉
-  doc.addEventListener('click', function (e) {
-    var t = e.target.closest && e.target.closest(TIP_TARGETS);
-    if (!t) { if (tipEl) tipEl.classList.remove('show'); currentTarget = null; return; }
-    if (currentTarget === t && tipEl && tipEl.classList.contains('show') && !(window.matchMedia && window.matchMedia('(hover: hover)').matches)) {
-      tipEl.classList.remove('show'); currentTarget = null; return;
-    }
-    if (window.matchMedia && window.matchMedia('(hover: hover)').matches) return;
-    currentTarget = null;
-    t.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-  });
-  doc.addEventListener('mouseout', function (e) {
-    if (!currentTarget) return;
-    var to = e.relatedTarget;
-    if (to && currentTarget.contains(to)) return;
+  }
+  function hideTip() {
+    if (currentTarget) currentTarget.removeAttribute('aria-describedby');
     currentTarget = null;
     if (tipEl) tipEl.classList.remove('show');
+  }
+  function targetOf(e) { return e.target.closest && e.target.closest(TIP_TARGETS); }
+  doc.addEventListener('mouseover', function (e) {
+    var t = targetOf(e);
+    if (!t || t === currentTarget) return;
+    showTip(t);
   });
-  doc.addEventListener('scroll', function () { if (tipEl) tipEl.classList.remove('show'); currentTarget = null; }, true);
+  doc.addEventListener('mouseout', function (e) {
+    if (!currentTarget || doc.activeElement === currentTarget) return;
+    var to = e.relatedTarget;
+    if (to && currentTarget.contains(to)) return;
+    hideTip();
+  });
+  // 鍵盤：Tab 到有提示的欄位標題或標籤時顯示，離開或按 Esc 關閉
+  doc.addEventListener('focusin', function (e) {
+    var t = targetOf(e);
+    if (t) showTip(t);
+  });
+  doc.addEventListener('focusout', function (e) {
+    if (targetOf(e)) hideTip();
+  });
+  doc.addEventListener('keydown', function (e) { if (e.key === 'Escape') hideTip(); });
+  // 觸控裝置沒有 hover：點一下顯示提示，再點一次或點別處關閉
+  doc.addEventListener('click', function (e) {
+    var t = targetOf(e);
+    if (canHover) return;
+    if (!t) { hideTip(); return; }
+    if (currentTarget === t && tipEl && tipEl.classList.contains('show')) { hideTip(); return; }
+    showTip(t);
+  });
+  doc.addEventListener('scroll', hideTip, true);
+  // 讓有提示的標題與標籤可以用 Tab 聚焦（動態產生的內容也一併處理）
+  function markFocusable() {
+    doc.querySelectorAll(TIP_TARGETS).forEach(function (el) {
+      if (el.hasAttribute('tabindex') || !lookup(el.textContent)) return;
+      // 表格資料列裡重複出現的標籤（例如每位跑者的類型標籤）不加入 Tab 順序，避免要按幾百次 Tab
+      if (el.classList.contains('pill') && el.closest('tbody')) return;
+      el.setAttribute('tabindex', '0');
+    });
+  }
+  markFocusable();
+  if ('MutationObserver' in window) {
+    var markTimer = null;
+    new MutationObserver(function () {
+      if (markTimer) return;
+      markTimer = setTimeout(function () { markTimer = null; markFocusable(); }, 150);
+    }).observe(doc.body, { childList: true, subtree: true });
+  }
 
   /* ---------- 目錄（漢堡按鈕＋側邊抽屜） ---------- */
   function mountToc(items, opts) {
@@ -659,10 +698,13 @@ if (payload.validation) {
     if (opts.inline) { btn.classList.add('inline'); opts.inline.insertBefore(btn, opts.inline.firstChild); }
     else root.insertBefore(btn, root.firstChild);
     function set(open) {
+      var wasOpen = drawer.classList.contains('open');
       drawer.classList.toggle('open', open);
       scrim.classList.toggle('open', open);
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
       doc.documentElement.classList.toggle('rc-toc-open', open);
+      if (open && !wasOpen) { var first = drawer.querySelector('a'); if (first) setTimeout(function () { first.focus(); }, 60); }
+      if (!open && wasOpen && drawer.contains(doc.activeElement)) btn.focus();
     }
     btn.addEventListener('click', function () { set(!drawer.classList.contains('open')); });
     scrim.addEventListener('click', function () { set(false); });
