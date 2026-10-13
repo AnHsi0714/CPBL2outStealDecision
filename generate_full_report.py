@@ -31,7 +31,7 @@ CATEGORY_SPECS = [
     {
         "id": "decision",
         "label": "盜壘決策報告",
-        "description": "三分支模擬（成功／失敗／不跑）、棒次 × 打者類型分組、六隊決策品質、符合門檻的跑者名單。",
+        "description": "三分支模擬（成功／失敗／不跑）、棒次 × 打者類型分組、各隊決策品質、符合門檻的跑者名單。",
         "pattern": re.compile(r"^cpbl-steal-decision-(\d{4})\.html$"),
     },
     {

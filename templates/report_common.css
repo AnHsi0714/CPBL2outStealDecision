@@ -1,0 +1,41 @@
+/* 報告頁共用樣式（目錄、提示框），由各產生器附加在各報告自己的樣式後面 */
+.rc-btn { position: fixed; left: 12px; top: var(--rc-top, 14px); z-index: 60; width: 40px; height: 40px; padding: 0;
+  display: grid; place-items: center; background: var(--surface); color: var(--text); border: 1px solid var(--text); cursor: pointer; }
+.rc-btn.inline { position: static; flex: none; align-self: center; margin-right: 4px; }
+.rc-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.rc-icon { position: relative; width: 18px; height: 2px; background: currentColor; transition: transform .3s ease; }
+.rc-icon::before, .rc-icon::after { content: ""; position: absolute; left: 0; width: 18px; height: 2px; background: currentColor; }
+.rc-icon::before { top: -6px; }
+.rc-icon::after { top: 6px; }
+.rc-btn:hover .rc-icon, .rc-btn:focus-visible .rc-icon, .rc-btn[aria-expanded="true"] .rc-icon { transform: rotate(90deg); }
+.rc-btn::after { content: attr(data-tip); position: absolute; left: 48px; top: 50%; transform: translateY(-50%); padding: 3px 9px; white-space: nowrap;
+  background: var(--text); color: var(--bg); font-size: .78rem; opacity: 0; pointer-events: none; transition: opacity .15s ease; z-index: 61; }
+.rc-btn:hover::after, .rc-btn:focus-visible::after { opacity: 1; }
+.rc-btn[aria-expanded="true"]::after { opacity: 0; }
+.rc-drawer { position: fixed; left: 0; top: 0; bottom: 0; z-index: 59; width: min(280px, 82vw); padding: 64px 0 24px; overflow-y: auto;
+  background: var(--surface); color: var(--text); border-right: 1px solid var(--text); transform: translateX(-102%); visibility: hidden;
+  transition: transform .28s cubic-bezier(.2,.7,.2,1), visibility 0s linear .28s; }
+.rc-drawer.open { transform: none; visibility: visible; transition: transform .28s cubic-bezier(.2,.7,.2,1); }
+.rc-drawer h2 { margin: 0 0 8px; padding: 0 20px; font-size: .78rem; letter-spacing: .12em; color: var(--muted); font-weight: 700; }
+.rc-drawer a { display: block; padding: 10px 20px; color: var(--text); text-decoration: none; border-left: 4px solid transparent; font-size: .95rem; }
+.rc-drawer a:hover { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.rc-drawer a[aria-current="true"] { border-left-color: var(--accent); font-weight: 700; background: color-mix(in srgb, var(--text) 6%, transparent); }
+.rc-scrim { position: fixed; inset: 0; z-index: 58; background: rgba(0,0,0,.35); opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility 0s linear .2s; }
+.rc-scrim.open { opacity: 1; visibility: visible; transition: opacity .2s ease; }
+/* 寬螢幕：目錄展開時把頁面往右推，不蓋住內容；窄螢幕：蓋在上面，用背景遮罩關閉 */
+@media (min-width: 761px) {
+  .rc-drawer { width: 280px; }
+  .rc-scrim { display: none; }
+  html.rc-toc-open body { padding-left: 280px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  body { transition: padding-left .28s cubic-bezier(.2,.7,.2,1); }
+}
+.rc-tip { position: fixed; z-index: 80; max-width: 320px; padding: 8px 11px; background: var(--text); color: var(--bg); font-size: .82rem; line-height: 1.5;
+  pointer-events: none; opacity: 0; transition: opacity .12s ease; white-space: normal; text-align: left; font-weight: 400; }
+.rc-tip.show { opacity: 1; }
+.rc-goto { font-weight: 650; }
+th:focus-visible, .stat small:focus-visible, .pill:focus-visible, .branch-head h3:focus-visible, .formula > strong:focus-visible, #segment-table td:first-child:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+.rc-drawer a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }

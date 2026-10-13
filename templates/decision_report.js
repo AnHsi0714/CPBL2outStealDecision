@@ -5,6 +5,39 @@
     const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
     })[char]);
+
+    // 隊色只當色塊，文字仍用一般文字色，確保對比。名稱對應各聯盟資料中的寫法。
+    const TEAM_COLORS = {
+      '中信兄弟': '#f2c200', '統一7-ELEVEn獅': '#f26a21', '樂天桃猿': '#8b1c3f', '富邦悍將': '#0b5cab', '味全龍': '#d6001c', '台鋼雄鷹': '#00793a',
+      'KIA': '#ea0029', 'KT': '#000000', 'LG': '#c30452', 'NC': '#315288', 'SSG': '#ce0e2d', '두산': '#131230', '롯데': '#041e42', '삼성': '#074ca1', '키움': '#820024', '한화': '#fc4e00',
+      'Arizona Diamondbacks': '#a71930', 'Athletics': '#003831', 'Oakland Athletics': '#003831', 'Atlanta Braves': '#ce1141', 'Baltimore Orioles': '#df4601',
+      'Boston Red Sox': '#bd3039', 'Chicago Cubs': '#0e3386', 'Chicago White Sox': '#27251f', 'Cincinnati Reds': '#c6011f', 'Cleveland Guardians': '#e31937',
+      'Colorado Rockies': '#33006f', 'Detroit Tigers': '#0c2340', 'Houston Astros': '#eb6e1f', 'Kansas City Royals': '#004687', 'Los Angeles Angels': '#ba0021',
+      'Los Angeles Dodgers': '#005a9c', 'Miami Marlins': '#00a3e0', 'Milwaukee Brewers': '#12284b', 'Minnesota Twins': '#002b5c', 'New York Mets': '#ff5910',
+      'New York Yankees': '#0c2340', 'Philadelphia Phillies': '#e81828', 'Pittsburgh Pirates': '#fdb827', 'San Diego Padres': '#2f241d', 'San Francisco Giants': '#fd5a1e',
+      'Seattle Mariners': '#005c5c', 'St. Louis Cardinals': '#c41e3a', 'Tampa Bay Rays': '#092c5c', 'Texas Rangers': '#003278', 'Toronto Blue Jays': '#134a8e',
+      'Washington Nationals': '#ab0003',
+    };
+    // 英文、韓文隊名顯示成中文，原文放在 hover 提示。
+    const TEAM_ZH = {
+      'KIA': '起亞老虎', 'KT': 'KT巫師', 'LG': 'LG雙子', 'NC': 'NC恐龍', 'SSG': 'SSG登陸者', '두산': '斗山熊', '롯데': '樂天巨人', '삼성': '三星獅', '키움': '啟動英雄', '한화': '韓華鷹',
+      'Arizona Diamondbacks': '亞利桑那響尾蛇', 'Athletics': '運動家', 'Oakland Athletics': '奧克蘭運動家', 'Atlanta Braves': '亞特蘭大勇士', 'Baltimore Orioles': '巴爾的摩金鶯',
+      'Boston Red Sox': '波士頓紅襪', 'Chicago Cubs': '芝加哥小熊', 'Chicago White Sox': '芝加哥白襪', 'Cincinnati Reds': '辛辛那提紅人', 'Cleveland Guardians': '克里夫蘭守護者',
+      'Colorado Rockies': '科羅拉多洛磯', 'Detroit Tigers': '底特律老虎', 'Houston Astros': '休士頓太空人', 'Kansas City Royals': '堪薩斯皇家', 'Los Angeles Angels': '洛杉磯天使',
+      'Los Angeles Dodgers': '洛杉磯道奇', 'Miami Marlins': '邁阿密馬林魚', 'Milwaukee Brewers': '密爾瓦基釀酒人', 'Minnesota Twins': '明尼蘇達雙城', 'New York Mets': '紐約大都會',
+      'New York Yankees': '紐約洋基', 'Philadelphia Phillies': '費城費城人', 'Pittsburgh Pirates': '匹茲堡海盜', 'San Diego Padres': '聖地牙哥教士', 'San Francisco Giants': '舊金山巨人',
+      'Seattle Mariners': '西雅圖水手', 'St. Louis Cardinals': '聖路易紅雀', 'Tampa Bay Rays': '坦帕灣光芒', 'Texas Rangers': '德州遊騎兵', 'Toronto Blue Jays': '多倫多藍鳥',
+      'Washington Nationals': '華盛頓國民',
+    };
+    const teamZh = (name) => TEAM_ZH[name] || name;
+    const teamTag = (name) => {
+      const color = TEAM_COLORS[name];
+      const dot = color ? `<span class="team-dot" style="background:${color}"></span>` : '';
+      const zh = teamZh(name);
+      const label = zh !== name ? `<span class="team-name" title="${esc(name)}">${esc(zh)}<span class="sr-only">（${esc(name)}）</span></span>` : esc(name);
+      return `${dot}${label}`;
+    };
+
     const outcomeLabel = { steal_success: '實際：盜壘成功', steal_failure: '實際：盜壘失敗', no_steal: '實際：不盜壘' };
 
     function fillValidation() {
@@ -25,10 +58,7 @@
         `);
       }
       $('validation-stats').innerHTML = cards.join('');
-      const notes = [];
-      if (v.re24) notes.push(`模擬引擎（<code>model_batter_decisions.py</code>）跟 <code>build_re24_matrix.py</code> 從真實逐球資料算出的 24 格 RE24 逐格比對，最大誤差都落在樣本數較少的稀有壘包組合，屬合理抽樣雜訊。`);
-      if (v.steal) notes.push(`盜壘判讀（<code>is_steal_success</code>／<code>is_steal_failure</code>）的通用版套用到全場，逐場逐隊加總比對 CPBL 官方 box score 的盜壘成功/刺殺統計。`);
-      $('validation-note').innerHTML = notes.join(' ') + ' 詳見 <a href="cpbl-re24-matrix-2025.html">RE24 矩陣熱力圖報告</a>與專案 README「引擎驗證」一節。';
+      $('validation-note').textContent = '';
     }
 
     function verdictColor(verdict) {
@@ -45,7 +75,7 @@
     function teamRowHtml(teamName, row, extraLabel) {
       const rate = row.actualSuccessRate === null ? '無嘗試' : pct(row.actualSuccessRate);
       const threshold = row.thresholdMedian === null ? '無資料' : pct(row.thresholdMedian);
-      return `<tr><td>${esc(teamName)}</td><td>${extraLabel}</td><td>${row.attempts.toLocaleString()}</td><td>${rate}</td><td>${threshold}</td><td>${pValueText(row)}</td><td style="color:${verdictColor(row.verdict)}; font-weight:650">${row.verdict}</td></tr>`;
+      return `<tr><td>${teamTag(teamName)}</td><td>${extraLabel}</td><td>${row.attempts.toLocaleString()}</td><td>${rate}</td><td>${threshold}</td><td>${pValueText(row)}</td><td style="color:${verdictColor(row.verdict)}; font-weight:650">${row.verdict}</td></tr>`;
     }
 
     function fillTeamDecisions() {
@@ -60,7 +90,7 @@
         const rate = row.actualSuccessRate === null ? '無嘗試' : pct(row.actualSuccessRate);
         const ci = row.ci95Low === null ? '無' : `${pct(row.ci95Low)} – ${pct(row.ci95High)}`;
         const threshold = row.thresholdMedian === null ? '無資料' : pct(row.thresholdMedian);
-        return `<tr><td>${esc(row.team)}</td>${opp}<td>${row.attempts.toLocaleString()}</td><td>${rate}</td><td>${ci}</td><td>${threshold}</td><td>${pValueText(row)}</td><td style="color:${verdictColor(row.verdict)}; font-weight:650">${row.verdict}</td></tr>`;
+        return `<tr><td>${teamTag(row.team)}</td>${opp}<td>${row.attempts.toLocaleString()}</td><td>${rate}</td><td>${ci}</td><td>${threshold}</td><td>${pValueText(row)}</td><td style="color:${verdictColor(row.verdict)}; font-weight:650">${row.verdict}</td></tr>`;
       }).join('');
       const halfLabels = { front_1_5: '前段(1-5)', back_6_9: '後段(6-9)' };
       const halfRows = [];
@@ -90,11 +120,6 @@
       $('v-success').textContent = fmt(a.vSuccess);
       $('v-failure').textContent = fmt(a.vFailure);
       $('v-no-steal').textContent = fmt(a.vNoSteal);
-      const maxValue = Math.max(a.vSuccess, a.vFailure, a.vNoSteal);
-      [['success', a.vSuccess], ['failure', a.vFailure], ['no-steal', a.vNoSteal]].forEach(([id, value]) => {
-        $(`bar-${id}`).style.width = `${(value / maxValue) * 100}%`;
-        $(`bar-${id}-label`).textContent = fmt(value);
-      });
       $('aggregate-formula').textContent = `(${fmt(a.vNoSteal)} − ${fmt(a.vFailure)}) ÷ (${fmt(a.vSuccess)} − ${fmt(a.vFailure)}) = ${pct(a.aggregateThreshold)}`;
       $('aggregate-threshold').textContent = pct(a.aggregateThreshold);
       $('median-threshold').textContent = pct(a.medianThreshold);
@@ -102,6 +127,7 @@
       $('out-penalty').textContent = `${fmt(a.expectedOutPenalty)} 分`;
       $('retention').textContent = `${a.retentionValue >= 0 ? '+' : ''}${fmt(a.retentionValue)} 分`;
       $('prior-pa').textContent = `${m.priorPA} PA`;
+      $('prior-pa-text').textContent = m.priorPA;
       $('generated-at').textContent = new Date(m.generatedAt).toLocaleString('zh-TW');
     }
 
@@ -152,11 +178,14 @@
         `;
       }
 
-      const maxMedian = Math.max(...segments.lineupSlots.map((s) => s.median ?? 0));
+      const medians = segments.lineupSlots.map((s) => s.median).filter((v) => v !== null);
+      const hi = Math.max(...medians);
+      const lo = Math.max(0, Math.floor((Math.min(...medians) - 0.03) * 20) / 20);
+      $('bar-axis-note').textContent = `長條從 ${pct(lo, 0)} 起算，方便看出棒次間的差異。`;
       $('lineup-bars').innerHTML = segments.lineupSlots.map((s) => `
         <div class="bar-row">
           <span>第 ${s.slot} 棒</span>
-          <div class="track"><div class="bar neutral" style="width:${maxMedian ? (s.median / maxMedian) * 100 : 0}%"></div></div>
+          <div class="track"><div class="bar neutral" style="width:${s.median === null ? 0 : Math.max(4, ((s.median - lo) / (hi - lo)) * 100)}%"></div></div>
           <strong>${s.median === null ? '無' : pct(s.median)}</strong>
         </div>
       `).join('');
@@ -176,69 +205,10 @@
         const sorted = [...slots].sort((a, b) => b.median - a.median);
         const peak = sorted[0];
         const trough = sorted[sorted.length - 1];
-        const runnerUp = sorted[1];
-        const thirdPlace = sorted[2];
-        const denoms = slots.map((s) => s.denominator).filter((v) => v !== null);
         $('peak-slot').textContent = peak.slot;
         $('peak-value').textContent = pct(peak.median);
         $('trough-slot').textContent = trough.slot;
         $('trough-value').textContent = pct(trough.median);
-        if (runnerUp) {
-          // 差距在 1 個百分點內視為並列次高，兩棒一起列出，不硬指認單一棒次。
-          const isClose = thirdPlace && Math.abs(runnerUp.median - thirdPlace.median) < 0.01;
-          $('runner-up-slot').textContent = isClose ? `${runnerUp.slot}、${thirdPlace.slot}` : runnerUp.slot;
-          $('runner-up-value').textContent = isClose
-            ? `${pct(runnerUp.median)}／${pct(thirdPlace.median)}，差距在雜訊範圍內`
-            : pct(runnerUp.median);
-        } else {
-          $('runner-up-item').hidden = true;
-        }
-        if (denoms.length) {
-          $('denom-range').textContent = `${pct(Math.min(...denoms))} ~ ${pct(Math.max(...denoms))}`;
-        }
-      }
-
-      const crossLabels = { front_1_5: '前段(1-5)', back_6_9: '後段(6-9)' };
-      function renderCrossTable(elementId, table, colA, colB) {
-        if (!table) { $(elementId).innerHTML = '<tr><td colspan="3">無資料</td></tr>'; return; }
-        $(elementId).innerHTML = Object.keys(table).sort().reverse().map((lineupKey) => {
-          const cell = table[lineupKey];
-          const a = cell[colA];
-          const b = cell[colB];
-          const fmtCell = (stat) => (stat && stat.median !== null ? `${pct(stat.median)}（n=${stat.n}）` : '無');
-          return `<tr><td>${crossLabels[lineupKey] || lineupKey}</td><td>${fmtCell(a)}</td><td>${fmtCell(b)}</td></tr>`;
-        }).join('');
-      }
-      if (segments.crossTables) {
-        renderCrossTable('cross-table-power', segments.crossTables.lineupXPower, 'high_ISO', 'low_ISO');
-        renderCrossTable('cross-table-patience', segments.crossTables.lineupXPatience, 'high_BB', 'low_BB');
-        renderCrossTable('cross-table-obp', segments.crossTables.lineupXObp, 'high_OBP', 'low_OBP');
-        renderCrossTable('cross-table-contact', segments.crossTables.lineupXContact, 'high_1B', 'low_1B');
-        renderCrossTable('cross-table-tto', segments.crossTables.lineupXTto, 'high_TTO', 'low_TTO');
-      }
-
-      if (segments.correlations) {
-        $('corr-iso-bb').textContent = segments.correlations.iso_vs_bb.toFixed(3);
-        $('corr-iso-obp').textContent = segments.correlations.iso_vs_obp.toFixed(3);
-        $('corr-iso-single').textContent = `相關係數 ${segments.correlations.iso_vs_single.toFixed(3)}`;
-        $('corr-iso-tto').textContent = `與 ISO 相關係數 ${segments.correlations.iso_vs_tto.toFixed(3)}`;
-      }
-
-      const contactComparison = segments.comparisons.find((c) => c.comparison === 'contact_high_vs_low_1B');
-      if (contactComparison) {
-        const hi = contactComparison.high_1B;
-        const lo = contactComparison.low_1B;
-        const pText = contactComparison.p_value < 0.001 ? '< 0.001' : contactComparison.p_value.toFixed(4);
-        $('contact-summary').textContent = `高單打率組門檻 ${pct(hi.median)}（n=${hi.n}），低單打率組 ${pct(lo.median)}（n=${lo.n}），低了 ${pct(Math.abs(hi.median - lo.median))}，p = ${pText}——是所有分組比較裡差距最大、也最顯著的一組，直接支持「單打即可得分」的假設：這類打者一旦上場最可能就是單打，而單打能不能把跑者從一壘送回本壘高度依賴壘包位置，讓跑者先上二壘的邊際價值特別高。`;
-      }
-
-      const ttoComparison = segments.comparisons.find((c) => c.comparison === 'tto_high_vs_low_TTO');
-      if (ttoComparison) {
-        const hi = ttoComparison.high_TTO;
-        const lo = ttoComparison.low_TTO;
-        const pText = ttoComparison.p_value === null ? '無' : (ttoComparison.p_value < 0.001 ? '< 0.001' : ttoComparison.p_value.toFixed(4));
-        const diff = hi.median - lo.median;
-        $('tto-summary').textContent = `高TTO組門檻 ${pct(hi.median)}（n=${hi.n}），低TTO組 ${pct(lo.median)}（n=${lo.n}），差 ${diff >= 0 ? '+' : ''}${pct(diff)}，p = ${pText}——方向與長打／選球分組${diff >= 0 ? '一致' : '相反'}，${diff >= 0 ? '疊加後訊號沒有比單一指標更清楚，屬於同一股力量的重複確認' : '值得進一步檢查是否為三振本身的效應蓋過了長打與選球'}。`;
       }
     }
 
@@ -287,7 +257,7 @@
       });
       $('runner-table').innerHTML = rows.map((row) => {
         const rate = row.successRate === null ? '無嘗試' : pct(row.successRate);
-        return `<tr><td><div>${esc(row.hitterName)}</div><div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:5px">${runnerTypeBadgesHtml(row)}</div></td><td>${esc(row.team)}</td><td>${row.attempts}</td><td>${rate}</td><td style="color:${runnerTierColor(row.tier)}; font-weight:650">${esc(row.tier)}</td><td>${slotGridHtml({ ...row, slotThresholds: r.thresholds.bySlot }, slots)}</td></tr>`;
+        return `<tr><td><div>${esc(row.hitterName)}</div><div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:5px">${runnerTypeBadgesHtml(row)}</div></td><td>${teamTag(row.team)}</td><td>${row.attempts}</td><td>${rate}</td><td style="color:${runnerTierColor(row.tier)}; font-weight:650">${esc(row.tier)}</td><td>${slotGridHtml({ ...row, slotThresholds: r.thresholds.bySlot }, slots)}</td></tr>`;
       }).join('') || '<tr><td colspan="6">找不到符合條件的跑者</td></tr>';
     }
 
@@ -312,53 +282,40 @@
       renderRunnerTable();
     }
 
-    function optionText(c) {
-      return `Game ${c.game}｜${c.inning}局｜${c.hitter}（${c.team}）`;
-    }
-
-    function populateCases(query = '') {
-      const select = $('case-select');
-      const normalized = query.trim().toLowerCase();
-      const selected = Number(select.value);
-      select.textContent = '';
-      const matches = REPORT.cases.filter((c) => {
-        const haystack = `${c.hitter} ${c.team} ${c.away} ${c.home} game ${c.game}`.toLowerCase();
-        return !normalized || haystack.includes(normalized);
+    // ---- 代表情境：還原壓縮後的個案、搜尋與篩選 ----
+    const CASES = (() => {
+      const c = REPORT.cases;
+      return c.rows.map((row, id) => {
+        const o = { id };
+        c.fields.forEach((key, j) => {
+          const v = row[j];
+          o[key] = j < c.strFields ? (v === null ? null : c.strings[v]) : v;
+        });
+        o.batterTypeQualified = Boolean(o.powerGroup);
+        return o;
       });
-      for (const c of matches) {
-        const option = document.createElement('option');
-        option.value = c.id;
-        option.textContent = optionText(c);
-        select.appendChild(option);
-      }
-      const desired = matches.some((c) => c.id === selected) ? selected : (matches[0]?.id ?? null);
-      if (desired !== null) {
-        select.value = String(desired);
-        renderCase(desired, true);
-      } else {
-        const option = document.createElement('option');
-        option.textContent = '找不到符合資料';
-        select.appendChild(option);
-      }
+    })();
+    let currentCase = CASES[REPORT.defaultCase] || CASES[0];
+
+    function caseLabel(c) {
+      return `${c.hitter}｜第 ${c.lineup} 棒｜${c.inning} 局｜${teamZh(c.team)}（${teamZh(c.away)} vs ${teamZh(c.home)}）`;
     }
 
-    function renderCase(id, resetRate = false) {
-      const c = REPORT.cases[Number(id)];
+    function renderCase(c) {
       if (!c) return;
+      currentCase = c;
       $('case-heading').textContent = `${c.hitter}｜第 ${c.lineup} 棒｜${c.inning} 局`;
-      $('case-subheading').textContent = `${c.date} · Game ${c.game} · ${c.away} vs ${c.home} · 一壘跑者 ${c.runner || '未記錄'} · 投手 ${c.pitcher || '未記錄'}`;
+      $('case-subheading').textContent = `${c.date} · 場次 ${c.game} · ${teamZh(c.away)} vs ${teamZh(c.home)} · 一壘跑者 ${c.runner || '未記錄'} · 投手 ${c.pitcher || '未記錄'}`;
       $('case-actual').textContent = outcomeLabel[c.actual] || c.actual;
       renderCaseTypeBadges(c);
       $('case-values').innerHTML = `<tr><td>${esc(c.hitter)}</td><td>${fmt(c.ModelVSuccess)}</td><td>${fmt(c.ModelVFailure)}</td><td>${fmt(c.ModelVNoSteal)}</td><td>${c.BreakEvenSuccessRate === null ? '無' : pct(c.BreakEvenSuccessRate)}</td><td>${fmt(c.ConditionalOutCostNoSteal)}</td><td>${fmt(c.ExpectedOutPenaltyNoSteal)}</td></tr>`;
       $('case-profile').innerHTML = `<tr><td>${esc(c.hitter)}</td><td>${Math.round(c.ProfilePA)}</td><td>${pct(c.ModelP_1B)}</td><td>${pct(c.ModelP_2B)}</td><td>${pct(c.ModelP_3B)}</td><td>${pct(c.ModelP_HR)}</td><td>${pct(c.ModelP_BB_HBP)}</td><td>${pct(c.ModelP_REACH)}</td><td>${pct(c.ModelP_OUT)}</td></tr>`;
-      if (resetRate) {
-        const threshold = c.BreakEvenSuccessRate === null ? REPORT.aggregate.medianThreshold : c.BreakEvenSuccessRate;
-        $('success-rate').value = String(Math.min(100, Math.max(0, threshold * 100)));
-      }
+      const threshold = c.BreakEvenSuccessRate === null ? REPORT.aggregate.medianThreshold : c.BreakEvenSuccessRate;
+      $('success-rate').value = String(Math.min(100, Math.max(0, threshold * 100)));
       updateDecision(c);
     }
 
-    function updateDecision(c = REPORT.cases[Number($('case-select').value)]) {
+    function updateDecision(c = currentCase) {
       if (!c) return;
       const p = Number($('success-rate').value) / 100;
       const stealEV = p * c.ModelVSuccess + (1 - p) * c.ModelVFailure;
@@ -369,17 +326,102 @@
       $('decision-readout').className = `decision-readout ${delta >= 0 ? 'good' : 'bad'}`;
     }
 
+    // 篩選器：選項由資料產生，標籤沿用分組名稱
+    const FILTERS = [
+      ['f-team', 'team', '全部球隊', (v) => teamZh(v)],
+      ['f-actual', 'actual', '全部結果', (v) => (outcomeLabel[v] || v).replace('實際：', '')],
+      ['f-slot', 'lineup', '全部棒次', (v) => `第 ${v} 棒`],
+      ['f-inning', 'inning', '全部局數', (v) => `第 ${v} 局`],
+      ['f-lineup', 'typicalLineupGroup', '不限', (v) => GROUP_LABELS[v] || v],
+      ['f-power', 'powerGroup', '不限', (v) => GROUP_LABELS[v] || v],
+      ['f-patience', 'patienceGroup', '不限', (v) => GROUP_LABELS[v] || v],
+      ['f-obp', 'obpGroup', '不限', (v) => GROUP_LABELS[v] || v],
+      ['f-contact', 'contactGroup', '不限', (v) => GROUP_LABELS[v] || v],
+      ['f-tto', 'ttoGroup', '不限', (v) => GROUP_LABELS[v] || v],
+    ];
+
+    function fillFilterOptions() {
+      FILTERS.forEach(([id, key, allLabel, labeler]) => {
+        const values = [...new Set(CASES.map((c) => c[key]).filter((v) => v !== null && v !== undefined))];
+        values.sort((a, b) => (typeof a === 'number' ? a - b : String(labeler(a)).localeCompare(String(labeler(b)), 'zh-Hant')));
+        $(id).innerHTML = `<option value="">${allLabel}</option>` + values.map((v) => `<option value="${esc(v)}">${esc(labeler(v))}</option>`).join('');
+      });
+    }
+
+    function applyCaseFilters() {
+      const query = $('case-search').value.trim().toLowerCase();
+      const active = FILTERS.map(([id, key]) => [key, $(id).value]).filter(([, v]) => v !== '');
+      const matches = CASES.filter((c) => {
+        for (const [key, value] of active) if (String(c[key]) !== value) return false;
+        if (!query) return true;
+        const hay = `${c.hitter} ${c.team} ${teamZh(c.team)} ${c.away} ${teamZh(c.away)} ${c.home} ${teamZh(c.home)} ${c.game} ${c.date}`.toLowerCase();
+        return hay.includes(query);
+      });
+      const LIMIT = 300;
+      const shown = matches.slice(0, LIMIT);
+      const cur = matches.find((c) => c.id === currentCase.id);
+      if (cur && !shown.includes(cur)) shown.unshift(cur);
+      $('case-count').textContent = matches.length
+        ? `共 ${matches.length.toLocaleString()} 筆符合${matches.length > LIMIT ? `，清單只列前 ${LIMIT} 筆，請再縮小條件` : ''}`
+        : '沒有符合的決策，請放寬條件';
+      const select = $('case-select');
+      select.innerHTML = shown.map((c) => `<option value="${c.id}">${esc(caseLabel(c))}</option>`).join('');
+      const keep = shown.find((c) => c.id === currentCase.id);
+      const target = keep || shown[0];
+      if (target) {
+        select.value = String(target.id);
+        if (!keep) renderCase(target);
+      }
+    }
+
+    function fillTakeaway() {
+      const a = REPORT.aggregate;
+      const attempts = a.outcomes.steal_success + a.outcomes.steal_failure;
+      if (!attempts) return;
+      const rate = a.outcomes.steal_success / attempts;
+      const above = rate >= a.medianThreshold;
+      $('key-takeaway').innerHTML = `<strong>重點：</strong>實際成功率 ${pct(rate)}（${attempts.toLocaleString()} 次嘗試）${above ? '高於' : '低於'}情境門檻中位數 ${pct(a.medianThreshold)}，${above ? '這個情境下盜壘整體划算；真正要看的是哪些棒次、哪些打者更適合跑，往下看。' : '整體而言，這個情境下盜壘不夠划算；往下看哪些棒次與打者例外。'}`;
+    }
+
+    function fillHandedness() {
+      const h = REPORT.handedness;
+      if (!h) return;
+      $('handedness-section').hidden = false;
+      const L = h.LHP, R = h.RHP;
+      const gap = (R.successRate - L.successRate) * 100;
+      $('handedness-cards').innerHTML = `
+        <article class="stat"><small>對左投成功率</small><strong>${pct(L.successRate)}</strong><span>${L.success} 成功／${L.attempts} 次嘗試</span></article>
+        <article class="stat"><small>對右投成功率</small><strong>${pct(R.successRate)}</strong><span>${R.success} 成功／${R.attempts} 次嘗試</span></article>
+        <article class="stat"><small>成功率差距</small><strong>${gap >= 0 ? '+' : ''}${gap.toFixed(1)} pp</strong><span>右投減左投，單位為百分點</span></article>
+        <article class="stat"><small>每球嘗試率（左／右）</small><strong>${pct(L.attemptRatePerPitch, 2)}／${pct(R.attemptRatePerPitch, 2)}</strong><span>一壘有人時，每球發動盜壘的比例</span></article>`;
+      const thr = REPORT.aggregate.medianThreshold;
+      const cmp = (name, row) => {
+        const diff = row.successRate - thr;
+        const rel = Math.abs(diff) < 0.01 ? '與' : (diff > 0 ? '高於' : '低於');
+        return `${name}成功率 ${pct(row.successRate)} ${rel}門檻中位數${Math.abs(diff) < 0.01 ? '相當' : ''}`;
+      };
+      $('handedness-note').textContent = `對照門檻中位數 ${pct(thr)}：${cmp('對右投', R)}，${cmp('對左投', L)}。左投面對一壘跑者是正面朝向，牽制與起跑時機都比較難抓。`;
+    }
+
     fillAggregate();
+    fillTakeaway();
     fillValidation();
     fillTeamDecisions();
     fillSegments();
     fillRunnerQualification();
+    fillHandedness();
     $('runner-search').addEventListener('input', renderRunnerTable);
     $('runner-filter').addEventListener('change', renderRunnerTable);
-    $('case-select').value = String(REPORT.defaultCase);
-    populateCases();
-    $('case-select').value = String(REPORT.defaultCase);
-    renderCase(REPORT.defaultCase, true);
-    $('case-search').addEventListener('input', (event) => populateCases(event.target.value));
-    $('case-select').addEventListener('change', (event) => renderCase(event.target.value, true));
+    fillFilterOptions();
+    applyCaseFilters();
+    $('case-select').value = String(currentCase.id);
+    renderCase(currentCase);
+    $('case-search').addEventListener('input', applyCaseFilters);
+    FILTERS.forEach(([id]) => $(id).addEventListener('change', applyCaseFilters));
+    $('f-clear').addEventListener('click', () => {
+      $('case-search').value = '';
+      FILTERS.forEach(([id]) => { $(id).value = ''; });
+      applyCaseFilters();
+    });
+    $('case-select').addEventListener('change', (event) => renderCase(CASES[Number(event.target.value)]));
     $('success-rate').addEventListener('input', () => updateDecision());

@@ -101,6 +101,65 @@ def compact_case(
     return data
 
 
+CASE_STRING_FIELDS = (
+    "date", "team", "away", "home", "hitter", "runner", "pitcher", "actual",
+    "typicalLineupGroup", "powerGroup", "patienceGroup", "obpGroup", "contactGroup", "ttoGroup",
+)
+CASE_NUMBER_FIELDS = (
+    "game", "inning", "lineup", "ProfilePA",
+    "ModelP_1B", "ModelP_2B", "ModelP_3B", "ModelP_HR", "ModelP_BB_HBP", "ModelP_REACH", "ModelP_OUT",
+    "ModelVSuccess", "ModelVFailure", "ModelVNoSteal",
+    "ConditionalOutCostNoSteal", "ExpectedOutPenaltyNoSteal", "BreakEvenSuccessRate",
+)
+
+
+def encode_cases(cases: list[dict[str, Any]]) -> dict[str, Any]:
+    """把逐筆個案壓成欄位表＋字串表，內嵌進報告時體積約為原本的五分之一。
+
+    字串欄位存字串表的索引（None 代表沒有），數值欄位四捨五入到小數 4 位。
+    前端用 fields 與 strFields 還原成物件。
+    """
+    strings: list[str] = []
+    index: dict[str, int] = {}
+
+    def intern(value: Any) -> int | None:
+        if value is None or value == "":
+            return None
+        text = str(value)
+        if text not in index:
+            index[text] = len(strings)
+            strings.append(text)
+        return index[text]
+
+    fields = list(CASE_STRING_FIELDS) + list(CASE_NUMBER_FIELDS)
+    rows = []
+    for case in cases:
+        row: list[Any] = [intern(case.get(key)) for key in CASE_STRING_FIELDS]
+        for key in CASE_NUMBER_FIELDS:
+            value = case.get(key)
+            if isinstance(value, float):
+                value = round(value, 4)
+            row.append(value)
+        rows.append(row)
+    return {"fields": fields, "strFields": len(CASE_STRING_FIELDS), "strings": strings, "rows": rows}
+
+
+def load_handedness(path: Path) -> dict[str, Any] | None:
+    """左右投對跑者盜二壘的聯盟層級數字（analysis/analyze_pitcher_handedness.py 的單季摘要）。"""
+    if not path.exists():
+        return None
+    data = json.loads(path.read_text(encoding="utf-8-sig"))
+    by_hand = data.get("league_by_pitcher_hand") or {}
+    keep = ("attempts", "success", "caught", "successRate", "attemptRatePerPitch", "pickoffThrowRate")
+    result = {}
+    for hand in ("LHP", "RHP"):
+        row = by_hand.get(hand)
+        if not row:
+            return None
+        result[hand] = {key: row.get(key) for key in keep}
+    return result
+
+
 def load_re24_validation(path: Path) -> dict[str, Any] | None:
     if not path.exists():
         return None
@@ -243,7 +302,7 @@ def build_payload(
             "outcomes": outcome_counts,
         },
         "defaultCase": default_case,
-        "cases": cases,
+        "cases": encode_cases(cases),
         "segments": build_segments(comparison),
         "validation": {
             "re24": re24_validation,
@@ -264,6 +323,7 @@ def generate_report(
     team_decisions_json: Path | None = None,
     runner_qualification_json: Path | None = None,
     batter_types_csv: Path | None = None,
+    handedness_json: Path | None = None,
 ) -> dict[str, Any]:
     with model_csv.open("r", encoding="utf-8-sig", newline="") as handle:
         rows = list(csv.DictReader(handle))
@@ -293,7 +353,7 @@ def generate_report(
 
     team_decisions = load_team_decisions(team_decisions_json) if team_decisions_json else None
     if team_decisions_json is not None and team_decisions is None:
-        print(f"提醒：找不到 {team_decisions_json}，報告將略過六隊決策品質評估區塊"
+        print(f"提醒：找不到 {team_decisions_json}，報告將略過各隊決策品質評估區塊"
               f"（可先執行 analyze_team_decisions.py）")
 
     runner_qualification = (
@@ -318,12 +378,23 @@ def generate_report(
         runner_qualification,
         batter_types,
     )
+    payload["handedness"] = load_handedness(handedness_json) if handedness_json else None
     payload_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     payload_json = payload_json.replace("</", "<\\/")
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
     document = template.replace("/*__STYLES__*/", STYLE_PATH.read_text(encoding="utf-8").rstrip("\n"))
+    document = document.replace("/*__COMMON_CSS__*/", (ROOT / "templates" / "report_common.css").read_text(encoding="utf-8").rstrip("\n"))
+    document = document.replace("/*__COMMON__*/", (ROOT / "templates" / "report_common.js").read_text(encoding="utf-8").rstrip("\n"))
     document = document.replace("/*__SCRIPT__*/", SCRIPT_PATH.read_text(encoding="utf-8").rstrip("\n"))
     document = document.replace("__REPORT_DATA__", payload_json)
+    # 範本把年份寫死成 2025（標題、眉標、概況標題），依實際球季換掉。
+    year = str(payload["meta"]["year"])
+    for old, new in (
+        ("<title>2025 CPBL", f"<title>{year} CPBL"),
+        ("CPBL · 2025 REGULAR SEASON", f"CPBL · {year} REGULAR SEASON"),
+        (">2025 資料概況<", f">{year} 資料概況<"),
+    ):
+        document = document.replace(old, new)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(document, encoding="utf-8", newline="\n")
@@ -367,6 +438,7 @@ def main() -> int:
         args.runner_qualification_json or ROOT / "outputs" / f"cpbl_runner_steal_rates_{stem}.json"
     )
     batter_types_csv = args.batter_types_csv or ROOT / "outputs" / f"cpbl_batter_types_{stem}.csv"
+    handedness_json = ROOT / "outputs" / f"cpbl_runner_handedness_{stem}_summary.json"
     output = args.output or ROOT / "reports" / f"cpbl-steal-decision-{args.year}.html"
     payload = generate_report(
         model_csv,
@@ -378,6 +450,7 @@ def main() -> int:
         team_decisions_json,
         runner_qualification_json,
         batter_types_csv,
+        handedness_json,
     )
     print(
         f"Wrote {output} with {payload['meta']['samples']} cases; "

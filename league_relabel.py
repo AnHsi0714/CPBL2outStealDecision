@@ -17,6 +17,7 @@ LABELS = {
         ("GameSno ", "日期 "),
         ("中職", "美國職棒大聯盟"),
         ("CPBL", "MLB"),
+        ("cpbl-wpa-decision", "mlb-wpa-decision"),
     ],
     "kbo": [
         ("CPBL 官網逐球紀錄", "KBO 官網文字轉播"),
@@ -24,6 +25,7 @@ LABELS = {
         ("GameSno ", "日期 "),
         ("中職", "韓職"),
         ("CPBL", "KBO"),
+        ("cpbl-wpa-decision", "kbo-wpa-decision"),
     ],
 }
 

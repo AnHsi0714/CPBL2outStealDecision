@@ -58,6 +58,9 @@ DEFAULT_SEASONS = [
 ]
 
 SCORE_DIFF_CAP = 5
+
+# 賽程場次少於預設編號範圍的球季（2023 五隊制只有 300 場），預期場次以實際賽程為準。
+SEASON_TOTAL_GAMES = {2023: 300}
 INNING_BUCKETS = ["1-6", "7", "8", "9+"]
 BATTING_SIDE_LABELS = {"1": "客隊進攻", "2": "主隊進攻"}
 
@@ -327,7 +330,7 @@ def main() -> int:
     games_skipped_incomplete = 0
 
     for spec in season_specs:
-        expected = spec.end - spec.start + 1
+        expected = min(spec.end, SEASON_TOTAL_GAMES.get(spec.year, spec.end)) - spec.start + 1
         games_expected_total += expected
         cache_dir = args.cache_dir / f"{spec.year}_{spec.kind_code}"
 
