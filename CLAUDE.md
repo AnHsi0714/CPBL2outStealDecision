@@ -59,7 +59,7 @@ python -m unittest tests.test_model_batter_decisions
 6. `pipeline/compare_groups.py` → `cpbl_group_comparison_{tag}.json`（注意：預設 `--input` 是 step 4 的檔案，要納入先發/代打欄位須顯式指定 step 5 的輸出）
 7. `pipeline/generate_decision_report.py` → `reports/cpbl-steal-decision-{year}.html`（單檔互動報告，payload 內嵌 JSON）
 
-`scrapers/CPBL_steal_getData.py`（原名 `getData.py`，跨聯盟整併時改名）是獨立的通用逐球匯出（playbyplay / scoreboard / batting CSV），不在上述管線內；參數寫死在檔案最下方，非 argparse。`scrapers/KBO_steal_getData.py`／`scrapers/MLB_steal_getData.py` 是同模式的另兩個聯盟爬蟲，`scrapers/combine_leagues.py` 把三份 playbyplay 統一欄位後合併（**目前僅到合併，尚未跑出跨聯盟門檻結果**）。
+`scrapers/CPBL_steal_getData.py`（原名 `getData.py`，跨聯盟整併時改名）是獨立的通用逐球匯出（playbyplay / scoreboard / batting CSV），不在上述管線內；參數寫死在檔案最下方，非 argparse。`scrapers/KBO_steal_getData.py`／`scrapers/MLB_steal_getData.py` 是同模式的另兩個聯盟爬蟲，`scrapers/combine_leagues.py` 把三份 playbyplay 統一欄位後合併（合併檔本身沒有往下用；MLB／KBO 的門檻結果是走各自的並行管線跑出來的，見下方「跨聯盟（MLB／KBO）並行腳本」）。
 
 ### 主管線之外的分析腳本
 
@@ -85,6 +85,22 @@ python -m unittest tests.test_model_batter_decisions
 - `analysis/analyze_batter_threshold_correlations.py`：打者層級門檻（該打者所有決策點 `BreakEvenSuccessRate` 中位數）跟 HR/長打/保送/單打率、打擊率、出局率的 Pearson 相關係數
 - `analysis/bootstrap_threshold_ci.py`：整體/逐棒次/四組打者類型比較的 95% bootstrap 信賴區間。case resampling 之外，額外用 `ModelV*SE`（模擬標準誤，原本沒用上）對 V 值加常態雜訊，一次涵蓋樣本誤差與模擬雜訊兩種來源，不必重跑模擬
 - `analysis/analyze_hyperparameter_sensitivity.py`：讀「模擬次數/`prior_pa`/`minimum_transition_cell` 各變體」重跑出來的 `cpbl_decision_model_*_summary.json`（各自獨立 `--output-dir`，不寫回 `outputs/`）與「`min-pa` 各變體」的 `cpbl_group_comparison_*.json`，跟基準情境比較門檻中位數與顯著性判定是否翻轉；這三個模擬類超參數需要先用 `pipeline/model_batter_decisions.py --output-dir <變體目錄>` 各跑一次，`min-pa` 則用 `pipeline/analyze_batter_types.py`→`pipeline/join_decision_batter_types.py`→`pipeline/compare_groups.py` 三支串起來、同樣指到各自 `--output-dir`／`--output`
+
+### 跨聯盟（MLB／KBO）並行腳本
+
+MLB、KBO 沿用 `mlb_`／`kbo_` 前綴的並行腳本，數學部分（模擬引擎、分組比較、保留效應、bootstrap 等）直接 import CPBL 版，只換資料來源；**不改 CPBL 腳本**。結果與數字見 `分析發現.md` 的「跨聯盟擴充」，過程與每個 bug 見 `跨聯盟擴充進度.md`。
+
+- MLB：`scrapers/mlb_find_2out_first_base.py`（Gumbo 快取 `data/raw/mlb/{start}_{end}/`）→ `pipeline/mlb_model_batter_decisions.py` → `bash pipeline/run_mlb_season.sh <年>`（類型、join、先發標記、分組比較、各隊決策、保留效應、WPA、跑者名單、決策報告一次跑完）。檔名標籤是日期區間 `YYYY-03-15_YYYY-10-10`。
+- KBO：`scrapers/KBO_crawl_seasons.py`（HTML 快取 `data/raw/kbo/{年}/`）→ `scrapers/kbo_find_2out_first_base.py` → `pipeline/kbo_model_batter_decisions.py` → `bash pipeline/run_kbo_season.sh <年>`。檔名標籤是年份。
+- RE24／WE：`re24/{mlb,kbo}_build_re24_matrix.py`、`re24/{mlb,kbo}_validate_re24_simulation.py`、`win_expectancy/{mlb,kbo}_build_win_expectancy_matrix.py`（四季合併）。**引擎驗證（模擬 RE24 對真實 RE24）是 MLB／KBO 解析正確性的檢查點**，每次動解析邏輯後都要重跑。
+- 報告：決策／RE24／WE 報告用 CPBL 版產生器產出後以 `league_relabel.py` 換標籤；WPA 報告用 `wpa/generate_league_wpa_report.py`（CPBL 版模板寫死 CPBL 結論，不可直接換標籤）；入口頁 `generate_league_full_report.py mlb|kbo`。
+- 通用腳本（`join_decision_batter_types.py`、`compare_groups.py`、`analyze_team_decisions.py` 等）只吃 CPBL 的 `{year}_{kind}_{start}-{end}` 標籤、輸出 `cpbl_` 檔名；`run_*_season.sh` 會輸出到暫存目錄再改名成 `mlb_`／`kbo_`，不要直接對它們傳 MLB／KBO 檔案後留在 `outputs/`。
+
+必須知道的陷阱：
+
+- **MLB**：`playEvents[].count.outs` 對投球事件是事件前、對非投球事件（牽制盜壘）是事件後，出局數一律用 `runners[].movement.isOut` 逐事件累加；盜壘標記在投球事件上時只出現在 `runners[].details.event`；半局第一個打席的得分要數 `runners[]` 的 `end=="score"`，不能用比分相減；延長賽第 10 局起二壘有人（placed runner）；延期賽在 schedule 裡會出現兩次（用 gamePk 去重）。
+- **KBO**：沒有比分、沒有球員 ID（主鍵 `球隊:姓名`）；三振同時阻殺（打者出局列之後接跑者阻殺列）不是兩出局決策；狀態機的殘餘誤差使 RE24 驗證 r 只有 0.98。
+- **記憶體**：MLB 單季模型載入全部 Gumbo JSON 約 6GB，同時跑超過 2 個季會把 32GB 吃光。
 
 ### 資料品質：公告列過濾（必讀）
 

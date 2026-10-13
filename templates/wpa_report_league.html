@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WPA 版損益兩平門檻</title>
+  <style>
+/*__STYLES__*/
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="eyebrow">CPBL __SEASON_RANGE__ REGULAR SEASON</div>
+      <h1>WPA 版損益兩平門檻：哪幾局可以放心改用勝率判準</h1>
+      <p class="lede">把 WE 勝率矩陣接回三分支決策模型，算出用「勝率增值」而非「剩餘得分」當價值函數的損益兩平門檻，再用 bootstrap 信賴區間驗證結論站不站得住雜訊。每季各自獨立跑過一次，放在一起看方向是否一致。</p>
+      <div class="meta">
+        <span>各季獨立驗證：__SEASON_RANGE__</span>
+        <span>bootstrap 1,000 次／季</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section aria-labelledby="finding-title">
+      <h2 id="finding-title">逐局門檻：RE 版 vs WPA 版</h2>
+      <div class="panel">
+        <p>RE 版只看「這次盜壘能不能幫本半局多得分」，不管這一分現在多值錢；WPA 版把局數、比分與對手下一次進攻都算進去。下表是各局兩種判準門檻中位數的四季範圍（逐局信賴區間見下方圖）：</p>
+        <div class="table-wrap" style="margin-top:14px">
+          <table>
+            <thead><tr><th>局</th><th>RE 門檻中位數（四季範圍）</th><th>WPA 門檻中位數（四季範圍）</th></tr></thead>
+            <tbody>
+              <tr><td>第 4 局</td><td>__RE_RANGE_INNING4__</td><td>__WPA_RANGE_INNING4__</td></tr>
+              <tr><td>第 6 局</td><td>__RE_RANGE_INNING6__</td><td>__WPA_RANGE_INNING6__</td></tr>
+              <tr><td>第 7 局</td><td>__RE_RANGE_INNING7__</td><td>__WPA_RANGE_INNING7__</td></tr>
+              <tr><td>第 8 局</td><td>__RE_RANGE_INNING8__</td><td>__WPA_RANGE_INNING8__</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="margin-top:16px"><strong>怎麼讀</strong>：WPA 門檻低於 RE 門檻，代表該局可接受的成功率比 RE 版隱含的更低；WPA 的 95% 信賴區間是否與 RE 門檻中位數重疊，見下方逐局圖與資料表（點估計不穩的局數以信賴區間為準，不要引用單一中位數）。</p>
+
+        <h3 style="margin-top:24px">為什麼門檻會隨局數下降：同一分的份量變重了</h3>
+        <p>機制不是「晚局盜壘比較容易成功」，而是「讓這個半局現在結束（不管是盜壘刺、還是打者自己正常出局），代價隨局數變重」。同一個 1 分領先／落後，換算成勝率的意義完全不同：</p>
+        <div class="grid" style="margin-top:14px; grid-template-columns:repeat(3,1fr)">
+__LEVERAGE_CARDS__
+        </div>
+        <p style="margin-top:14px">上方卡片是各局領先／落後 1 分時進攻方的勝率（取自本聯盟的 WE 矩陣）。門檻公式是 <code>(V不跑－V失敗)／(V成功－V失敗)</code>：當「現在讓半局結束」的代價（V失敗，換算對手視角）跟「打者繼續打、大機率還是出局收場」的代價（V不跑）愈接近，分子被壓縮，門檻就愈低。RE 版模型假設每一分的價值到處都一樣，看不到這件事。</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="runner-title">
+      <h2 id="runner-title">實際影響：RE 判「不建議跑」的跑者，換成 WPA 有多少人翻盤</h2>
+      <div class="panel">
+        <p>兩套判準會不會吵架，最終要看「同一位跑者、同一個情境，兩套判準的判定是不是同一個答案」。下表只看 RE 版判為<strong>任一棒次都不建議跑</strong>的跑者，用第 4–8 局的 WPA 門檻重新判定，統計有多少人在至少一局夠格盜壘。</p>
+        <div class="table-wrap" style="margin-top:14px">
+          <table>
+            <thead><tr><th>年度</th><th>RE 判「任一棒次都不建議跑」人數</th><th>WPA 下至少一局翻盤</th><th>翻盤比例</th></tr></thead>
+            <tbody>__RECLASSIFICATION_ROWS__</tbody>
+          </table>
+        </div>
+        <p style="margin-top:14px">名單人數較少的球季，翻盤比例的波動是小樣本的正常現象，不必過度解讀單一年份的百分比；請看四季是否同向。</p>
+        <details style="margin-top:14px">
+          <summary>展開完整名單（RE 判「任一棒次都不建議跑」的跑者，逐局 WPA 判定）</summary>
+          <div class="table-wrap" style="margin-top:10px">
+            <table>
+              <thead><tr><th>年度</th><th>跑者</th><th>球隊</th><th>RE 成功率</th><th>嘗試次數</th><th>WPA 下夠格的局數</th></tr></thead>
+              <tbody>__RECLASSIFICATION_RUNNER_ROWS__</tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section aria-labelledby="groups-title">
+      <h2 id="groups-title">棒次與打者類型分組：換成 WPA 還成不成立</h2>
+      <div class="panel">
+        <p>RE 版的棒次與打者類型分組比較是用全部局數（1–8 局）算的；這裡只用第 4–8 局的決策重算一次，RE 版也用同一個子集重算，兩邊才是同一批樣本、只差價值函數，比較才公平（<code>compare_wpa_groups.py</code>）。</p>
+
+        <h3 style="margin-top:22px">逐棒次門檻的最低點（RE vs WPA）</h3>
+        <p>下表列出每季 RE 版與 WPA 版逐棒次門檻最低的棒次。WPA 門檻再切成 9 個棒次子群後每群樣本變少，訊噪比下降，請看各季是否一致。</p>
+        <div class="table-wrap" style="margin-top:14px">
+          <table>
+            <thead><tr><th>年度</th><th>RE 門檻最低棒次</th><th>WPA 門檻最低棒次</th></tr></thead>
+            <tbody>__LINEUP_SLOT_ROWS__</tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top:26px">打者類型分組：RE 與 WPA 方向比較</h3>
+        <p>下表是五個分組軸在 RE 與 WPA 兩種判準下的高低組門檻方向（四季多數決）與結論。</p>
+        <div class="table-wrap" style="margin-top:14px">
+          <table>
+            <thead><tr><th>分組</th><th>RE 方向（四季）</th><th>WPA 方向（四季）</th><th>結論</th></tr></thead>
+            <tbody>__GROUP_AXIS_ROWS__</tbody>
+          </table>
+        </div>
+        
+        
+      </div>
+    </section>
+
+    <section aria-labelledby="chart-title">
+      <h2 id="chart-title">這站得住嗎：逐局 WPA 95% 信賴區間 vs RE 門檻中位數</h2>
+      <p class="lede" style="margin-bottom:14px">藍色線段是 WPA 門檻的 95% bootstrap 信賴區間（圓點＝中位數）；橘色菱形是同一局 RE 版模型的門檻中位數。只要橘色菱形落在藍色線段的範圍**之外**（在它右邊），代表這一局改用 WPA 判準的門檻明顯比 RE 低，而且不是抽樣雜訊。四張圖裡，第 2–8 局橘色菱形都清楚落在藍色區間右邊，只有第 1 局（標 † 的列）兩季重疊，數字不可信。</p>
+      <div class="legend">
+        <div class="legend-item"><span class="legend-swatch wpa"></span>WPA 門檻 95% CI（圓點＝中位數）</div>
+        <div class="legend-item"><span class="legend-swatch re"></span>RE 門檻中位數</div>
+      </div>
+      <div class="panels">
+__SEASON_PANELS__
+      </div>
+      <p class="footnote">† 第 1 局分母（V成功－V失敗）通常很小，跟其標準誤同一量級，比值結構性不穩定，數字僅供參考。</p>
+    </section>
+
+    <section aria-labelledby="table-title">
+      <h2 id="table-title">完整資料表</h2>
+      <div class="panel">
+        <details open>
+          <summary>展開逐局逐季數字</summary>
+          <div class="table-wrap" style="margin-top:10px">
+            <table>
+              <thead><tr><th>年度</th><th>局</th><th>RE 門檻中位數</th><th>WPA 門檻中位數</th><th>WPA 95% CI</th><th>與 RE 重疊</th></tr></thead>
+              <tbody>__TABLE_ROWS__</tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section aria-labelledby="method-title">
+      <h2 id="method-title">怎麼算的</h2>
+      <ul class="note-list">
+        <li><strong>V成功</strong>（盜壘成功、跑者上二壘）直接查 WE 表。WE 矩陣每一格本來就是「這個狀態到比賽結束」的經驗值。</li>
+        <li><strong>V失敗</strong>（跑者被封殺，半局立刻結束）＝ 1 − WE(對手下一次進攻起始狀態)。WPA 本質上是零和的，算勝率一定要換算對手視角，這是跟 RE 版模型最根本的差異。</li>
+        <li><strong>V不跑</strong>：打者用自己的打擊機率分布做「一步」蒙地卡羅，落到新狀態後查 WE 表。</li>
+        <li>信賴區間對每筆決策的三個 V 值各自加高斯雜訊（WE 表格子的二項標準誤＋一步模擬標準誤），再對決策列做 case resampling，重複 1,000 次取 2.5/97.5 百分位。</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer><div class="wrap">資料：CPBL 官網逐球紀錄，__SEASON_RANGE__ 例行賽 · 由 model_wpa_decisions.py + bootstrap_wpa_threshold_ci.py 的 __LEAGUE_NOTE__ 版本產生 · 詳細方法論見 README「WPA 版損益兩平門檻」一節</div></footer>
+</body>
+</html>
