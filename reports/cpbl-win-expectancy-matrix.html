@@ -195,6 +195,43 @@
       .js-reveal .barr { transform: scaleX(0); transform-origin: left center; transition: transform 1s cubic-bezier(.2,.7,.2,1) .1s; }
       .js-reveal .barr.in { transform: scaleX(1); }
     }
+/* 報告頁共用樣式（目錄、提示框），由各產生器附加在各報告自己的樣式後面 */
+.rc-btn { position: fixed; left: 12px; top: var(--rc-top, 14px); z-index: 60; width: 40px; height: 40px; padding: 0;
+  display: grid; place-items: center; background: var(--surface); color: var(--text); border: 1px solid var(--text); cursor: pointer; }
+.rc-btn.inline { position: static; flex: none; align-self: center; margin-right: 4px; }
+.rc-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.rc-icon { position: relative; width: 18px; height: 2px; background: currentColor; transition: transform .3s ease; }
+.rc-icon::before, .rc-icon::after { content: ""; position: absolute; left: 0; width: 18px; height: 2px; background: currentColor; }
+.rc-icon::before { top: -6px; }
+.rc-icon::after { top: 6px; }
+.rc-btn:hover .rc-icon, .rc-btn:focus-visible .rc-icon, .rc-btn[aria-expanded="true"] .rc-icon { transform: rotate(90deg); }
+.rc-btn::after { content: attr(data-tip); position: absolute; left: 48px; top: 50%; transform: translateY(-50%); padding: 3px 9px; white-space: nowrap;
+  background: var(--text); color: var(--bg); font-size: .78rem; opacity: 0; pointer-events: none; transition: opacity .15s ease; z-index: 61; }
+.rc-btn:hover::after, .rc-btn:focus-visible::after { opacity: 1; }
+.rc-btn[aria-expanded="true"]::after { opacity: 0; }
+.rc-drawer { position: fixed; left: 0; top: 0; bottom: 0; z-index: 59; width: min(280px, 82vw); padding: 64px 0 24px; overflow-y: auto;
+  background: var(--surface); color: var(--text); border-right: 1px solid var(--text); transform: translateX(-102%); visibility: hidden;
+  transition: transform .28s cubic-bezier(.2,.7,.2,1), visibility 0s linear .28s; }
+.rc-drawer.open { transform: none; visibility: visible; transition: transform .28s cubic-bezier(.2,.7,.2,1); }
+.rc-drawer h2 { margin: 0 0 8px; padding: 0 20px; font-size: .78rem; letter-spacing: .12em; color: var(--muted); font-weight: 700; }
+.rc-drawer a { display: block; padding: 10px 20px; color: var(--text); text-decoration: none; border-left: 4px solid transparent; font-size: .95rem; }
+.rc-drawer a:hover { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.rc-drawer a[aria-current="true"] { border-left-color: var(--accent); font-weight: 700; background: color-mix(in srgb, var(--text) 6%, transparent); }
+.rc-scrim { position: fixed; inset: 0; z-index: 58; background: rgba(0,0,0,.35); opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility 0s linear .2s; }
+.rc-scrim.open { opacity: 1; visibility: visible; transition: opacity .2s ease; }
+/* 寬螢幕：目錄展開時把頁面往右推，不蓋住內容；窄螢幕：蓋在上面，用背景遮罩關閉 */
+@media (min-width: 761px) {
+  .rc-drawer { width: 280px; }
+  .rc-scrim { display: none; }
+  html.rc-toc-open body { padding-left: 280px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  body { transition: padding-left .28s cubic-bezier(.2,.7,.2,1); }
+}
+.rc-tip { position: fixed; z-index: 80; max-width: 320px; padding: 8px 11px; background: var(--text); color: var(--bg); font-size: .82rem; line-height: 1.5;
+  pointer-events: none; opacity: 0; transition: opacity .12s ease; white-space: normal; text-align: left; font-weight: 400; }
+.rc-tip.show { opacity: 1; }
+.rc-goto { font-weight: 650; }
   </style>
 </head>
 <body>
@@ -402,41 +439,13 @@ if (payload.validation) {
   var doc = document;
   var embedded = window.parent !== window;
 
-  /* ---------- 共用樣式（目錄、提示框） ---------- */
-  var css = [
-    '.rc-btn { position: fixed; left: 12px; top: var(--rc-top, 14px); z-index: 60; width: 40px; height: 40px; padding: 0;',
-    '  display: grid; place-items: center; background: var(--surface); color: var(--text); border: 1px solid var(--text); cursor: pointer; }',
-    '.rc-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }',
-    '.rc-icon { position: relative; width: 18px; height: 2px; background: currentColor; transition: transform .3s ease; }',
-    '.rc-icon::before, .rc-icon::after { content: ""; position: absolute; left: 0; width: 18px; height: 2px; background: currentColor; }',
-    '.rc-icon::before { top: -6px; } .rc-icon::after { top: 6px; }',
-    '.rc-btn:hover .rc-icon, .rc-btn:focus-visible .rc-icon { transform: rotate(90deg); }',
-    '.rc-btn[aria-expanded="true"] .rc-icon { transform: rotate(90deg); }',
-    '.rc-btn::after { content: attr(data-tip); position: absolute; left: 48px; top: 50%; transform: translateY(-50%); padding: 3px 9px; white-space: nowrap;',
-    '  background: var(--text); color: var(--bg); font-size: .78rem; opacity: 0; pointer-events: none; transition: opacity .15s ease; }',
-    '.rc-btn:hover::after, .rc-btn:focus-visible::after { opacity: 1; }',
-    '.rc-btn[aria-expanded="true"]::after { opacity: 0; }',
-    '.rc-drawer { position: fixed; left: 0; top: 0; bottom: 0; z-index: 59; width: min(280px, 82vw); padding: 64px 0 24px; overflow-y: auto;',
-    '  background: var(--surface); color: var(--text); border-right: 1px solid var(--text); transform: translateX(-102%); visibility: hidden;',
-    '  transition: transform .28s cubic-bezier(.2,.7,.2,1), visibility 0s linear .28s; }',
-    '.rc-drawer.open { transform: none; visibility: visible; transition: transform .28s cubic-bezier(.2,.7,.2,1); }',
-    '.rc-drawer h2 { margin: 0 0 8px; padding: 0 20px; font-size: .78rem; letter-spacing: .12em; color: var(--muted); font-weight: 700; }',
-    '.rc-drawer a { display: block; padding: 10px 20px; color: var(--text); text-decoration: none; border-left: 4px solid transparent; font-size: .95rem; }',
-    '.rc-drawer a:hover { background: color-mix(in srgb, var(--text) 8%, transparent); }',
-    '.rc-drawer a[aria-current="true"] { border-left-color: var(--accent); font-weight: 700; background: color-mix(in srgb, var(--text) 6%, transparent); }',
-    '.rc-scrim { position: fixed; inset: 0; z-index: 58; background: rgba(0,0,0,.35); opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility 0s linear .2s; }',
-    '.rc-scrim.open { opacity: 1; visibility: visible; transition: opacity .2s ease; }',
-    '.rc-tip { position: fixed; z-index: 80; max-width: 320px; padding: 8px 11px; background: var(--text); color: var(--bg); font-size: .82rem; line-height: 1.5;',
-    '  pointer-events: none; opacity: 0; transition: opacity .12s ease; white-space: normal; text-align: left; font-weight: 400; }',
-    '.rc-tip.show { opacity: 1; }',
-    '.rc-goto { font-weight: 650; }'
-  ].join('\n');
-  var styleEl = doc.createElement('style');
-  styleEl.textContent = css;
-  doc.head.appendChild(styleEl);
-
   /* ---------- 專有名詞提示 ---------- */
   var G = {
+    '單調性違反': '分差對進攻方愈有利，勝率理應愈高；這是違反這個規律的格子數，越少越好（多半來自樣本太少）',
+    '目標情境涵蓋度': '盜壘決策最常遇到的情境（2 出局、一二壘有人、第 7–8 局）中，樣本數足夠的格子比例',
+    '決策當下為該棒次先發打者': '決策時站在打擊區的是該棒次的先發球員，不是代打或換人',
+    '代打／換人後才上場': '決策時站在打擊區的是代打或換人後才上場的球員',
+    '代打比例最高的棒次': '該棒次的決策中，非先發球員的比例最高',
     'N': '樣本數：這個格子實際觀測到的次數，越少數字越不穩定',
     'n': '樣本數：這個格子實際觀測到的次數，越少數字越不穩定',
     'SD': '標準差：同一局面下得分的分散程度，越大代表結果越難預測',
@@ -501,6 +510,16 @@ if (payload.validation) {
     '樣本不足': '嘗試次數太少，不做判定'
   };
   var P = [
+    [/^\d+ · 盜壘成功/, '盜壘成功的路線：跑者上二壘，打者繼續打席，模擬到下一個進攻半局結束'],
+    [/^\d+ · 盜壘失敗/, '盜壘失敗的路線：跑者成為第三個出局，半局立刻結束，打者留到下一局先打'],
+    [/^\d+ · 不盜壘/, '不盜壘的路線：維持兩出局、一壘有人，打者正常打完打席，若出局則下一局由下一棒開始'],
+    [/^盜壘損益兩平成功率/, '盜壘成功率至少要達到這個數字才划算，低於它不如不跑'],
+    [/無類型資料/, '打席數不足 100，無法歸類打者類型'],
+    [/^低樣本格/, '樣本數低於門檻的格子，數字雜訊較大，解讀時要保守'],
+    [/RE\(一壘\)／RE\(二壘\)/, '不含打者個人差異與保留效應的基礎損益兩平門檻：RE(一壘) ÷ RE(二壘)'],
+    [/(領先|落後) 1 分時的勝率/, '該局進攻方領先（或落後）1 分時最後贏球的機率，用來看一分的份量隨局數變重'],
+    [/^模擬 vs 真實 RE24/, 'r 是相關係數，越接近 1 代表模擬的 RE24 與真實比賽越吻合；誤差單位是分'],
+    [/^盜壘文字判讀/, '把文字紀錄判讀出的盜壘成功與刺殺，與官方統計逐場逐隊比對'],
     [/^高長打/, 'ISO（長打率 − 打擊率）高於聯盟中位數的打者'],
     [/^低長打/, 'ISO（長打率 − 打擊率）低於聯盟中位數的打者'],
     [/^高選球/, '保送與觸身率（BB%）高於聯盟中位數的打者'],
@@ -535,7 +554,7 @@ if (payload.validation) {
     }
     return tipEl;
   }
-  var TIP_TARGETS = 'th, .stat small, .pill, #segment-table td:first-child, .branch-head h3, .formula strong';
+  var TIP_TARGETS = 'th, .stat small, .pill, #segment-table td:first-child, .branch-head h3, .formula > strong';
   var currentTarget = null;
   doc.addEventListener('mouseover', function (e) {
     var t = e.target.closest && e.target.closest(TIP_TARGETS);
@@ -569,6 +588,9 @@ if (payload.validation) {
     opts = opts || {};
     var old = doc.getElementById('rc-toc-root');
     if (old) old.remove();
+    var oldBtn = doc.querySelector('.rc-btn.inline');
+    if (oldBtn) oldBtn.remove();
+    doc.documentElement.classList.remove('rc-toc-open');
     var root = doc.createElement('div');
     root.id = 'rc-toc-root';
     var btn = doc.createElement('button');
@@ -589,12 +611,15 @@ if (payload.validation) {
     drawer.innerHTML = '<h2>目錄</h2>' + items.map(function (it) {
       return '<a href="#' + it.id + '" data-id="' + it.id + '">' + it.title.replace(/[&<>]/g, '') + '</a>';
     }).join('');
-    root.appendChild(btn); root.appendChild(scrim); root.appendChild(drawer);
+    root.appendChild(scrim); root.appendChild(drawer);
     doc.body.appendChild(root);
+    if (opts.inline) { btn.classList.add('inline'); opts.inline.insertBefore(btn, opts.inline.firstChild); }
+    else root.insertBefore(btn, root.firstChild);
     function set(open) {
       drawer.classList.toggle('open', open);
       scrim.classList.toggle('open', open);
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      doc.documentElement.classList.toggle('rc-toc-open', open);
     }
     btn.addEventListener('click', function () { set(!drawer.classList.contains('open')); });
     scrim.addEventListener('click', function () { set(false); });
