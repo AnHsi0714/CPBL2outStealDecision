@@ -25,10 +25,7 @@
         `);
       }
       $('validation-stats').innerHTML = cards.join('');
-      const notes = [];
-      if (v.re24) notes.push(`模擬引擎（<code>model_batter_decisions.py</code>）跟 <code>build_re24_matrix.py</code> 從真實逐球資料算出的 24 格 RE24 逐格比對，最大誤差都落在樣本數較少的稀有壘包組合，屬合理抽樣雜訊。`);
-      if (v.steal) notes.push(`盜壘判讀（<code>is_steal_success</code>／<code>is_steal_failure</code>）的通用版套用到全場，逐場逐隊加總比對 CPBL 官方 box score 的盜壘成功/刺殺統計。`);
-      $('validation-note').innerHTML = notes.join(' ') + ' 詳見 <a href="cpbl-re24-matrix-2025.html">RE24 矩陣熱力圖報告</a>與專案 README「引擎驗證」一節。';
+      $('validation-note').textContent = '';
     }
 
     function verdictColor(verdict) {
@@ -176,69 +173,10 @@
         const sorted = [...slots].sort((a, b) => b.median - a.median);
         const peak = sorted[0];
         const trough = sorted[sorted.length - 1];
-        const runnerUp = sorted[1];
-        const thirdPlace = sorted[2];
-        const denoms = slots.map((s) => s.denominator).filter((v) => v !== null);
         $('peak-slot').textContent = peak.slot;
         $('peak-value').textContent = pct(peak.median);
         $('trough-slot').textContent = trough.slot;
         $('trough-value').textContent = pct(trough.median);
-        if (runnerUp) {
-          // 差距在 1 個百分點內視為並列次高，兩棒一起列出，不硬指認單一棒次。
-          const isClose = thirdPlace && Math.abs(runnerUp.median - thirdPlace.median) < 0.01;
-          $('runner-up-slot').textContent = isClose ? `${runnerUp.slot}、${thirdPlace.slot}` : runnerUp.slot;
-          $('runner-up-value').textContent = isClose
-            ? `${pct(runnerUp.median)}／${pct(thirdPlace.median)}，差距在雜訊範圍內`
-            : pct(runnerUp.median);
-        } else {
-          $('runner-up-item').hidden = true;
-        }
-        if (denoms.length) {
-          $('denom-range').textContent = `${pct(Math.min(...denoms))} ~ ${pct(Math.max(...denoms))}`;
-        }
-      }
-
-      const crossLabels = { front_1_5: '前段(1-5)', back_6_9: '後段(6-9)' };
-      function renderCrossTable(elementId, table, colA, colB) {
-        if (!table) { $(elementId).innerHTML = '<tr><td colspan="3">無資料</td></tr>'; return; }
-        $(elementId).innerHTML = Object.keys(table).sort().reverse().map((lineupKey) => {
-          const cell = table[lineupKey];
-          const a = cell[colA];
-          const b = cell[colB];
-          const fmtCell = (stat) => (stat && stat.median !== null ? `${pct(stat.median)}（n=${stat.n}）` : '無');
-          return `<tr><td>${crossLabels[lineupKey] || lineupKey}</td><td>${fmtCell(a)}</td><td>${fmtCell(b)}</td></tr>`;
-        }).join('');
-      }
-      if (segments.crossTables) {
-        renderCrossTable('cross-table-power', segments.crossTables.lineupXPower, 'high_ISO', 'low_ISO');
-        renderCrossTable('cross-table-patience', segments.crossTables.lineupXPatience, 'high_BB', 'low_BB');
-        renderCrossTable('cross-table-obp', segments.crossTables.lineupXObp, 'high_OBP', 'low_OBP');
-        renderCrossTable('cross-table-contact', segments.crossTables.lineupXContact, 'high_1B', 'low_1B');
-        renderCrossTable('cross-table-tto', segments.crossTables.lineupXTto, 'high_TTO', 'low_TTO');
-      }
-
-      if (segments.correlations) {
-        $('corr-iso-bb').textContent = segments.correlations.iso_vs_bb.toFixed(3);
-        $('corr-iso-obp').textContent = segments.correlations.iso_vs_obp.toFixed(3);
-        $('corr-iso-single').textContent = `相關係數 ${segments.correlations.iso_vs_single.toFixed(3)}`;
-        $('corr-iso-tto').textContent = `與 ISO 相關係數 ${segments.correlations.iso_vs_tto.toFixed(3)}`;
-      }
-
-      const contactComparison = segments.comparisons.find((c) => c.comparison === 'contact_high_vs_low_1B');
-      if (contactComparison) {
-        const hi = contactComparison.high_1B;
-        const lo = contactComparison.low_1B;
-        const pText = contactComparison.p_value < 0.001 ? '< 0.001' : contactComparison.p_value.toFixed(4);
-        $('contact-summary').textContent = `高單打率組門檻 ${pct(hi.median)}（n=${hi.n}），低單打率組 ${pct(lo.median)}（n=${lo.n}），低了 ${pct(Math.abs(hi.median - lo.median))}，p = ${pText}——是所有分組比較裡差距最大、也最顯著的一組，直接支持「單打即可得分」的假設：這類打者一旦上場最可能就是單打，而單打能不能把跑者從一壘送回本壘高度依賴壘包位置，讓跑者先上二壘的邊際價值特別高。`;
-      }
-
-      const ttoComparison = segments.comparisons.find((c) => c.comparison === 'tto_high_vs_low_TTO');
-      if (ttoComparison) {
-        const hi = ttoComparison.high_TTO;
-        const lo = ttoComparison.low_TTO;
-        const pText = ttoComparison.p_value === null ? '無' : (ttoComparison.p_value < 0.001 ? '< 0.001' : ttoComparison.p_value.toFixed(4));
-        const diff = hi.median - lo.median;
-        $('tto-summary').textContent = `高TTO組門檻 ${pct(hi.median)}（n=${hi.n}），低TTO組 ${pct(lo.median)}（n=${lo.n}），差 ${diff >= 0 ? '+' : ''}${pct(diff)}，p = ${pText}——方向與長打／選球分組${diff >= 0 ? '一致' : '相反'}，${diff >= 0 ? '疊加後訊號沒有比單一指標更清楚，屬於同一股力量的重複確認' : '值得進一步檢查是否為三振本身的效應蓋過了長打與選球'}。`;
       }
     }
 

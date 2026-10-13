@@ -68,7 +68,9 @@ function activateLeague(league) {
   document.getElementById("league-eyebrow").textContent = league.toUpperCase() + " · 2 OUT, RUNNER ON FIRST";
   try { history.replaceState(null, "", "#" + league); } catch (e) {}
   renderPrimaryButtons();
-  activateCategory(categories[0].id);
+  // 換聯盟時保持在同一個分類，該分類不存在才回到第一個。
+  const keep = categories.find((c) => c.id === activeCategoryId);
+  activateCategory(keep ? keep.id : categories[0].id);
 }
 
 leagueTabs.addEventListener("click", (event) => {
