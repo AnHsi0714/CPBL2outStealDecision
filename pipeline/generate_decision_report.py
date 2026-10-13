@@ -365,6 +365,7 @@ def generate_report(
     payload_json = payload_json.replace("</", "<\\/")
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
     document = template.replace("/*__STYLES__*/", STYLE_PATH.read_text(encoding="utf-8").rstrip("\n"))
+    document = document.replace("/*__COMMON_CSS__*/", (ROOT / "templates" / "report_common.css").read_text(encoding="utf-8").rstrip("\n"))
     document = document.replace("/*__COMMON__*/", (ROOT / "templates" / "report_common.js").read_text(encoding="utf-8").rstrip("\n"))
     document = document.replace("/*__SCRIPT__*/", SCRIPT_PATH.read_text(encoding="utf-8").rstrip("\n"))
     document = document.replace("__REPORT_DATA__", payload_json)

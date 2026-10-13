@@ -40,6 +40,7 @@ def build(reports_dir: Path) -> str:
     style = base.STYLE_PATH.read_text(encoding="utf-8")
     script = base.SCRIPT_PATH.read_text(encoding="utf-8")
     common = (base.ROOT / "templates" / "report_common.js").read_text(encoding="utf-8")
+    common_css = (base.ROOT / "templates" / "report_common.css").read_text(encoding="utf-8")
     # 原腳本一次只有一組分類；這裡把它包成「切換聯盟時換一組分類」。
     script = script.replace(
         'const categories = JSON.parse(document.getElementById("categories-data").textContent);',
@@ -111,7 +112,6 @@ activateLeague(location.hash.replace("#", ""));
       .mobile .tabs, .mobile .sub-tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
       .mobile .tab, .mobile .sub-tab, .mobile .league-tabs button { min-height: 40px; }
       .mobile header { position: static; }
-      .mobile .title-row { padding-left: 52px; }
     }
 """
     return f"""<!doctype html>
@@ -121,7 +121,7 @@ activateLeague(location.hash.replace("#", ""));
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>三聯盟盜壘決策報告</title>
   <style>
-{style}{extra_css}
+{style}{extra_css}{common_css}
   </style>
 </head>
 <body>

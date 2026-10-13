@@ -55,6 +55,7 @@ def build_report(matrix_summary: dict[str, Any], validation_summary: dict[str, A
 
     document = TEMPLATE_PATH.read_text(encoding="utf-8")
     document = document.replace("/*__STYLES__*/", style.rstrip("\n"))
+    document = document.replace("/*__COMMON_CSS__*/", (ROOT / "templates" / "report_common.css").read_text(encoding="utf-8").rstrip("\n"))
     document = document.replace("/*__COMMON__*/", (ROOT / "templates" / "report_common.js").read_text(encoding="utf-8").rstrip("\n"))
     document = document.replace("/*__SCRIPT__*/", SCRIPT_PATH.read_text(encoding="utf-8").rstrip("\n"))
     document = document.replace("__REPORT_DATA__", json.dumps(payload, ensure_ascii=False))

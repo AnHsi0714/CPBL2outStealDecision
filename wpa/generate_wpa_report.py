@@ -402,6 +402,7 @@ def build_report(
     style = STYLE_PATH.read_text(encoding="utf-8")
     document = TEMPLATE_PATH.read_text(encoding="utf-8")
     document = document.replace("/*__STYLES__*/", style.rstrip("\n"))
+    document = document.replace("/*__COMMON_CSS__*/", (Path(__file__).resolve().parent.parent / "templates" / "report_common.css").read_text(encoding="utf-8").rstrip("\n"))
     document = document.replace("/*__COMMON__*/", (Path(__file__).resolve().parent.parent / "templates" / "report_common.js").read_text(encoding="utf-8").rstrip("\n"))
 
     panels_html = []

@@ -54,9 +54,8 @@ applyMobile();
 
 function mountParentToc(items) {
   if (!window.ReportCommon || !items || !items.length) return;
-  const top = mobile ? 12 : Math.max(12, frame.getBoundingClientRect().top + 12);
   tocApi = window.ReportCommon.mountToc(items, {
-    top: `${top}px`,
+    inline: document.querySelector(".title-row"),
     onGo: (id) => frame.contentWindow.postMessage({ type: "report-goto", id }, "*"),
   });
 }
