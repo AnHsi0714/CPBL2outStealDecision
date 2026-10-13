@@ -1,6 +1,6 @@
 """抓取並整理 2026 CPBL「兩出局、僅一壘有人」決策樣本。
 
-預設抓例行賽 GameSno 1–240。原始 getlive 回應逐場快取，因此中斷後可以續跑，
+預設抓例行賽 GameSno 1–360。原始 getlive 回應逐場快取，因此中斷後可以續跑，
 也能在不重新請求官網的情況下反覆修正分析邏輯。
 """
 
@@ -22,7 +22,7 @@ from cpbl_row_filters import is_administrative_only_row, remove_administrative_r
 DEFAULT_YEAR = 2026
 DEFAULT_KIND_CODE = "A"
 DEFAULT_START = 1
-DEFAULT_END = 240
+DEFAULT_END = 360
 
 
 def as_int(value: Any, default: int = 0) -> int:

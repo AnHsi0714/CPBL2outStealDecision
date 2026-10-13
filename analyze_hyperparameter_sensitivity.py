@@ -42,7 +42,7 @@ def parse_args() -> argparse.Namespace:
         "--year-ends",
         type=int,
         nargs="+",
-        default=[300, 360, 360, 240],
+        default=[360, 360, 360, 360],
         help="與 --years 一一對應的 --end 值",
     )
     parser.add_argument("--kind-code", default="A")

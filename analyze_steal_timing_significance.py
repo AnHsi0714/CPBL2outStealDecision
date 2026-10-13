@@ -25,7 +25,7 @@ from typing import Any
 from scipy.stats import binomtest, fisher_exact
 
 
-DEFAULT_TAGS = ["2023_A_1-300", "2024_A_1-360", "2025_A_1-360", "2026_A_1-240"]
+DEFAULT_TAGS = ["2023_A_1-360", "2024_A_1-360", "2025_A_1-360", "2026_A_1-360"]
 
 
 def load_csv(path: Path) -> list[dict[str, Any]]:
