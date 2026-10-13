@@ -130,7 +130,7 @@ python analysis/analyze_pitcher_handedness.py --year 2025 --start 1 --end 360 \
 
 | 報告                                                                                                                       | 內容                                                           |
 | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| [cpbl-full-report.html（整合入口）](https://anhsi0714.github.io/CPBL2outStealDecision/reports/cpbl-full-report.html)         | 單頁整合以下全部報告，上方分類＋年份頁籤切換                   |
+| [all-leagues-report.html（整合入口）](https://anhsi0714.github.io/CPBL2outStealDecision/reports/all-leagues-report.html) | 三聯盟單頁整合入口：右上角 cpbl／mlb／kbo 標籤切換聯盟，再用分類＋年份頁籤切換以下全部報告 |
 | [cpbl-steal-decision-2023.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/cpbl-steal-decision-2023.html)   | 2023 年損益兩平門檻、棒次/打者類型分組                         |
 | [cpbl-steal-decision-2024.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/cpbl-steal-decision-2024.html)   | 2024 年損益兩平門檻、棒次/打者類型分組                         |
 | [cpbl-steal-decision-2025.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/cpbl-steal-decision-2025.html)   | 2025 年損益兩平門檻、棒次/打者類型分組、球隊決策品質、跑者名單 |
@@ -162,7 +162,6 @@ MLB 單季決策報告約 10MB，載入較慢。連結同樣指向 GitHub Pages 
 
 | 報告 | 內容 |
 | --- | --- |
-| [mlb-full-report.html（整合入口）](https://anhsi0714.github.io/CPBL2outStealDecision/reports/mlb-full-report.html) | 單頁整合以下全部報告，上方分類＋年份頁籤切換 |
 | [mlb-steal-decision-2023.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/mlb-steal-decision-2023.html) | 2023 年損益兩平門檻、棒次/打者類型分組、球隊決策品質、跑者名單 |
 | [mlb-steal-decision-2024.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/mlb-steal-decision-2024.html) | 2024 年損益兩平門檻、棒次/打者類型分組、球隊決策品質、跑者名單 |
 | [mlb-steal-decision-2025.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/mlb-steal-decision-2025.html) | 2025 年損益兩平門檻、棒次/打者類型分組、球隊決策品質、跑者名單 |
@@ -178,7 +177,6 @@ MLB 單季決策報告約 10MB，載入較慢。連結同樣指向 GitHub Pages 
 
 | 報告 | 內容 |
 | --- | --- |
-| [kbo-full-report.html（整合入口）](https://anhsi0714.github.io/CPBL2outStealDecision/reports/kbo-full-report.html) | 單頁整合以下全部報告，上方分類＋年份頁籤切換 |
 | [kbo-steal-decision-2023.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/kbo-steal-decision-2023.html) | 2023 年損益兩平門檻、棒次/打者類型分組、球隊決策品質、跑者名單 |
 | [kbo-steal-decision-2024.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/kbo-steal-decision-2024.html) | 2024 年損益兩平門檻、棒次/打者類型分組、球隊決策品質、跑者名單 |
 | [kbo-steal-decision-2025.html](https://anhsi0714.github.io/CPBL2outStealDecision/reports/kbo-steal-decision-2025.html) | 2025 年損益兩平門檻、棒次/打者類型分組、球隊決策品質、跑者名單 |
