@@ -116,3 +116,27 @@ if (payload.validation) {
   document.getElementById("val-tied-note").textContent =
     `平手時勝率（主場優勢粗檢查）：${tiedParts.join("　vs　")}`;
 }
+
+// 範例：從資料中挑一組「2 出局、一壘 vs 二壘」，條件是樣本數都夠多、且盜上二壘確實較有利，用來說明怎麼讀一格。
+(function () {
+  const target = document.getElementById("we-example");
+  if (!target) return;
+  let best = null;
+  for (const inning of payload.inningBuckets) {
+    if (inning === "9+") continue;
+    for (const side of ["1", "2"]) {
+      for (let diff = -2; diff <= 2; diff += 1) {
+        const one = cellIndex.get([inning, side, diff, 2, 1].join("|"));
+        const two = cellIndex.get([inning, side, diff, 2, 2].join("|"));
+        if (!one || !two) continue;
+        const n = Math.min(one.n, two.n);
+        if (n < 30 || two.winRate <= one.winRate) continue;
+        if (!best || n > best.n) best = { inning, side, diff, one, two, n };
+      }
+    }
+  }
+  if (!best) { target.closest("details").hidden = true; return; }
+  const pct = (v) => `${(v * 100).toFixed(1)}%`;
+  const diffText = best.diff === 0 ? "平手" : (best.diff > 0 ? `領先 ${best.diff} 分` : `落後 ${-best.diff} 分`);
+  target.textContent = `例：「${INNING_LABELS[best.inning]}、${SIDE_LABELS[best.side]}、${diffText}、2 出局、一壘有人」這格是 ${pct(best.one.winRate)}，代表進攻方在這種局面下，最後贏球的機率約 ${pct(best.one.winRate)}（觀測 ${best.one.n.toLocaleString()} 次）。跑者盜上二壘後，同樣條件變成 ${pct(best.two.winRate)}，多了 ${((best.two.winRate - best.one.winRate) * 100).toFixed(1)} 個百分點，這就是盜壘成功在勝率上的好處。顏色越深，勝率越高。`;
+})();
