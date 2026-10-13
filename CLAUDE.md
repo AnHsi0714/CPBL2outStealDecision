@@ -6,9 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 2026 台灣棒球數據分析競賽參賽專案（現場分析戰術組）。研究「第 1–8 局、兩出局、僅一壘有人」情境下發動盜壘的**損益兩平成功率門檻**，以及該門檻如何隨棒次與打者類型變化。
 
-兩份必讀文件：
-- `兩出局一壘有人盜壘決策_專案計畫書.md`：研究定位、方法論、13 週工作分解（用 checkbox 追蹤進度，改動程式碼後應同步更新對應項目）
-- `README.md`：使用方式與已完成的 2025 分析結論
+三份必讀文件：
+- `兩出局一壘有人盜壘決策_專案計畫書.md`：研究定位、方法論、13 週工作分解（用 checkbox 追蹤進度）。**checkbox 項目只寫任務描述與一句話結論，不放完整數字**，改動程式碼後同步更新對應項目即可，不必補回數字
+- `分析發現.md`：計畫書各項分析的完整數字、結論與方法細節。**新增或更新分析結果一律寫進這裡，不要寫回計畫書**，計畫書要留給評審看，太多數字會拖累可讀性
+- `README.md`：使用方式與已完成的分析結論摘要
 
 ## 程式碼目錄結構
 
@@ -18,7 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pipeline/`：主管線 step 2–7（`model_batter_decisions.py` 到 `generate_decision_report.py`）
 - `re24/`、`win_expectancy/`、`wpa/`：對應同名分析區塊（見下方「主管線之外的分析腳本」）
 - `analysis/`：主管線之外、不屬於上述三類的獨立分析／驗證腳本
-- 根目錄：僅 `generate_full_report.py`（彙整 `reports/` 底下既有報告，不屬於單一功能分類）與本檔案、README 等文件
+- 根目錄：僅 `generate_all_leagues_report.py`（把 CPBL／MLB／KBO 的既有報告整合成單一入口 `reports/all-leagues-report.html`，右上角標籤切換聯盟；重用 `generate_full_report.py` 的分類掃描與 `templates/full_report.*`，不屬於單一功能分類）、`generate_full_report.py`、`league_relabel.py` 與本檔案、README 等文件
 
 各資料夾內的腳本仍用原本扁平的 `from find_2out_first_base import x` 這類寫法互相 import，**不是** Python package（沒有 `__init__.py` 賦予的套件語意）。能這樣運作是因為根目錄的 `pathsetup.py` 會把六個資料夾都加進 `sys.path`；每支被搬動過的腳本與 `tests/` 下的測試檔開頭都有一行 `import pathsetup` 觸發這件事。**新增腳本或測試檔時比照既有檔案在檔案最前面（`from __future__ import annotations` 之後、其餘 import 之前）加上同一行**，否則 cross-folder import 會找不到模組。執行方式不變，一律 `python <資料夾>/<script>.py --參數`（例如 `python pipeline/model_batter_decisions.py ...`），不要用 `python -m`。
 
@@ -58,7 +59,7 @@ python -m unittest tests.test_model_batter_decisions
 6. `pipeline/compare_groups.py` → `cpbl_group_comparison_{tag}.json`（注意：預設 `--input` 是 step 4 的檔案，要納入先發/代打欄位須顯式指定 step 5 的輸出）
 7. `pipeline/generate_decision_report.py` → `reports/cpbl-steal-decision-{year}.html`（單檔互動報告，payload 內嵌 JSON）
 
-`scrapers/CPBL_steal_getData.py`（原名 `getData.py`，跨聯盟整併時改名）是獨立的通用逐球匯出（playbyplay / scoreboard / batting CSV），不在上述管線內；參數寫死在檔案最下方，非 argparse。`scrapers/KBO_steal_getData.py`／`scrapers/MLB_steal_getData.py` 是同模式的另兩個聯盟爬蟲，`scrapers/combine_leagues.py` 把三份 playbyplay 統一欄位後合併（**目前僅到合併，尚未跑出跨聯盟門檻結果**）。
+`scrapers/CPBL_steal_getData.py`（原名 `getData.py`，跨聯盟整併時改名）是獨立的通用逐球匯出（playbyplay / scoreboard / batting CSV），不在上述管線內；參數寫死在檔案最下方，非 argparse。`scrapers/KBO_steal_getData.py`／`scrapers/MLB_steal_getData.py` 是同模式的另兩個聯盟爬蟲，`scrapers/combine_leagues.py` 把三份 playbyplay 統一欄位後合併（合併檔本身沒有往下用；MLB／KBO 的門檻結果是走各自的並行管線跑出來的，見下方「跨聯盟（MLB／KBO）並行腳本」）。
 
 ### 主管線之外的分析腳本
 
@@ -66,7 +67,7 @@ python -m unittest tests.test_model_batter_decisions
 
 - `re24/build_re24_matrix.py` → `re24/generate_re24_report.py`：中職 RE24 24 格矩陣與互動熱力圖
 - `win_expectancy/build_win_expectancy_matrix.py` → `win_expectancy/validate_win_expectancy_matrix.py` → `win_expectancy/generate_we_report.py`：中職 WE（勝率增值）矩陣：(局數桶 1-6/7/8/9+ × 攻守方 × 分差桶 ±5 × 出局數 × 壘包) → 進攻方最終獲勝機率，全部從逐球紀錄推回最終比分（不查 box score 總分欄位）。跟 RE24 不同，預設一次合併四季（`--seasons` 可覆寫），因為格子數（2112）遠多於 RE24 的 24 格；validate 腳本做單調性與目標情境（2 出局、一/二壘有人、第 7–8 局）涵蓋度檢查，因為沒有獨立模擬引擎可對照
-- `wpa/model_wpa_decisions.py` → `wpa/bootstrap_wpa_threshold_ci.py` → `wpa/generate_wpa_report.py`（`reports/cpbl-wpa-decision-thresholds.html`，四季逐局信賴區間比較圖）：把 WE 矩陣接回三分支模型，對應計畫書第 213 項「第 7–8 局應改用 WPA 而非 RE 當判準」。V成功／V失敗直接查 WE 表（WE 每格本來就是「這個狀態到比賽結束」的經驗值，不必再模擬），V不跑用打者個人機率分布做「一步」蒙地卡羅落到新狀態後查表：關鍵是 V失敗必須換算成**對手視角**（`1 - WE(對手下一次進攻)`），RE 版模型完全沒有這個機制（RE 版失敗分支只模擬「自己隊下一次進攻」，不管對手，因為 RE 不是零和的）。門檻是比值，分母很小時對雜訊極敏感，所以 bootstrap 腳本對每筆決策的三個 V 值各自用其標準誤（WE 格子二項標準誤＋一步模擬標準誤）加雜訊再 case resampling，算 95% CI。**四季結果**：逐局把 CI 上界跟同局 RE 門檻中位數比，第 2–8 局四季都碰不到（0/4 重疊），只有第 1 局 2/4 季重疊；分母（V成功－V失敗）中位數只有 0.04、跟標準誤同量級，比值結構性不穩定，不是樣本不夠。**結論：第 2–8 局方向都站得住，不是只有 7–8 局**；但點估計本身第 2–3 局落在自己 CI *之外*（跟第 1 局同一種分母不穩問題，只是較輕），**第 4 局起中位數才穩定落在自己 CI 之內**，此後數字才適合直接引用（第 6/7/8 局 CI 約 24–44%／19–32%／21–33%，RE 版 54–60%）。機制：同一分的份量隨局數變重（領先1分勝率：1-6局59%→7局72%→8局79%），讓半局現在結束的代價上升，壓縮門檻公式分子。另外第 7–8 局 V成功查表仍有 44–55% 退化到忽略局數桶的合併值（理論上稀釋、不誇大結論）。`wpa/analyze_wpa_runner_reclassification.py` 把這個門檻接回實際球員：RE 判「任一棒次都不建議跑」的跑者裡，四季分別有 100%／67%／88%／50%（2024、2026 兩季名單本身只有 2、3 人，波動是小樣本正常現象）在第 4–8 局至少一局的 WPA 門檻下其實夠格，說明 RE 版判準不只低估晚局門檻該多低，也低估了現有跑者裡有多少人夠格晚局盜壘。`wpa/compare_wpa_groups.py` 把「棒次 × 打者類型分組分析」的既有 RE 結論換成 WPA（只用第 4-8 局子集，兩邊用同一批決策才公平）：棒次分析的「低點在 1、2 棒」在這個切法下不穩定（四季最低點落在不同棒次），暫不能下結論；長打力／選球力分組方向大致保留（跟 RE 同調）；單打率／TTO 分組方向不變但顯著性消失（樣本切太細撐不住，不是效應消失）；**真上壘率（OBP）分組方向四季一致反轉**（RE 說高 OBP 門檻較低，WPA 說高 OBP 門檻較高，3/4 季顯著），這是唯一一個真的翻過來的分組，值得再深入拆解機制。詳見 README「WPA 版損益兩平門檻」一節
+- `wpa/model_wpa_decisions.py` → `wpa/bootstrap_wpa_threshold_ci.py` → `wpa/generate_wpa_report.py`（`reports/cpbl-wpa-decision-thresholds.html`，四季逐局信賴區間比較圖）：把 WE 矩陣接回三分支模型算 WPA 版損益兩平門檻。V成功／V失敗直接查 WE 表（WE 每格本來就是「這個狀態到比賽結束」的經驗值，不必再模擬），V不跑用打者個人機率分布做「一步」蒙地卡羅落到新狀態後查表：關鍵是 V失敗必須換算成**對手視角**（`1 - WE(對手下一次進攻)`），RE 版模型完全沒有這個機制（RE 版失敗分支只模擬「自己隊下一次進攻」，因為 RE 不是零和的）。門檻是比值，分母很小時對雜訊極敏感，所以 bootstrap 腳本對每筆決策的三個 V 值各自用其標準誤（WE 格子二項標準誤＋一步模擬標準誤）加雜訊再 case resampling，算 95% CI。`wpa/analyze_wpa_runner_reclassification.py` 把門檻接回實際跑者名單，`wpa/compare_wpa_groups.py` 把棒次×打者類型分組換成 WPA 重算。**四季結果與完整數字見 `分析發現.md`**
 - `analysis/analyze_team_decisions.py`：六隊決策品質，用二項檢定判「跑對／跑錯」，不顯著就標「無法判定」
 - `analysis/analyze_runner_steal_rates.py`：符合門檻的跑者名單，**逐棒次比對而非比單一門檻**（門檻本身隨棒次變是核心發現，比單一中位數等於丟掉這個結論）
 - `re24/validate_re24_simulation.py`：模擬 RE24 vs 真實 RE24 逐格比較。**引擎若無法重現真實 RE24 就不可繼續往下做**
@@ -75,15 +76,31 @@ python -m unittest tests.test_model_batter_decisions
 
 ### 左右投：必須分清楚的兩件事
 
-- **投手慣用手影響的是「跑不跑得掉」（實際成功率），不是門檻。** 門檻由打者的打擊結果分布決定，模型裡完全沒有用到投手。所以把現有結果按投手左右投分兩堆比較，門檻會幾乎一樣——那是算法造成的，不是真的沒差異。
+- **投手慣用手影響的是「跑不跑得掉」（實際成功率），不是門檻。** 門檻由打者的打擊結果分布決定，模型裡完全沒有用到投手。所以把現有結果按投手左右投分兩堆比較，門檻會幾乎一樣，那是算法造成的，不是真的沒差異。
 - 若真要讓門檻隨投手變，必須把打者成績依對戰關係分開建檔，而且**platoon 效應是「打者手 × 投手手」的對戰關係，不是投手手別本身**：把所有打者合起來看「對左投的成績」，右打者（逆向有利）與左打者（同手不利）會互相抵銷，得到「幾乎沒差異」的假結論。這條路因樣本不足（要湊 100 個對左投打席需全年 400 打席，四季只有 17/22/15/0 位打者達標）目前未採用。
 
-以下兩支只吃 `cpbl_decision_model_*.csv`（`analysis/analyze_batter_threshold_correlations.py` 另吃 `cpbl_batter_profiles_*.csv`），輸出 CSV＋文字結論寫進 README「跨年度穩定性檢查」一節，**不會**被 `pipeline/generate_decision_report.py` 吸收進互動報告：
+以下兩支只吃 `cpbl_decision_model_*.csv`（`analysis/analyze_batter_threshold_correlations.py` 另吃 `cpbl_batter_profiles_*.csv`），輸出 CSV＋文字結論寫進 `分析發現.md`，**不會**被 `pipeline/generate_decision_report.py` 吸收進互動報告：
 
 - `analysis/analyze_retention_contribution.py`：逐棒次的保留效應貢獻（pp）。反事實直接重用 `pipeline/model_batter_decisions.py` 每筆決策已算好但原本沒用上的 `ModelVIfBatterOut`（正常出局、下一局改由下一棒開局），不必重跑模擬
 - `analysis/analyze_batter_threshold_correlations.py`：打者層級門檻（該打者所有決策點 `BreakEvenSuccessRate` 中位數）跟 HR/長打/保送/單打率、打擊率、出局率的 Pearson 相關係數
 - `analysis/bootstrap_threshold_ci.py`：整體/逐棒次/四組打者類型比較的 95% bootstrap 信賴區間。case resampling 之外，額外用 `ModelV*SE`（模擬標準誤，原本沒用上）對 V 值加常態雜訊，一次涵蓋樣本誤差與模擬雜訊兩種來源，不必重跑模擬
 - `analysis/analyze_hyperparameter_sensitivity.py`：讀「模擬次數/`prior_pa`/`minimum_transition_cell` 各變體」重跑出來的 `cpbl_decision_model_*_summary.json`（各自獨立 `--output-dir`，不寫回 `outputs/`）與「`min-pa` 各變體」的 `cpbl_group_comparison_*.json`，跟基準情境比較門檻中位數與顯著性判定是否翻轉；這三個模擬類超參數需要先用 `pipeline/model_batter_decisions.py --output-dir <變體目錄>` 各跑一次，`min-pa` 則用 `pipeline/analyze_batter_types.py`→`pipeline/join_decision_batter_types.py`→`pipeline/compare_groups.py` 三支串起來、同樣指到各自 `--output-dir`／`--output`
+
+### 跨聯盟（MLB／KBO）並行腳本
+
+MLB、KBO 沿用 `mlb_`／`kbo_` 前綴的並行腳本，數學部分（模擬引擎、分組比較、保留效應、bootstrap 等）直接 import CPBL 版，只換資料來源；**不改 CPBL 腳本**。結果與數字見 `分析發現.md` 的「跨聯盟擴充」，過程與每個 bug 見 `跨聯盟擴充進度.md`。
+
+- MLB：`scrapers/mlb_find_2out_first_base.py`（Gumbo 快取 `data/raw/mlb/{start}_{end}/`）→ `pipeline/mlb_model_batter_decisions.py` → `bash pipeline/run_mlb_season.sh <年>`（類型、join、先發標記、分組比較、各隊決策、保留效應、WPA、跑者名單、決策報告一次跑完）。檔名標籤是日期區間 `YYYY-03-15_YYYY-10-10`。
+- KBO：`scrapers/KBO_crawl_seasons.py`（HTML 快取 `data/raw/kbo/{年}/`）→ `scrapers/kbo_find_2out_first_base.py` → `pipeline/kbo_model_batter_decisions.py` → `bash pipeline/run_kbo_season.sh <年>`。檔名標籤是年份。
+- RE24／WE：`re24/{mlb,kbo}_build_re24_matrix.py`、`re24/{mlb,kbo}_validate_re24_simulation.py`、`win_expectancy/{mlb,kbo}_build_win_expectancy_matrix.py`（四季合併）。**引擎驗證（模擬 RE24 對真實 RE24）是 MLB／KBO 解析正確性的檢查點**，每次動解析邏輯後都要重跑。
+- 報告：決策／RE24／WE 報告用 CPBL 版產生器產出後以 `league_relabel.py` 換標籤；WPA 報告用 `wpa/generate_league_wpa_report.py`（CPBL 版模板寫死 CPBL 結論，不可直接換標籤）；入口頁只有 `reports/all-leagues-report.html`（`python generate_all_leagues_report.py` 產生），不再有各聯盟自己的 `*-full-report.html`。
+- 通用腳本（`join_decision_batter_types.py`、`compare_groups.py`、`analyze_team_decisions.py` 等）只吃 CPBL 的 `{year}_{kind}_{start}-{end}` 標籤、輸出 `cpbl_` 檔名；`run_*_season.sh` 會輸出到暫存目錄再改名成 `mlb_`／`kbo_`，不要直接對它們傳 MLB／KBO 檔案後留在 `outputs/`。
+
+必須知道的陷阱：
+
+- **MLB**：`playEvents[].count.outs` 對投球事件是事件前、對非投球事件（牽制盜壘）是事件後，出局數一律用 `runners[].movement.isOut` 逐事件累加；盜壘標記在投球事件上時只出現在 `runners[].details.event`；半局第一個打席的得分要數 `runners[]` 的 `end=="score"`，不能用比分相減；延長賽第 10 局起二壘有人（placed runner）；延期賽在 schedule 裡會出現兩次（用 gamePk 去重）。
+- **KBO**：沒有比分、沒有球員 ID（主鍵 `球隊:姓名`）；三振同時阻殺（打者出局列之後接跑者阻殺列）不是兩出局決策；狀態機的殘餘誤差使 RE24 驗證 r 只有 0.98。
+- **記憶體**：MLB 單季模型載入全部 Gumbo JSON 約 6GB，同時跑超過 2 個季會把 32GB 吃光。
 
 ### 資料品質：公告列過濾（必讀）
 
@@ -110,7 +127,7 @@ CPBL 逐球資料混有「換投手／代打／代跑／守備」等純公告列
 - **得分歸屬起算點是「盜壘成功的那一球」**，不是打席或半局開頭（計畫書 3.0）。絕不可用半局總得分或 scoreboard 逐局比分做 RE 計算，會把盜壘前的得分算進去而高估。
 - **保留效應是本研究核心貢獻**：盜壘失敗造成第三出局時，該打者的打席保留到下一局重新開始，等於打序整體延後一棒。三分支模擬（成功／失敗／不跑）都必須模擬到「同隊下一個進攻半局結束」才能捕捉這個效應。
 - **第 9 局與延長賽排除**（保留效應不存在），資料篩選階段已處理，勿放寬。
-- **球員以 `HitterAcnt` 為主鍵**，不用姓名 join。投手與打者的投打習慣見 `data/player_handedness.csv`（497 人，以 `Acnt` 為主鍵）——這是 `data/` 底下唯一進版控的檔案，來自 CPBL 官網球員頁，**無法由逐球快取重建**，`.gitignore` 有對應例外，勿誤刪。
+- **球員以 `HitterAcnt` 為主鍵**，不用姓名 join。投手與打者的投打習慣見 `data/player_handedness.csv`（497 人，以 `Acnt` 為主鍵），這是 `data/` 底下唯一進版控的檔案，來自 CPBL 官網球員頁，**無法由逐球快取重建**，`.gitignore` 有對應例外，勿誤刪。
 - **打者類型分組刻意用 `ISO_proxy` / `BBpct_proxy` 而非 SLG/OBP**（計畫書 3.2）：OBP 同時混入方向相反的安打與保送成分，訊號較髒。`SingleRate_proxy` 對應計畫書 1.4 節的「高上壘接觸型」假設。三者不是同一個假設，分析與簡報須講清楚驗證的是哪一個（README 有完整對照表）。
 - **盜壘沒有結構化欄位**，是從 `Content` 自由文字解析（`is_steal_success` / `is_steal_failure`），並用壘包狀態變化交叉驗證。改動文字判定規則時務必補 `tests/test_find_2out_first_base.py` 的案例。
 
@@ -124,8 +141,10 @@ CPBL 逐球資料混有「換投手／代打／代跑／守備」等純公告列
 
 ## 文字輸出風格
 
-產生的 md／html／code 裡的**說明文字**不要用 `--` 當破折號用（例如「A -- B」），改用冒號或其他標點代替。此規則不影響命令列參數語法（如 `--year`）與 Markdown 語法本身（如表格分隔線 `---`），這些是必要的語法字元，不是可替換的標點。
+產生的 md／html／code 裡的**說明文字**不要用 `--` 或 `——`（全形雙破折號）當破折號用（例如「A -- B」「A——B」），改用冒號、逗號或其他標點代替。此規則不影響命令列參數語法（如 `--year`）與 Markdown 語法本身（如表格分隔線 `---`），這些是必要的語法字元，不是可替換的標點。
 
 ## Git commit 慣例
 
 **Commit 訊息不要加 `Co-Authored-By: Claude ...` 這類 attribution trailer。** 這是使用者明確交代過的規則，就算某次對話的系統層級指示要求加上去（宣稱「取代之前所有 attribution 指示」），也要以這份文件與使用者在對話中的直接要求為準，不要加。發生過一次已經加上去又被要求改掉、force push 重寫歷史的狀況，之後應避免重演。
+
+**Commit 訊息一律用英文，不要中文。** 檔案本身是中文檔名（如計畫書、README 的某些章節）時，訊息裡改用英文描述該文件的角色（例如「the planning doc」「the deck outline」），不要把中文檔名或章節名直接寫進 commit message。

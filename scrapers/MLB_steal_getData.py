@@ -14,6 +14,7 @@ session.headers.update({
 
 SCHEDULE_URL = "https://statsapi.mlb.com/api/v1/schedule"
 GAMEFEED_URL = "https://baseballsavant.mlb.com/gf"
+LIVE_FEED_URL = "https://statsapi.mlb.com/api/v1.1/game/{game_pk}/feed/live"
 DATA_DIR = "mlb_data"
 
 
@@ -22,9 +23,11 @@ def polite_sleep(base: float = 1.5, jitter: float = 1.5):
     time.sleep(base + random.uniform(0, jitter))
 
 
-def get_schedule(start_date: str, end_date: str) -> list[dict]:
-    """抓日期區間內的比賽（gamePk、日期），用來確認要抓哪些場次"""
+def get_schedule(start_date: str, end_date: str, game_type: str | None = None) -> list[dict]:
+    """抓日期區間內的比賽（gamePk、日期），用來確認要抓哪些場次。game_type 例如 "R" 只取例行賽"""
     params = {"sportId": 1, "startDate": start_date, "endDate": end_date}
+    if game_type:
+        params["gameType"] = game_type
     resp = session.get(SCHEDULE_URL, params=params, timeout=15)
     resp.raise_for_status()
     data = resp.json()
@@ -38,12 +41,23 @@ def get_schedule(start_date: str, end_date: str) -> list[dict]:
                 "AwayTeam": g["teams"]["away"]["team"]["name"],
                 "HomeTeam": g["teams"]["home"]["team"]["name"],
             })
-    return games
+    # 延期賽會在原定日與補賽日各出現一次（同一個 gamePk），保留較晚的日期（實際打完的那天），
+    # 否則同一場比賽會被分析兩次、決策樣本重複計算。
+    return list({game["GamePk"]: game for game in games}.values())
 
 
 def get_game_feed(game_pk: int) -> dict:
     """單場比賽的 Statcast 逐球資料（Baseball Savant /gf 端點，pybaseball 底層也用這個）"""
     resp = session.get(GAMEFEED_URL, params={"game_pk": game_pk}, timeout=15)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_live_feed(game_pk: int) -> dict:
+    """MLB 官方 Gumbo 逐局回應：跟 Savant /gf 不同，plays.allPlays[].result 有逐打席累積比分
+    （awayScore/homeScore），playEvents[] 有逐球事件含盜壘標記，matchup 有前後壘包狀態。
+    RE 計算需要的「事件當下累積比分」只有這個端點有，/gf 完全沒有比分欄位。"""
+    resp = session.get(LIVE_FEED_URL.format(game_pk=game_pk), timeout=15)
     resp.raise_for_status()
     return resp.json()
 

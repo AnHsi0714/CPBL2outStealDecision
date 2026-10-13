@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>韓職 RE24 得分期望值矩陣</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f1ea;
+      --surface: #fffdf8;
+      --text: #18201c;
+      --muted: #65706a;
+      --line: #d9d4c9;
+      --accent: #d59c25;
+      --shadow: 0 14px 35px rgba(43, 49, 45, .09);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111512;
+        --surface: #1a201c;
+        --text: #edf2ee;
+        --muted: #aab5ae;
+        --line: #39423c;
+        --accent: #efbd55;
+        --shadow: none;
+      }
+      .cell[data-level="0"] { --cell-bg: #0d366b; --cell-fg: #ffffff; }
+      .cell[data-level="1"] { --cell-bg: #104281; --cell-fg: #ffffff; }
+      .cell[data-level="2"] { --cell-bg: #184f95; --cell-fg: #ffffff; }
+      .cell[data-level="3"] { --cell-bg: #1c5cab; --cell-fg: #ffffff; }
+      .cell[data-level="4"] { --cell-bg: #256abf; --cell-fg: #ffffff; }
+      .cell[data-level="5"] { --cell-bg: #2a78d6; --cell-fg: #ffffff; }
+      .cell[data-level="6"] { --cell-bg: #3987e5; --cell-fg: #12130f; }
+      .cell[data-level="7"] { --cell-bg: #5598e7; --cell-fg: #12130f; }
+      .cell[data-level="8"] { --cell-bg: #6da7ec; --cell-fg: #12130f; }
+      .cell[data-level="9"] { --cell-bg: #86b6ef; --cell-fg: #12130f; }
+      .cell[data-level="10"] { --cell-bg: #9ec5f4; --cell-fg: #12130f; }
+      .cell[data-level="11"] { --cell-bg: #b7d3f6; --cell-fg: #12130f; }
+      .cell[data-level="12"] { --cell-bg: #cde2fb; --cell-fg: #12130f; }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      line-height: 1.65;
+    }
+    .wrap { width: min(1080px, calc(100% - 32px)); margin: 0 auto; }
+    header { padding: 56px 0 26px; border-bottom: 1px solid var(--line); }
+    .eyebrow { color: var(--accent); font-weight: 700; letter-spacing: .08em; }
+    h1 { max-width: 780px; margin: 8px 0 12px; font-size: clamp(1.8rem, 4.4vw, 3.2rem); line-height: 1.12; letter-spacing: -.03em; }
+    h2 { margin: 0 0 18px; font-size: clamp(1.3rem, 2.6vw, 1.7rem); }
+    p { margin: 0 0 12px; }
+    .lede { max-width: 720px; color: var(--muted); font-size: 1.03rem; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 20px; color: var(--muted); font-size: .88rem; }
+    main { padding: 34px 0 80px; }
+    section { margin: 0 0 52px; }
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 24px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 18px; }
+    .stat small { display: block; color: var(--muted); }
+    .stat strong { display: block; margin: 3px 0; font-size: 1.6rem; line-height: 1.2; }
+    .stat span { color: var(--muted); font-size: .82rem; }
+
+    .heatmap {
+      display: grid;
+      grid-template-columns: 84px repeat(8, 1fr);
+      gap: 4px;
+      margin-top: 6px;
+    }
+    .col-label, .row-label {
+      display: flex; align-items: center; justify-content: center;
+      font-size: .82rem; color: var(--muted); font-weight: 600;
+      padding: 6px 2px; text-align: center;
+    }
+    .row-label { justify-content: flex-start; padding-left: 4px; }
+    .cell {
+      position: relative;
+      border-radius: 10px;
+      min-height: 64px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 2px;
+      background: var(--cell-bg, var(--line));
+      color: var(--cell-fg, var(--text));
+      outline: none;
+      cursor: default;
+    }
+    .cell:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+    .cell.empty { background: transparent; border: 1px dashed var(--line); color: var(--muted); }
+    .cell-value { font-weight: 700; font-size: 1rem; font-variant-numeric: tabular-nums; }
+    .cell-n { font-size: .68rem; opacity: .85; font-variant-numeric: tabular-nums; }
+    .cell::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--text);
+      color: var(--surface);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: .76rem;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .12s ease;
+      z-index: 5;
+      box-shadow: var(--shadow);
+    }
+    .cell:hover::after, .cell:focus-visible::after { opacity: 1; }
+
+    .legend { display: flex; align-items: center; gap: 12px; margin-top: 22px; }
+    .legend-bar {
+      flex: 1;
+      height: 14px;
+      border-radius: 999px;
+      background: linear-gradient(to right, #cde2fb ,#b7d3f6 ,#9ec5f4 ,#86b6ef ,#6da7ec ,#5598e7 ,#3987e5 ,#2a78d6 ,#256abf ,#1c5cab ,#184f95 ,#104281 ,#0d366b);
+    }
+    @media (prefers-color-scheme: dark) {
+      .legend-bar { background: linear-gradient(to right, #0d366b ,#104281 ,#184f95 ,#1c5cab ,#256abf ,#2a78d6 ,#3987e5 ,#5598e7 ,#6da7ec ,#86b6ef ,#9ec5f4 ,#b7d3f6 ,#cde2fb); }
+    }
+    .legend span { font-size: .82rem; color: var(--muted); white-space: nowrap; }
+
+    .table-wrap { overflow-x: auto; margin-top: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+    th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+    th { color: var(--muted); font-weight: 650; }
+
+    details > summary { cursor: pointer; color: var(--muted); font-size: .88rem; margin-top: 4px; }
+
+    footer { padding: 24px 0 50px; border-top: 1px solid var(--line); color: var(--muted); font-size: .85rem; }
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: 1fr; }
+      .heatmap { grid-template-columns: 56px repeat(8, minmax(46px, 1fr)); }
+      .cell-n { display: none; }
+    }
+
+    .cell[data-level="0"] { --cell-bg: #cde2fb; --cell-fg: #12130f; }
+    .cell[data-level="1"] { --cell-bg: #b7d3f6; --cell-fg: #12130f; }
+    .cell[data-level="2"] { --cell-bg: #9ec5f4; --cell-fg: #12130f; }
+    .cell[data-level="3"] { --cell-bg: #86b6ef; --cell-fg: #12130f; }
+    .cell[data-level="4"] { --cell-bg: #6da7ec; --cell-fg: #12130f; }
+    .cell[data-level="5"] { --cell-bg: #5598e7; --cell-fg: #12130f; }
+    .cell[data-level="6"] { --cell-bg: #3987e5; --cell-fg: #12130f; }
+    .cell[data-level="7"] { --cell-bg: #2a78d6; --cell-fg: #ffffff; }
+    .cell[data-level="8"] { --cell-bg: #256abf; --cell-fg: #ffffff; }
+    .cell[data-level="9"] { --cell-bg: #1c5cab; --cell-fg: #ffffff; }
+    .cell[data-level="10"] { --cell-bg: #184f95; --cell-fg: #ffffff; }
+    .cell[data-level="11"] { --cell-bg: #104281; --cell-fg: #ffffff; }
+    .cell[data-level="12"] { --cell-bg: #0d366b; --cell-fg: #ffffff; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="eyebrow">KBO 2026 REGULAR SEASON</div>
+      <h1>韓職 RE24 得分期望值矩陣</h1>
+      <p class="lede">24 種 base-out state（3 種出局數 × 8 種壘包組合）各自「從該狀態起算到半局結束」的平均剩餘得分。起算點對齊到壘包狀態實際變化的那一球，不是打席或半局的開頭——方法見計畫書 3.0 節。</p>
+      <div class="meta">
+        <span>KindCode R</span>
+        <span>日期 2026-03–2026-10</span>
+        <span>723 場已處理</span>
+        <span>64,592 個 state 區段觀測值</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section aria-labelledby="heatmap-title">
+      <h2 id="heatmap-title">RE24 熱力圖</h2>
+      <div class="panel">
+        <div class="heatmap">
+          <div class="row-label"></div>
+          <div class="col-label">空壘</div><div class="col-label">一壘</div><div class="col-label">二壘</div><div class="col-label">三壘</div><div class="col-label">一二壘</div><div class="col-label">一三壘</div><div class="col-label">二三壘</div><div class="col-label">一二三壘</div>
+          <div class="row-label">0 出局</div><div class="cell" data-level="2" tabindex="0" data-tooltip="0 出局・空壘｜平均 0.566 分｜n=12,861｜SD 1.131"><span class="cell-value">0.566</span><span class="cell-n">n=12,861</span></div><div class="cell" data-level="4" tabindex="0" data-tooltip="0 出局・一壘｜平均 0.978 分｜n=3,829｜SD 1.452"><span class="cell-value">0.978</span><span class="cell-n">n=3,829</span></div><div class="cell" data-level="6" tabindex="0" data-tooltip="0 出局・二壘｜平均 1.347 分｜n=914｜SD 1.453"><span class="cell-value">1.347</span><span class="cell-n">n=914</span></div><div class="cell" data-level="8" tabindex="0" data-tooltip="0 出局・三壘｜平均 1.671 分｜n=146｜SD 1.405"><span class="cell-value">1.671</span><span class="cell-n">n=146</span></div><div class="cell" data-level="8" tabindex="0" data-tooltip="0 出局・一二壘｜平均 1.723 分｜n=1,238｜SD 1.728"><span class="cell-value">1.723</span><span class="cell-n">n=1,238</span></div><div class="cell" data-level="10" tabindex="0" data-tooltip="0 出局・一三壘｜平均 2.110 分｜n=373｜SD 1.616"><span class="cell-value">2.110</span><span class="cell-n">n=373</span></div><div class="cell" data-level="12" tabindex="0" data-tooltip="0 出局・二三壘｜平均 2.505 分｜n=222｜SD 1.947"><span class="cell-value">2.505</span><span class="cell-n">n=222</span></div><div class="cell" data-level="12" tabindex="0" data-tooltip="0 出局・一二三壘｜平均 2.550 分｜n=333｜SD 1.958"><span class="cell-value">2.550</span><span class="cell-n">n=333</span></div><div class="row-label">1 出局</div><div class="cell" data-level="1" tabindex="0" data-tooltip="1 出局・空壘｜平均 0.305 分｜n=8,940｜SD 0.815"><span class="cell-value">0.305</span><span class="cell-n">n=8,940</span></div><div class="cell" data-level="2" tabindex="0" data-tooltip="1 出局・一壘｜平均 0.579 分｜n=5,216｜SD 1.127"><span class="cell-value">0.579</span><span class="cell-n">n=5,216</span></div><div class="cell" data-level="4" tabindex="0" data-tooltip="1 出局・二壘｜平均 0.987 分｜n=2,289｜SD 1.300"><span class="cell-value">0.987</span><span class="cell-n">n=2,289</span></div><div class="cell" data-level="6" tabindex="0" data-tooltip="1 出局・三壘｜平均 1.241 分｜n=615｜SD 1.191"><span class="cell-value">1.241</span><span class="cell-n">n=615</span></div><div class="cell" data-level="6" tabindex="0" data-tooltip="1 出局・一二壘｜平均 1.234 分｜n=2,458｜SD 1.542"><span class="cell-value">1.234</span><span class="cell-n">n=2,458</span></div><div class="cell" data-level="7" tabindex="0" data-tooltip="1 出局・一三壘｜平均 1.520 分｜n=1,032｜SD 1.506"><span class="cell-value">1.520</span><span class="cell-n">n=1,032</span></div><div class="cell" data-level="9" tabindex="0" data-tooltip="1 出局・二三壘｜平均 1.903 分｜n=745｜SD 1.580"><span class="cell-value">1.903</span><span class="cell-n">n=745</span></div><div class="cell" data-level="10" tabindex="0" data-tooltip="1 出局・一二三壘｜平均 2.047 分｜n=971｜SD 1.804"><span class="cell-value">2.047</span><span class="cell-n">n=971</span></div><div class="row-label">2 出局</div><div class="cell" data-level="0" tabindex="0" data-tooltip="2 出局・空壘｜平均 0.110 分｜n=6,919｜SD 0.455"><span class="cell-value">0.110</span><span class="cell-n">n=6,919</span></div><div class="cell" data-level="1" tabindex="0" data-tooltip="2 出局・一壘｜平均 0.227 分｜n=5,024｜SD 0.690"><span class="cell-value">0.227</span><span class="cell-n">n=5,024</span></div><div class="cell" data-level="2" tabindex="0" data-tooltip="2 出局・二壘｜平均 0.458 分｜n=2,615｜SD 0.844"><span class="cell-value">0.458</span><span class="cell-n">n=2,615</span></div><div class="cell" data-level="3" tabindex="0" data-tooltip="2 出局・三壘｜平均 0.687 分｜n=980｜SD 0.904"><span class="cell-value">0.687</span><span class="cell-n">n=980</span></div><div class="cell" data-level="2" tabindex="0" data-tooltip="2 出局・一二壘｜平均 0.575 分｜n=3,007｜SD 1.026"><span class="cell-value">0.575</span><span class="cell-n">n=3,007</span></div><div class="cell" data-level="3" tabindex="0" data-tooltip="2 出局・一三壘｜平均 0.800 分｜n=1,527｜SD 1.050"><span class="cell-value">0.800</span><span class="cell-n">n=1,527</span></div><div class="cell" data-level="5" tabindex="0" data-tooltip="2 出局・二三壘｜平均 1.156 分｜n=980｜SD 1.183"><span class="cell-value">1.156</span><span class="cell-n">n=980</span></div><div class="cell" data-level="5" tabindex="0" data-tooltip="2 出局・一二三壘｜平均 1.153 分｜n=1,358｜SD 1.319"><span class="cell-value">1.153</span><span class="cell-n">n=1,358</span></div>
+        </div>
+        <div class="legend">
+          <span>0.110 分</span>
+          <div class="legend-bar"></div>
+          <span>2.550 分</span>
+        </div>
+        <p class="lede" style="margin-top:14px; font-size:.86rem">顏色深淺（淺色模式）／亮度（深色模式）代表平均剩餘得分的相對高低；每格滑鼠移過或鍵盤 Tab 到該格可看到樣本數與標準差。空白格代表本季無樣本觀測到該 state。</p>
+        <details style="margin-top:16px">
+          <summary>顯示完整資料表</summary>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>出局數</th><th>壘包狀態</th><th>平均 RE</th><th>SD</th><th>N</th></tr></thead>
+              <tbody><tr><td>0 出局</td><td>空壘</td><td>0.5663</td><td>1.131</td><td>12,861</td></tr><tr><td>0 出局</td><td>一壘</td><td>0.9783</td><td>1.452</td><td>3,829</td></tr><tr><td>0 出局</td><td>二壘</td><td>1.3468</td><td>1.453</td><td>914</td></tr><tr><td>0 出局</td><td>三壘</td><td>1.6712</td><td>1.405</td><td>146</td></tr><tr><td>0 出局</td><td>一二壘</td><td>1.7229</td><td>1.728</td><td>1,238</td></tr><tr><td>0 出局</td><td>一三壘</td><td>2.1099</td><td>1.616</td><td>373</td></tr><tr><td>0 出局</td><td>二三壘</td><td>2.5045</td><td>1.947</td><td>222</td></tr><tr><td>0 出局</td><td>一二三壘</td><td>2.5495</td><td>1.958</td><td>333</td></tr><tr><td>1 出局</td><td>空壘</td><td>0.3047</td><td>0.815</td><td>8,940</td></tr><tr><td>1 出局</td><td>一壘</td><td>0.5792</td><td>1.127</td><td>5,216</td></tr><tr><td>1 出局</td><td>二壘</td><td>0.9873</td><td>1.300</td><td>2,289</td></tr><tr><td>1 出局</td><td>三壘</td><td>1.2407</td><td>1.191</td><td>615</td></tr><tr><td>1 出局</td><td>一二壘</td><td>1.2335</td><td>1.542</td><td>2,458</td></tr><tr><td>1 出局</td><td>一三壘</td><td>1.5203</td><td>1.506</td><td>1,032</td></tr><tr><td>1 出局</td><td>二三壘</td><td>1.9034</td><td>1.580</td><td>745</td></tr><tr><td>1 出局</td><td>一二三壘</td><td>2.0474</td><td>1.804</td><td>971</td></tr><tr><td>2 出局</td><td>空壘</td><td>0.1103</td><td>0.455</td><td>6,919</td></tr><tr><td>2 出局</td><td>一壘</td><td>0.2267</td><td>0.690</td><td>5,024</td></tr><tr><td>2 出局</td><td>二壘</td><td>0.4581</td><td>0.844</td><td>2,615</td></tr><tr><td>2 出局</td><td>三壘</td><td>0.6867</td><td>0.904</td><td>980</td></tr><tr><td>2 出局</td><td>一二壘</td><td>0.5747</td><td>1.026</td><td>3,007</td></tr><tr><td>2 出局</td><td>一三壘</td><td>0.7996</td><td>1.050</td><td>1,527</td></tr><tr><td>2 出局</td><td>二三壘</td><td>1.1561</td><td>1.183</td><td>980</td></tr><tr><td>2 出局</td><td>一二三壘</td><td>1.1532</td><td>1.319</td><td>1,358</td></tr></tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section aria-labelledby="threshold-title">
+      <h2 id="threshold-title">由 RE24 直接推導的基礎門檻（層次二）</h2>
+      <p class="lede">計畫書 3.1 節層次二公式：<code>p ≥ RE(一壘) / RE(二壘)</code>，尚未計入盜壘失敗的「保留打者到下一局」效應（層次三蒙地卡羅模擬已處理，見 README 逐棒次門檻）。此處僅作為與模擬結果交叉核對的基準值。</p>
+      <div class="grid" style="margin-top:14px"><article class="stat"><small>0 出局｜RE(一壘)／RE(二壘)</small><strong>72.6%</strong><span>層次二基礎損益兩平門檻（未計保留效應）</span></article><article class="stat"><small>1 出局｜RE(一壘)／RE(二壘)</small><strong>58.7%</strong><span>層次二基礎損益兩平門檻（未計保留效應）</span></article><article class="stat"><small>2 出局｜RE(一壘)／RE(二壘)</small><strong>49.5%</strong><span>層次二基礎損益兩平門檻（未計保留效應）</span></article></div>
+    </section>
+  </main>
+
+  <footer><div class="wrap">資料：KBO 官網文字轉播，2026 例行賽 日期 2026-03–2026-10 · RE 計算對齊事件發生當下（計畫書 3.0 節），排除未打完的半局 · 由 build_re24_matrix.py 產生</div></footer>
+</body>
+</html>
