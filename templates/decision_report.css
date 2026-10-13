@@ -71,6 +71,16 @@
     .branch-body { padding: 18px 20px 20px; }
     .branch ol { margin: 0; padding-left: 1.25rem; }
     .branch li + li { margin-top: 7px; }
+    .controls.case-filters { grid-template-columns: repeat(5, 1fr); align-items: end; }
+    .case-filters .wide { grid-column: span 2; }
+    #case-select { margin-bottom: 20px; }
+    .clear-btn { min-height: 42px; padding: 8px 12px; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--text); cursor: pointer; }
+    .clear-btn:hover { background: color-mix(in srgb, var(--text) 10%, var(--surface)); }
+    #case-select { min-height: 150px; }
+    .team-name[title] { text-decoration: underline dotted; text-underline-offset: 4px; }
+    #validation-stats { grid-template-columns: repeat(2, 1fr); }
+    #validation-stats .stat strong { white-space: nowrap; }
+    .goto-note a { color: var(--text); text-underline-offset: 3px; }
     .team-dot { display: inline-block; width: 12px; height: 12px; margin-right: 8px; vertical-align: -1px; border: 1px solid color-mix(in srgb, var(--text) 45%, transparent); }
     .bar-row { display: grid; grid-template-columns: 96px 1fr 72px; align-items: center; gap: 12px; margin: 16px 0; }
     .track { height: 18px; background: color-mix(in srgb, var(--line) 70%, transparent); border-radius: 0; overflow: hidden; }
@@ -100,7 +110,7 @@
       border-radius: 0;
       font: inherit;
     }
-    input[type="range"] { padding: 0; }
+    input[type="range"] { padding: 0; accent-color: var(--neutral); }
     .case-title { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
     .case-title strong { font-size: 1.25rem; }
     .case-title span { color: var(--muted); }
@@ -127,6 +137,7 @@
       .grid { grid-template-columns: repeat(2, 1fr); }
       .branches { grid-template-columns: 1fr; }
       .simulator { grid-template-columns: 1fr; }
+      .controls.case-filters { grid-template-columns: repeat(2, 1fr); }
     }
     @media (max-width: 560px) {
       .wrap { width: min(100% - 22px, 1120px); }
@@ -160,3 +171,5 @@
       .js-reveal .barr { transform: scaleX(0); transform-origin: left center; transition: transform 1s cubic-bezier(.2,.7,.2,1) .1s; }
       .js-reveal .barr.in { transform: scaleX(1); }
     }
+
+    @media (max-width: 560px) { #validation-stats { grid-template-columns: 1fr; } #validation-stats .stat strong { white-space: normal; } }

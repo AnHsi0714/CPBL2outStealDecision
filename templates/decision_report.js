@@ -18,11 +18,27 @@
       'Seattle Mariners': '#005c5c', 'St. Louis Cardinals': '#c41e3a', 'Tampa Bay Rays': '#092c5c', 'Texas Rangers': '#003278', 'Toronto Blue Jays': '#134a8e',
       'Washington Nationals': '#ab0003',
     };
+    // 英文、韓文隊名顯示成中文，原文放在 hover 提示。
+    const TEAM_ZH = {
+      'KIA': '起亞老虎', 'KT': 'KT巫師', 'LG': 'LG雙子', 'NC': 'NC恐龍', 'SSG': 'SSG登陸者', '두산': '斗山熊', '롯데': '樂天巨人', '삼성': '三星獅', '키움': '啟動英雄', '한화': '韓華鷹',
+      'Arizona Diamondbacks': '亞利桑那響尾蛇', 'Athletics': '運動家', 'Oakland Athletics': '奧克蘭運動家', 'Atlanta Braves': '亞特蘭大勇士', 'Baltimore Orioles': '巴爾的摩金鶯',
+      'Boston Red Sox': '波士頓紅襪', 'Chicago Cubs': '芝加哥小熊', 'Chicago White Sox': '芝加哥白襪', 'Cincinnati Reds': '辛辛那提紅人', 'Cleveland Guardians': '克里夫蘭守護者',
+      'Colorado Rockies': '科羅拉多洛磯', 'Detroit Tigers': '底特律老虎', 'Houston Astros': '休士頓太空人', 'Kansas City Royals': '堪薩斯皇家', 'Los Angeles Angels': '洛杉磯天使',
+      'Los Angeles Dodgers': '洛杉磯道奇', 'Miami Marlins': '邁阿密馬林魚', 'Milwaukee Brewers': '密爾瓦基釀酒人', 'Minnesota Twins': '明尼蘇達雙城', 'New York Mets': '紐約大都會',
+      'New York Yankees': '紐約洋基', 'Philadelphia Phillies': '費城費城人', 'Pittsburgh Pirates': '匹茲堡海盜', 'San Diego Padres': '聖地牙哥教士', 'San Francisco Giants': '舊金山巨人',
+      'Seattle Mariners': '西雅圖水手', 'St. Louis Cardinals': '聖路易紅雀', 'Tampa Bay Rays': '坦帕灣光芒', 'Texas Rangers': '德州遊騎兵', 'Toronto Blue Jays': '多倫多藍鳥',
+      'Washington Nationals': '華盛頓國民',
+    };
+    const teamZh = (name) => TEAM_ZH[name] || name;
     const teamTag = (name) => {
       const color = TEAM_COLORS[name];
       const dot = color ? `<span class="team-dot" style="background:${color}"></span>` : '';
-      return `${dot}${esc(name)}`;
+      const zh = teamZh(name);
+      const label = zh !== name ? `<span class="team-name" title="${esc(name)}" tabindex="0">${esc(zh)}</span>` : esc(name);
+      return `${dot}${label}`;
     };
+
+    const outcomeLabel = { steal_success: '實際：盜壘成功', steal_failure: '實際：盜壘失敗', no_steal: '實際：不盜壘' };
 
     function fillValidation() {
       const v = REPORT.validation;
@@ -123,6 +139,17 @@
       high_1B: '高單打率(接觸型)', low_1B: '低單打率',
       high_TTO: '高TTO型', low_TTO: '低TTO型',
     };
+
+    function renderCaseTypeBadges(c) {
+      // 這排標籤是「這位打者本人」的固定球員類型，跟這筆決策剛好排第幾棒（見上方 case-heading）無關。
+      let badges;
+      if (c.batterTypeQualified) {
+        badges = [GROUP_LABELS[c.typicalLineupGroup], GROUP_LABELS[c.powerGroup], GROUP_LABELS[c.patienceGroup], GROUP_LABELS[c.obpGroup], GROUP_LABELS[c.contactGroup], GROUP_LABELS[c.ttoGroup]];
+      } else {
+        badges = ['打席數不足(PA<100)，無球員類型資料'];
+      }
+      $('case-type-badges').innerHTML = badges.filter(Boolean).map((label) => `<span class="pill">${esc(label)}</span>`).join('');
+    }
 
     const comparisonLabels = {
       lineup_front_vs_back: ['前段(1-5)', '後段(6-9)'],
@@ -252,6 +279,98 @@
       renderRunnerTable();
     }
 
+    // ---- 代表情境：還原壓縮後的個案、搜尋與篩選 ----
+    const CASES = (() => {
+      const c = REPORT.cases;
+      return c.rows.map((row, id) => {
+        const o = { id };
+        c.fields.forEach((key, j) => {
+          const v = row[j];
+          o[key] = j < c.strFields ? (v === null ? null : c.strings[v]) : v;
+        });
+        o.batterTypeQualified = Boolean(o.powerGroup);
+        return o;
+      });
+    })();
+    let currentCase = CASES[REPORT.defaultCase] || CASES[0];
+
+    function caseLabel(c) {
+      return `${c.hitter}｜第 ${c.lineup} 棒｜${c.inning} 局｜${teamZh(c.team)}（${teamZh(c.away)} vs ${teamZh(c.home)}）`;
+    }
+
+    function renderCase(c) {
+      if (!c) return;
+      currentCase = c;
+      $('case-heading').textContent = `${c.hitter}｜第 ${c.lineup} 棒｜${c.inning} 局`;
+      $('case-subheading').textContent = `${c.date} · 場次 ${c.game} · ${teamZh(c.away)} vs ${teamZh(c.home)} · 一壘跑者 ${c.runner || '未記錄'} · 投手 ${c.pitcher || '未記錄'}`;
+      $('case-actual').textContent = outcomeLabel[c.actual] || c.actual;
+      renderCaseTypeBadges(c);
+      $('case-values').innerHTML = `<tr><td>${esc(c.hitter)}</td><td>${fmt(c.ModelVSuccess)}</td><td>${fmt(c.ModelVFailure)}</td><td>${fmt(c.ModelVNoSteal)}</td><td>${c.BreakEvenSuccessRate === null ? '無' : pct(c.BreakEvenSuccessRate)}</td><td>${fmt(c.ConditionalOutCostNoSteal)}</td><td>${fmt(c.ExpectedOutPenaltyNoSteal)}</td></tr>`;
+      $('case-profile').innerHTML = `<tr><td>${esc(c.hitter)}</td><td>${Math.round(c.ProfilePA)}</td><td>${pct(c.ModelP_1B)}</td><td>${pct(c.ModelP_2B)}</td><td>${pct(c.ModelP_3B)}</td><td>${pct(c.ModelP_HR)}</td><td>${pct(c.ModelP_BB_HBP)}</td><td>${pct(c.ModelP_REACH)}</td><td>${pct(c.ModelP_OUT)}</td></tr>`;
+      const threshold = c.BreakEvenSuccessRate === null ? REPORT.aggregate.medianThreshold : c.BreakEvenSuccessRate;
+      $('success-rate').value = String(Math.min(100, Math.max(0, threshold * 100)));
+      updateDecision(c);
+    }
+
+    function updateDecision(c = currentCase) {
+      if (!c) return;
+      const p = Number($('success-rate').value) / 100;
+      const stealEV = p * c.ModelVSuccess + (1 - p) * c.ModelVFailure;
+      const delta = stealEV - c.ModelVNoSteal;
+      $('success-rate-value').textContent = pct(p);
+      $('decision-label').textContent = delta >= 0 ? '這個成功率下：盜壘較有利' : '這個成功率下：不跑較有利';
+      $('decision-math').textContent = `EV(盜壘) ${fmt(stealEV)} − EV(不跑) ${fmt(c.ModelVNoSteal)} = ${delta >= 0 ? '+' : ''}${fmt(delta)} 分`;
+      $('decision-readout').className = `decision-readout ${delta >= 0 ? 'good' : 'bad'}`;
+    }
+
+    // 篩選器：選項由資料產生，標籤沿用分組名稱
+    const FILTERS = [
+      ['f-team', 'team', '全部球隊', (v) => teamZh(v)],
+      ['f-actual', 'actual', '全部結果', (v) => (outcomeLabel[v] || v).replace('實際：', '')],
+      ['f-slot', 'lineup', '全部棒次', (v) => `第 ${v} 棒`],
+      ['f-inning', 'inning', '全部局數', (v) => `第 ${v} 局`],
+      ['f-lineup', 'typicalLineupGroup', '不限', (v) => GROUP_LABELS[v] || v],
+      ['f-power', 'powerGroup', '不限', (v) => GROUP_LABELS[v] || v],
+      ['f-patience', 'patienceGroup', '不限', (v) => GROUP_LABELS[v] || v],
+      ['f-obp', 'obpGroup', '不限', (v) => GROUP_LABELS[v] || v],
+      ['f-contact', 'contactGroup', '不限', (v) => GROUP_LABELS[v] || v],
+      ['f-tto', 'ttoGroup', '不限', (v) => GROUP_LABELS[v] || v],
+    ];
+
+    function fillFilterOptions() {
+      FILTERS.forEach(([id, key, allLabel, labeler]) => {
+        const values = [...new Set(CASES.map((c) => c[key]).filter((v) => v !== null && v !== undefined))];
+        values.sort((a, b) => (typeof a === 'number' ? a - b : String(labeler(a)).localeCompare(String(labeler(b)), 'zh-Hant')));
+        $(id).innerHTML = `<option value="">${allLabel}</option>` + values.map((v) => `<option value="${esc(v)}">${esc(labeler(v))}</option>`).join('');
+      });
+    }
+
+    function applyCaseFilters() {
+      const query = $('case-search').value.trim().toLowerCase();
+      const active = FILTERS.map(([id, key]) => [key, $(id).value]).filter(([, v]) => v !== '');
+      const matches = CASES.filter((c) => {
+        for (const [key, value] of active) if (String(c[key]) !== value) return false;
+        if (!query) return true;
+        const hay = `${c.hitter} ${c.team} ${teamZh(c.team)} ${c.away} ${teamZh(c.away)} ${c.home} ${teamZh(c.home)} ${c.game} ${c.date}`.toLowerCase();
+        return hay.includes(query);
+      });
+      const LIMIT = 300;
+      const shown = matches.slice(0, LIMIT);
+      const cur = matches.find((c) => c.id === currentCase.id);
+      if (cur && !shown.includes(cur)) shown.unshift(cur);
+      $('case-count').textContent = matches.length
+        ? `共 ${matches.length.toLocaleString()} 筆符合${matches.length > LIMIT ? `，清單只列前 ${LIMIT} 筆，請再縮小條件` : ''}`
+        : '沒有符合的決策，請放寬條件';
+      const select = $('case-select');
+      select.innerHTML = shown.map((c) => `<option value="${c.id}">${esc(caseLabel(c))}</option>`).join('');
+      const keep = shown.find((c) => c.id === currentCase.id);
+      const target = keep || shown[0];
+      if (target) {
+        select.value = String(target.id);
+        if (!keep) renderCase(target);
+      }
+    }
+
     fillAggregate();
     fillValidation();
     fillTeamDecisions();
@@ -259,3 +378,16 @@
     fillRunnerQualification();
     $('runner-search').addEventListener('input', renderRunnerTable);
     $('runner-filter').addEventListener('change', renderRunnerTable);
+    fillFilterOptions();
+    applyCaseFilters();
+    $('case-select').value = String(currentCase.id);
+    renderCase(currentCase);
+    $('case-search').addEventListener('input', applyCaseFilters);
+    FILTERS.forEach(([id]) => $(id).addEventListener('change', applyCaseFilters));
+    $('f-clear').addEventListener('click', () => {
+      $('case-search').value = '';
+      FILTERS.forEach(([id]) => { $(id).value = ''; });
+      applyCaseFilters();
+    });
+    $('case-select').addEventListener('change', (event) => renderCase(CASES[Number(event.target.value)]));
+    $('success-rate').addEventListener('input', () => updateDecision());

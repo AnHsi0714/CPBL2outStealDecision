@@ -29,6 +29,7 @@
         <article class="stat"><small>實際盜壘失敗</small><strong id="stat-failure-count"></strong><span id="stat-failure-rate"></span></article>
         <article class="stat"><small>情境損益兩平中位數</small><strong id="stat-threshold"></strong><span>每個情境先各自計算，再取中位數</span></article>
       </div>
+        <p class="muted goto-note" style="margin-top:14px">以上是得分期望值（RE）版。第 4 局起建議改看 <a class="rc-goto" data-category="wpa" href="cpbl-wpa-decision-thresholds.html">勝率版（WPA）損益兩平門檻</a>，晚局門檻明顯較低。</p>
     </section>
 
     <section aria-labelledby="branches-title">
@@ -158,6 +159,63 @@
       </div>
     </section>
 
+    <section aria-labelledby="explorer-title">
+      <h2 id="explorer-title">用一筆代表情境試算</h2>
+      <div class="panel">
+        <p class="muted">預設是門檻最接近中位數的一筆。可搜尋球員、球隊，或用條件篩選，再從清單選一筆決策，拖曳成功率看盜壘與不跑哪個較划算。</p>
+        <div class="controls case-filters">
+          <label class="wide">搜尋球員、球隊或場次
+            <input id="case-search" type="search" placeholder="例如：球員名、球隊名、場次">
+          </label>
+          <label>球隊<select id="f-team"></select></label>
+          <label>實際結果<select id="f-actual"></select></label>
+          <label>本次棒次<select id="f-slot"></select></label>
+          <label>局數<select id="f-inning"></select></label>
+          <label>打者常排棒次<select id="f-lineup"></select></label>
+          <label>長打<select id="f-power"></select></label>
+          <label>選球<select id="f-patience"></select></label>
+          <label>上壘率<select id="f-obp"></select></label>
+          <label>單打率<select id="f-contact"></select></label>
+          <label>TTO<select id="f-tto"></select></label>
+          <button type="button" id="f-clear" class="clear-btn">清除篩選</button>
+        </div>
+        <p class="muted" id="case-count"></p>
+        <label>選擇一筆決策機會
+          <select id="case-select" size="6"></select>
+        </label>
+        <div class="case-title">
+          <div><strong id="case-heading"></strong><div id="case-subheading" class="muted"></div></div>
+          <div><span class="pill" id="case-actual"></span></div>
+        </div>
+        <div id="case-type-badges" style="display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 6px"></div>
+
+        <div class="simulator">
+          <div>
+            <label for="success-rate">假設這次盜壘成功率：<span class="range-value" id="success-rate-value"></span></label>
+            <input id="success-rate" type="range" min="0" max="100" step="0.1">
+            <p class="muted">EV(盜壘) = p × V成功 + (1 − p) × V失敗</p>
+          </div>
+          <div id="decision-readout" class="decision-readout" aria-live="polite">
+            <strong id="decision-label"></strong>
+            <span id="decision-math"></span>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>此情境</th><th>V成功</th><th>V失敗</th><th>V不跑</th><th>損益兩平</th><th>出局成本</th><th>期望出局懲罰</th></tr></thead>
+            <tbody id="case-values"></tbody>
+          </table>
+        </div>
+        <div class="table-wrap" style="margin-top:18px">
+          <table>
+            <thead><tr><th>打者模型</th><th>PA</th><th>1B</th><th>2B</th><th>3B</th><th>HR</th><th>BB/HBP</th><th>其他上壘</th><th>OUT</th></tr></thead>
+            <tbody id="case-profile"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <section aria-labelledby="scope-title">
       <h2 id="scope-title">解讀邊界</h2>
       <ul class="note-list">
@@ -174,67 +232,7 @@
 /*__SCRIPT__*/
   </script>
   <script>
-    // 嵌在整合入口的 iframe 內時，回報目前停在哪個區塊，並接受入口頁要求捲回同一區塊。
-    (function () {
-      if (window.parent === window) return;
-      function anchor() {
-        var y = window.scrollY, found = null;
-        document.querySelectorAll('section[aria-labelledby]').forEach(function (sec) {
-          if (sec.hidden || sec.offsetParent === null) return;
-          var top = sec.getBoundingClientRect().top + y;
-          if (top <= y + 80) found = { id: sec.getAttribute('aria-labelledby'), offset: y - top };
-        });
-        return { y: y, section: found };
-      }
-      var ticking = false;
-      window.addEventListener('scroll', function () {
-        if (ticking) return;
-        ticking = true;
-        setTimeout(function () {
-          ticking = false;
-          parent.postMessage({ type: 'report-anchor', anchor: anchor() }, '*');
-        }, 50);
-      });
-      window.addEventListener('message', function (e) {
-        if (!e.data || e.data.type !== 'report-restore' || !e.data.anchor) return;
-        var a = e.data.anchor;
-        function go() {
-          if (a.section) {
-            var h = document.getElementById(a.section.id);
-            var sec = h && h.closest('section');
-            if (sec && !sec.hidden) {
-              var top = sec.getBoundingClientRect().top + window.scrollY;
-              window.scrollTo(0, Math.max(0, top + Math.min(a.section.offset, sec.offsetHeight - 80)));
-              return;
-            }
-          }
-          window.scrollTo(0, a.y);
-        }
-        go();
-        setTimeout(go, 150);
-      });
-      parent.postMessage({ type: 'report-ready' }, '*');
-    })();
-  </script>
-  <script>
-    // 內容區塊與長條在第一次捲動到時才播放進場動畫（不支援或要求減少動態時不做任何事）。
-    (function () {
-      if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      var fired = false;
-      var io = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-          if (!entry.isIntersecting) return;
-          fired = true;
-          entry.target.classList.add('in');
-          io.unobserve(entry.target);
-        });
-      }, { rootMargin: '0px 0px -8% 0px', threshold: 0 });
-      document.querySelectorAll('main section').forEach(function (el) { el.classList.add('reveal'); io.observe(el); });
-      document.querySelectorAll('.bar').forEach(function (el) { el.classList.add('barr'); io.observe(el); });
-      document.documentElement.classList.add('js-reveal');
-      // 保險：觀察器一直沒有回報（例如被瀏覽器節流）時，直接顯示全部內容，避免頁面空白。
-      setTimeout(function () { if (!fired) document.documentElement.classList.remove('js-reveal'); }, 1500);
-    })();
+/*__COMMON__*/
   </script>
 </body>
 </html>

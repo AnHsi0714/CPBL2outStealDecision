@@ -39,6 +39,7 @@ def build(reports_dir: Path) -> str:
 
     style = base.STYLE_PATH.read_text(encoding="utf-8")
     script = base.SCRIPT_PATH.read_text(encoding="utf-8")
+    common = (base.ROOT / "templates" / "report_common.js").read_text(encoding="utf-8")
     # 原腳本一次只有一組分類；這裡把它包成「切換聯盟時換一組分類」。
     script = script.replace(
         'const categories = JSON.parse(document.getElementById("categories-data").textContent);',
@@ -87,6 +88,8 @@ activateLeague(location.hash.replace("#", ""));
         1,
     )
 
+    script = common + "\n" + script
+
     league_buttons = "".join(
         f'<button type="button" data-league="{name}" aria-selected="false">{name}</button>' for name in leagues
     )
@@ -98,6 +101,18 @@ activateLeague(location.hash.replace("#", ""));
     .league-tabs button[aria-selected="true"], .league-tabs button[aria-selected="true"]:hover { background: var(--text); color: var(--surface); border-color: var(--text); }
     .league-tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .title-row { align-items: center; }
+
+    @media (max-width: 760px) {
+      .mobile body { display: block; min-height: 0; }
+      .mobile main { display: block; }
+      .mobile .frame-panel { min-height: 0; margin: 0 -8px; }
+      .mobile .report-frame { flex: none; height: 80vh; }
+      .mobile .eyebrow { display: none; }
+      .mobile .tabs, .mobile .sub-tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
+      .mobile .tab, .mobile .sub-tab, .mobile .league-tabs button { min-height: 40px; }
+      .mobile header { position: static; }
+      .mobile .title-row { padding-left: 52px; }
+    }
 """
     return f"""<!doctype html>
 <html lang="zh-Hant">

@@ -160,6 +160,7 @@ def build_report(summary: dict[str, Any]) -> str:
 
     document = TEMPLATE_PATH.read_text(encoding="utf-8")
     document = document.replace("/*__STYLES__*/", style.rstrip("\n"))
+    document = document.replace("/*__COMMON__*/", (ROOT / "templates" / "report_common.js").read_text(encoding="utf-8").rstrip("\n"))
     document = document.replace("__COLUMN_HEADERS__", column_headers_html)
     document = document.replace("__GRID_CELLS__", "".join(grid_cells_html))
     document = document.replace("__TABLE_ROWS__", "".join(table_rows_html))

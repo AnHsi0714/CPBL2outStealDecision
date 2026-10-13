@@ -37,17 +37,62 @@ function renderSecondaryTabs() {
     .join("");
 }
 
-// 切換報告時的捲動位置同步：報告頁（iframe 內）用 postMessage 回報目前停在哪個區塊，
-// 載入新報告後入口頁再請它捲到同一區塊。用 postMessage 而非直接讀 iframe 內容，
-// 這樣本機以 file:// 開啟（跨來源）時也能運作。
+// 入口頁與報告頁（iframe）用 postMessage 溝通，這樣本機以 file:// 開啟（跨來源）時也能運作：
+// report-anchor 回報目前停在哪個區塊（切換報告時捲回同一區塊）、report-ready 帶目錄項目、
+// report-height 讓手機版把 iframe 撐成內容高度（只剩一層捲動）、report-goto-category 切換分頁。
+let tocApi = null;
+const mobileQuery = window.matchMedia("(max-width: 760px)");
+let mobile = false;
+
+function applyMobile() {
+  mobile = mobileQuery.matches;
+  document.documentElement.classList.toggle("mobile", mobile);
+  if (!mobile) frame.style.height = "";
+}
+mobileQuery.addEventListener("change", applyMobile);
+applyMobile();
+
+function mountParentToc(items) {
+  if (!window.ReportCommon || !items || !items.length) return;
+  const top = mobile ? 12 : Math.max(12, frame.getBoundingClientRect().top + 12);
+  tocApi = window.ReportCommon.mountToc(items, {
+    top: `${top}px`,
+    onGo: (id) => frame.contentWindow.postMessage({ type: "report-goto", id }, "*"),
+  });
+}
+
 window.addEventListener("message", (event) => {
   if (event.source !== frame.contentWindow || !event.data) return;
-  if (event.data.type === "report-anchor") {
-    lastAnchor = event.data.anchor;
-  } else if (event.data.type === "report-ready") {
-    if (lastAnchor) frame.contentWindow.postMessage({ type: "report-restore", anchor: lastAnchor }, "*");
+  const d = event.data;
+  if (d.type === "report-anchor") {
+    lastAnchor = d.anchor;
+    if (tocApi) tocApi.setActive(d.anchor.section && d.anchor.section.id);
+  } else if (d.type === "report-height") {
+    if (mobile) frame.style.height = `${d.height}px`;
+  } else if (d.type === "report-scroll-to") {
+    if (mobile) window.scrollTo({ top: frame.getBoundingClientRect().top + window.scrollY + d.y, behavior: "smooth" });
+  } else if (d.type === "report-goto-category") {
+    if (categoryById(d.id)) {
+      lastAnchor = null;
+      activateCategory(d.id);
+    }
+  } else if (d.type === "report-ready") {
     frame.style.opacity = "1";
+    if (mobile && d.height) frame.style.height = `${d.height}px`;
+    mountParentToc(d.items);
+    if (lastAnchor) frame.contentWindow.postMessage({ type: "report-restore", anchor: lastAnchor }, "*");
   }
+});
+
+// 手機版整頁捲動：定期請報告頁換算「目前停在哪個區塊」。
+let queryTimer = null;
+window.addEventListener("scroll", () => {
+  if (!mobile || queryTimer) return;
+  queryTimer = setTimeout(() => {
+    queryTimer = null;
+    const y = Math.max(0, -frame.getBoundingClientRect().top);
+    frame.contentWindow.postMessage({ type: "report-query", y }, "*");
+  }, 120);
 });
 
 frame.addEventListener("load", () => { frame.style.opacity = "1"; });
