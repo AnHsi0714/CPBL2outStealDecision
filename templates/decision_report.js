@@ -34,7 +34,7 @@
       const color = TEAM_COLORS[name];
       const dot = color ? `<span class="team-dot" style="background:${color}"></span>` : '';
       const zh = teamZh(name);
-      const label = zh !== name ? `<span class="team-name" title="${esc(name)}" tabindex="0">${esc(zh)}</span>` : esc(name);
+      const label = zh !== name ? `<span class="team-name" title="${esc(name)}">${esc(zh)}<span class="sr-only">（${esc(name)}）</span></span>` : esc(name);
       return `${dot}${label}`;
     };
 

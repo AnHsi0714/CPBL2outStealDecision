@@ -35,3 +35,7 @@
   pointer-events: none; opacity: 0; transition: opacity .12s ease; white-space: normal; text-align: left; font-weight: 400; }
 .rc-tip.show { opacity: 1; }
 .rc-goto { font-weight: 650; }
+th:focus-visible, .stat small:focus-visible, .pill:focus-visible, .branch-head h3:focus-visible, .formula > strong:focus-visible, #segment-table td:first-child:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+.rc-drawer a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
