@@ -71,7 +71,7 @@ python -m unittest tests.test_model_batter_decisions
 - `analysis/analyze_team_decisions.py`：六隊決策品質，用二項檢定判「跑對／跑錯」，不顯著就標「無法判定」
 - `analysis/analyze_runner_steal_rates.py`：符合門檻的跑者名單，**逐棒次比對而非比單一門檻**（門檻本身隨棒次變是核心發現，比單一中位數等於丟掉這個結論）
 - `re24/validate_re24_simulation.py`：模擬 RE24 vs 真實 RE24 逐格比較。**引擎若無法重現真實 RE24 就不可繼續往下做**
-- `analysis/validate_steal_parsing.py`：文字判讀的盜壘數 vs CPBL 官方 box score 逐場逐隊對帳
+- `analysis/validate_steal_parsing.py`：文字判讀的盜壘數 vs CPBL 官方 box score 逐場逐隊對帳。**四季 2,760 個（場次,球隊）組合全部 0 筆不符。** 達到這個結果補過兩個樣式缺口：單獨盜本壘「三壘跑者X 盜壘回本壘得分」（原本只認「雙盜壘回本壘得分」，四季僅 1 筆，2026 第 106 場）與未標壘包的盜壘刺「跑者X出局-盜壘刺」（三振＋盜壘刺雙殺，四季僅 1 筆，2023 第 35 場）。注意 `scrapers/find_2out_first_base.py` 的 `is_steal_failure` **刻意不跟著放寬**：研究範圍只取一壘跑者，沒標壘包的無法確認是哪一壘，保守排除才正確
 - `analysis/analyze_pitcher_handedness.py`：**左右投對跑者**的影響。只看投手慣用手如何改變跑者盜二壘的實際成功率，**不涉及打者**。加 `--pool-years 2023,2024,2025,2026` 合併四季做逐跑者拆分（單季拆完多數跑者樣本不足）
 
 ### 左右投：必須分清楚的兩件事
@@ -106,15 +106,17 @@ MLB、KBO 沿用 `mlb_`／`kbo_` 前綴的並行腳本，數學部分（模擬�
 
 CPBL 逐球資料混有「換投手／代打／代跑／守備」等純公告列，其 `OutCnt` 與壘包欄位是殘留舊值，約佔全部列數 3%，未過濾會嚴重污染「兩出局、空壘」這格的 RE24。過濾邏輯在 `scrapers/cpbl_row_filters.py`（獨立成模組是為避免與 `scrapers/CPBL_steal_getData.py` 循環 import）。
 
+**所有球季的檔名 tag 一律用 `1-360`**（含 2023，雖然該季只有 300 場）：`find_2out_first_base.py` 當初以排程範圍命名，核心產出都是 `2023_A_1-360`。曾有幾支腳本寫死 `2023:A:1:300`／`2026:A:1:240`，導致找不到決策 CSV 或只讀半季，已全部統一為 360。實際場次數看 summary 的 `games_processed`。
+
 **任何新增的原始列解析都必須套用 `remove_administrative_rows`**，否則會重蹈這個 bug。2026-08-29 的 commit `28321aa` 修正此問題後，四季結果全部重跑過；若看到 `outputs/` 與 git 歷史對不上的數字，先確認是不是修正前的殘留。
 
 ### 各腳本預設年份不一致（常見陷阱）
 
-`scrapers/find_2out_first_base.py` 與 `pipeline/model_batter_decisions.py` 預設 `--year 2026 --start 1 --end 240`；其餘腳本預設 `--year 2025 --start 1 --end 360`。**跑任何一年都應顯式帶滿 `--year/--start/--end`**，否則會出現「找不到決策樣本」或悄悄讀到另一年的檔案。
+`scrapers/find_2out_first_base.py` 與 `pipeline/model_batter_decisions.py` 預設 `--year 2026 --start 1 --end 360`；其餘腳本預設 `--year 2025 --start 1 --end 360`。年份仍不一致，場次範圍已統一為 360。**跑任何一年都應顯式帶滿 `--year/--start/--end`**，否則會出現「找不到決策樣本」或悄悄讀到另一年的檔案。
 
 ### 已抓取的原始資料
 
-`data/raw/cpbl/2025_A/`（1–360）、`data/raw/cpbl/2026_A/`（1–240）已在本機快取。重跑管線不需重爬；只有補新場次時才會發網路請求（`--refresh` 會忽略快取全部重抓，慎用）。
+四季原始資料均已在本機快取：`2023_A`（300 場，五隊制）、`2024_A`／`2025_A`／`2026_A`（各 360 場）。2026 例行賽已打完，四季皆為完整球季。重跑管線不需重爬；只有補新場次時才會發網路請求（`--refresh` 會忽略快取全部重抓，慎用）。
 
 `data/raw/`、`outputs/`、`*.csv`、`*.json` 都在 `.gitignore` 內：**分析輸出不進版控**，只有程式碼、文件與 `reports/*.html` 進。
 

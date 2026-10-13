@@ -31,7 +31,7 @@ from cpbl_row_filters import remove_administrative_rows
 
 # 逐球 Content 裡出現的盜壘描述樣式（見腳本開發時的抽樣統計）：
 # - 成功盜二／三壘："一壘跑者X 盜壘上二壘。"／"二壘跑者X 盜壘上三壘。"
-# - 雙盜壘時三壘跑者回本壘："三壘跑者X 雙盜壘回本壘得分。"
+# - 盜本壘："三壘跑者X 雙盜壘回本壘得分。"（雙盜壘的一環）／"三壘跑者X 盜壘回本壘得分。"（單獨盜本壘）
 # - 盜壘刺（任一壘出局）："X壘跑者Y出局-盜壘刺 N人出局。"
 # - 盜壘刺但因野手失誤反而安全上壘："X壘跑者Y 盜壘刺-因野手失誤進壘上N壘。"
 #   CPBL 官方 box score 仍把這次算進 StealBaseFailCnt（跑者被判出局在先，
@@ -43,8 +43,16 @@ from cpbl_row_filters import remove_administrative_rows
 # 選手名字（如「吉力吉撈．鞏冠」）比一般漢字姓名長，字數上限抓太緊會漏配；
 # 用「非句號」而非「任意字元」限制範圍，確保不會跨到下一個句子誤配。
 STEAL_SUCCESS_PATTERN = re.compile(r"[一二三]壘跑者[^。]{0,15}?盜壘上[二三]壘")
-STEAL_HOME_ON_DOUBLE_STEAL_PATTERN = re.compile(r"三壘跑者[^。]{0,15}?雙盜壘回本壘得分")
-STEAL_CAUGHT_PATTERN = re.compile(r"[一二三]壘跑者[^。]{0,15}?出局-盜壘刺")
+# 盜本壘有兩種寫法：雙盜壘的一環（「雙盜壘回本壘得分」）與單獨盜本壘（「盜壘回本壘得分」）。
+# 四季只有 1 次單獨盜本壘（2026 第 106 場），原本的樣式只認「雙」版，導致該場對帳差 1 次。
+# `(?:雙)?` 讓兩種寫法共用同一條樣式，且每次出現只計一次。
+STEAL_HOME_PATTERN = re.compile(r"三壘跑者[^。]{0,15}?(?:雙)?盜壘回本壘得分")
+# 絕大多數盜壘刺都寫成「X壘跑者…出局-盜壘刺」，但四季裡有 1 筆（2023 第 35 場，
+# 三振＋盜壘刺的雙殺）只寫「跑者…出局-盜壘刺」，沒標壘包，原樣式因此漏掉。
+# 壘包前綴改為選用即可涵蓋；`(?:[一二三]壘)?` 不會讓已標壘包的那種重複計數。
+# 註：`find_2out_first_base.py` 的 `is_steal_failure` 仍要求「一壘跑者」，不跟著放寬：
+# 研究範圍只取一壘跑者，沒標壘包的無法確認是哪一壘，保守排除才正確。
+STEAL_CAUGHT_PATTERN = re.compile(r"(?:[一二三]壘)?跑者[^。]{0,15}?出局-盜壘刺")
 STEAL_CAUGHT_ON_ERROR_PATTERN = re.compile(r"[一二三]壘跑者[^。]{0,15}?盜壘刺-因野手失誤")
 
 
@@ -58,7 +66,7 @@ def count_parsed_steals(rows: list[dict[str, Any]]) -> dict[str, dict[str, int]]
         side = str(row.get("VisitingHomeType") or "")
         bucket = counts.setdefault(side, {"success": 0, "caught": 0})
         bucket["success"] += len(STEAL_SUCCESS_PATTERN.findall(content))
-        bucket["success"] += len(STEAL_HOME_ON_DOUBLE_STEAL_PATTERN.findall(content))
+        bucket["success"] += len(STEAL_HOME_PATTERN.findall(content))
         bucket["caught"] += len(STEAL_CAUGHT_PATTERN.findall(content))
         bucket["caught"] += len(STEAL_CAUGHT_ON_ERROR_PATTERN.findall(content))
     return counts

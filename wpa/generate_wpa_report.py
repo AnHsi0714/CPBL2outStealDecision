@@ -29,10 +29,10 @@ TEMPLATE_PATH = ROOT / "templates" / "wpa_report.html"
 STYLE_PATH = ROOT / "templates" / "wpa_report.css"
 
 SEASONS = [
-    (2023, "A", 1, 300),
+    (2023, "A", 1, 360),
     (2024, "A", 1, 360),
     (2025, "A", 1, 360),
-    (2026, "A", 1, 240),
+    (2026, "A", 1, 360),
 ]
 
 MAX_PCT = 90.0

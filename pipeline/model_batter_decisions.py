@@ -499,7 +499,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--year", type=int, default=2026)
     parser.add_argument("--kind-code", default="A")
     parser.add_argument("--start", type=int, default=1)
-    parser.add_argument("--end", type=int, default=240)
+    parser.add_argument("--end", type=int, default=360)
     parser.add_argument("--cache-dir", type=Path)
     parser.add_argument(
         "--decision-csv",

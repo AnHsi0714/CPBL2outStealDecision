@@ -51,10 +51,10 @@ from find_2out_first_base import (
 
 
 DEFAULT_SEASONS = [
-    "2023:A:1:300",
+    "2023:A:1:360",
     "2024:A:1:360",
     "2025:A:1:360",
-    "2026:A:1:240",
+    "2026:A:1:360",
 ]
 
 SCORE_DIFF_CAP = 5
