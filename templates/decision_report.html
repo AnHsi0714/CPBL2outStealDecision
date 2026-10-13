@@ -30,11 +30,13 @@
         <article class="stat"><small>實際盜壘失敗</small><strong id="stat-failure-count"></strong><span id="stat-failure-rate"></span></article>
         <article class="stat"><small>情境損益兩平中位數</small><strong id="stat-threshold"></strong><span>每個情境先各自計算，再取中位數</span></article>
       </div>
+        <p class="takeaway" id="key-takeaway"></p>
         <p class="muted goto-note" style="margin-top:14px">以上是得分期望值（RE）版。第 4 局起建議改看 <a class="rc-goto" data-category="wpa" href="cpbl-wpa-decision-thresholds.html">勝率版（WPA）損益兩平門檻</a>，晚局門檻明顯較低。</p>
     </section>
 
     <section aria-labelledby="branches-title">
       <h2 id="branches-title">三種情況怎麼算</h2>
+      <p class="muted">把同一個比賽瞬間拆成三條路線，各自模擬到下一個進攻半局結束，數字是平均期望得分。</p>
       <div class="branches">
         <article class="branch success">
           <div class="branch-head"><h3>1 · 盜壘成功</h3><div class="branch-value" id="v-success"></div><small>平均期望得分</small></div>
@@ -87,11 +89,13 @@
         <div class="grid" id="substitution-stats" style="margin-top:14px"></div>
 
         <h3 style="margin-top:22px">逐棒次（1–9）損益兩平門檻中位數</h3>
+        <p class="muted">長條越長，門檻越高，代表越不該冒險盜壘。<span id="bar-axis-note"></span></p>
         <div id="lineup-bars" style="margin-top:12px"></div>
 
         <p class="muted" style="margin-top:12px">門檻最高在第 <span id="peak-slot"></span> 棒（<span id="peak-value"></span>），最低在第 <span id="trough-slot"></span> 棒（<span id="trough-value"></span>）。棒次影響兩件事：這棒自己的打擊價值，以及盜壘失敗後打席被保留到下一局的影響。</p>
 
         <h3 style="margin-top:28px">分組比較</h3>
+        <p class="muted">差異為正，代表組一的門檻較高，也就是比較不該冒險。</p>
         <div class="table-wrap">
           <table>
             <thead><tr><th>比較</th><th>組一</th><th>組二</th><th>差異（組一－組二）</th><th>p 值（Mann-Whitney U）</th></tr></thead>
@@ -157,6 +161,15 @@
           </div>
           <p class="muted" style="margin-top:14px" id="runner-unresolved-note"></p>
         </details>
+      </div>
+    </section>
+
+    <section id="handedness-section" aria-labelledby="handedness-title" hidden>
+      <h2 id="handedness-title">左投還是右投：跑得掉的機率不同</h2>
+      <div class="panel">
+        <p class="muted">只看投手慣用手對「跑不跑得掉」的影響。門檻由打者決定，不會因投手而變，變的是跑者達不達得到門檻。範圍是一壘盜二壘，不限出局數。</p>
+        <div class="grid" id="handedness-cards"></div>
+        <p class="muted" id="handedness-note" style="margin-top:14px"></p>
       </div>
     </section>
 

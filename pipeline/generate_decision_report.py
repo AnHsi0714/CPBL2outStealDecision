@@ -144,6 +144,22 @@ def encode_cases(cases: list[dict[str, Any]]) -> dict[str, Any]:
     return {"fields": fields, "strFields": len(CASE_STRING_FIELDS), "strings": strings, "rows": rows}
 
 
+def load_handedness(path: Path) -> dict[str, Any] | None:
+    """左右投對跑者盜二壘的聯盟層級數字（analysis/analyze_pitcher_handedness.py 的單季摘要）。"""
+    if not path.exists():
+        return None
+    data = json.loads(path.read_text(encoding="utf-8-sig"))
+    by_hand = data.get("league_by_pitcher_hand") or {}
+    keep = ("attempts", "success", "caught", "successRate", "attemptRatePerPitch", "pickoffThrowRate")
+    result = {}
+    for hand in ("LHP", "RHP"):
+        row = by_hand.get(hand)
+        if not row:
+            return None
+        result[hand] = {key: row.get(key) for key in keep}
+    return result
+
+
 def load_re24_validation(path: Path) -> dict[str, Any] | None:
     if not path.exists():
         return None
@@ -307,6 +323,7 @@ def generate_report(
     team_decisions_json: Path | None = None,
     runner_qualification_json: Path | None = None,
     batter_types_csv: Path | None = None,
+    handedness_json: Path | None = None,
 ) -> dict[str, Any]:
     with model_csv.open("r", encoding="utf-8-sig", newline="") as handle:
         rows = list(csv.DictReader(handle))
@@ -361,6 +378,7 @@ def generate_report(
         runner_qualification,
         batter_types,
     )
+    payload["handedness"] = load_handedness(handedness_json) if handedness_json else None
     payload_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     payload_json = payload_json.replace("</", "<\\/")
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
@@ -420,6 +438,7 @@ def main() -> int:
         args.runner_qualification_json or ROOT / "outputs" / f"cpbl_runner_steal_rates_{stem}.json"
     )
     batter_types_csv = args.batter_types_csv or ROOT / "outputs" / f"cpbl_batter_types_{stem}.csv"
+    handedness_json = ROOT / "outputs" / f"cpbl_runner_handedness_{stem}_summary.json"
     output = args.output or ROOT / "reports" / f"cpbl-steal-decision-{args.year}.html"
     payload = generate_report(
         model_csv,
@@ -431,6 +450,7 @@ def main() -> int:
         team_decisions_json,
         runner_qualification_json,
         batter_types_csv,
+        handedness_json,
     )
     print(
         f"Wrote {output} with {payload['meta']['samples']} cases; "

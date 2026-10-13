@@ -178,11 +178,14 @@
         `;
       }
 
-      const maxMedian = Math.max(...segments.lineupSlots.map((s) => s.median ?? 0));
+      const medians = segments.lineupSlots.map((s) => s.median).filter((v) => v !== null);
+      const hi = Math.max(...medians);
+      const lo = Math.max(0, Math.floor((Math.min(...medians) - 0.03) * 20) / 20);
+      $('bar-axis-note').textContent = `長條從 ${pct(lo, 0)} 起算，方便看出棒次間的差異。`;
       $('lineup-bars').innerHTML = segments.lineupSlots.map((s) => `
         <div class="bar-row">
           <span>第 ${s.slot} 棒</span>
-          <div class="track"><div class="bar neutral" style="width:${maxMedian ? (s.median / maxMedian) * 100 : 0}%"></div></div>
+          <div class="track"><div class="bar neutral" style="width:${s.median === null ? 0 : Math.max(4, ((s.median - lo) / (hi - lo)) * 100)}%"></div></div>
           <strong>${s.median === null ? '無' : pct(s.median)}</strong>
         </div>
       `).join('');
@@ -371,11 +374,42 @@
       }
     }
 
+    function fillTakeaway() {
+      const a = REPORT.aggregate;
+      const attempts = a.outcomes.steal_success + a.outcomes.steal_failure;
+      if (!attempts) return;
+      const rate = a.outcomes.steal_success / attempts;
+      const above = rate >= a.medianThreshold;
+      $('key-takeaway').innerHTML = `<strong>重點：</strong>實際成功率 ${pct(rate)}（${attempts.toLocaleString()} 次嘗試）${above ? '高於' : '低於'}情境門檻中位數 ${pct(a.medianThreshold)}，${above ? '這個情境下盜壘整體划算；真正要看的是哪些棒次、哪些打者更適合跑，往下看。' : '整體而言，這個情境下盜壘不夠划算；往下看哪些棒次與打者例外。'}`;
+    }
+
+    function fillHandedness() {
+      const h = REPORT.handedness;
+      if (!h) return;
+      $('handedness-section').hidden = false;
+      const L = h.LHP, R = h.RHP;
+      const gap = (R.successRate - L.successRate) * 100;
+      $('handedness-cards').innerHTML = `
+        <article class="stat"><small>對左投成功率</small><strong>${pct(L.successRate)}</strong><span>${L.success} 成功／${L.attempts} 次嘗試</span></article>
+        <article class="stat"><small>對右投成功率</small><strong>${pct(R.successRate)}</strong><span>${R.success} 成功／${R.attempts} 次嘗試</span></article>
+        <article class="stat"><small>成功率差距</small><strong>${gap >= 0 ? '+' : ''}${gap.toFixed(1)} pp</strong><span>右投減左投，單位為百分點</span></article>
+        <article class="stat"><small>每球嘗試率（左／右）</small><strong>${pct(L.attemptRatePerPitch, 2)}／${pct(R.attemptRatePerPitch, 2)}</strong><span>一壘有人時，每球發動盜壘的比例</span></article>`;
+      const thr = REPORT.aggregate.medianThreshold;
+      const cmp = (name, row) => {
+        const diff = row.successRate - thr;
+        const rel = Math.abs(diff) < 0.01 ? '與' : (diff > 0 ? '高於' : '低於');
+        return `${name}成功率 ${pct(row.successRate)} ${rel}門檻中位數${Math.abs(diff) < 0.01 ? '相當' : ''}`;
+      };
+      $('handedness-note').textContent = `對照門檻中位數 ${pct(thr)}：${cmp('對右投', R)}，${cmp('對左投', L)}。左投面對一壘跑者是正面朝向，牽制與起跑時機都比較難抓。`;
+    }
+
     fillAggregate();
+    fillTakeaway();
     fillValidation();
     fillTeamDecisions();
     fillSegments();
     fillRunnerQualification();
+    fillHandedness();
     $('runner-search').addEventListener('input', renderRunnerTable);
     $('runner-filter').addEventListener('change', renderRunnerTable);
     fillFilterOptions();

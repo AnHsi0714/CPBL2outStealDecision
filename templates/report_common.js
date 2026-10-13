@@ -10,6 +10,10 @@
     '決策當下為該棒次先發打者': '決策時站在打擊區的是該棒次的先發球員，不是代打或換人',
     '代打／換人後才上場': '決策時站在打擊區的是代打或換人後才上場的球員',
     '代打比例最高的棒次': '該棒次的決策中，非先發球員的比例最高',
+    '對左投成功率': '面對左投時，一壘跑者盜二壘的成功比例',
+    '對右投成功率': '面對右投時，一壘跑者盜二壘的成功比例',
+    '成功率差距': '右投成功率減左投成功率，單位是百分點（pp）',
+    '每球嘗試率（左／右）': '一壘有人時，平均每投一球就有多少機率發動盜壘',
     'N': '樣本數：這個格子實際觀測到的次數，越少數字越不穩定',
     'n': '樣本數：這個格子實際觀測到的次數，越少數字越不穩定',
     'SD': '標準差：同一局面下得分的分散程度，越大代表結果越難預測',
@@ -137,6 +141,17 @@
     tip.style.left = left + 'px';
     tip.style.top = top + 'px';
     tip.classList.add('show');
+  });
+  // 觸控裝置沒有 hover：點一下顯示提示，點別處關閉
+  doc.addEventListener('click', function (e) {
+    var t = e.target.closest && e.target.closest(TIP_TARGETS);
+    if (!t) { if (tipEl) tipEl.classList.remove('show'); currentTarget = null; return; }
+    if (currentTarget === t && tipEl && tipEl.classList.contains('show') && !(window.matchMedia && window.matchMedia('(hover: hover)').matches)) {
+      tipEl.classList.remove('show'); currentTarget = null; return;
+    }
+    if (window.matchMedia && window.matchMedia('(hover: hover)').matches) return;
+    currentTarget = null;
+    t.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
   });
   doc.addEventListener('mouseout', function (e) {
     if (!currentTarget) return;
