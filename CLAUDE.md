@@ -59,6 +59,20 @@ python -m unittest tests.test_model_batter_decisions
 6. `pipeline/compare_groups.py` → `cpbl_group_comparison_{tag}.json`（注意：預設 `--input` 是 step 4 的檔案，要納入先發/代打欄位須顯式指定 step 5 的輸出）
 7. `pipeline/generate_decision_report.py` → `reports/cpbl-steal-decision-{year}.html`（單檔互動報告，payload 內嵌 JSON）
 
+完整指令範例（以 2025 為例，各步驟都帶滿 `--year/--start/--end`）：
+
+```bash
+python scrapers/find_2out_first_base.py --year 2025 --start 1 --end 360
+python pipeline/model_batter_decisions.py --year 2025 --start 1 --end 360
+python pipeline/analyze_batter_types.py --year 2025 --start 1 --end 360
+python pipeline/join_decision_batter_types.py --year 2025 --start 1 --end 360
+python pipeline/flag_lineup_substitutions.py --year 2025 --start 1 --end 360
+python pipeline/compare_groups.py --year 2025 --start 1 --end 360   --input outputs/cpbl_decision_with_starter_flag_2025_A_1-360.csv
+python pipeline/generate_decision_report.py --year 2025 --start 1 --end 360
+```
+
+全新 clone 沒有原始資料快取（`data/raw/` 不進版控），第一次跑步驟 1 會逐場請求 CPBL 官網，360 場約需數十分鐘。
+
 `scrapers/CPBL_steal_getData.py`（原名 `getData.py`，跨聯盟整併時改名）是獨立的通用逐球匯出（playbyplay / scoreboard / batting CSV），不在上述管線內；參數寫死在檔案最下方，非 argparse。`scrapers/KBO_steal_getData.py`／`scrapers/MLB_steal_getData.py` 是同模式的另兩個聯盟爬蟲，`scrapers/combine_leagues.py` 把三份 playbyplay 統一欄位後合併（合併檔本身沒有往下用；MLB／KBO 的門檻結果是走各自的並行管線跑出來的，見下方「跨聯盟（MLB／KBO）並行腳本」）。
 
 ### 主管線之外的分析腳本
