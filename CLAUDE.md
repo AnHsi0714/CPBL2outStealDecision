@@ -19,7 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pipeline/`：主管線 step 2–7（`model_batter_decisions.py` 到 `generate_decision_report.py`）
 - `re24/`、`win_expectancy/`、`wpa/`：對應同名分析區塊（見下方「主管線之外的分析腳本」）
 - `analysis/`：主管線之外、不屬於上述三類的獨立分析／驗證腳本
-- 根目錄：僅 `generate_full_report.py`（彙整 `reports/` 底下既有報告，不屬於單一功能分類）與本檔案、README 等文件
+- 根目錄：僅 `generate_all_leagues_report.py`（把 CPBL／MLB／KBO 的既有報告整合成單一入口 `reports/all-leagues-report.html`，右上角標籤切換聯盟；重用 `generate_full_report.py` 的分類掃描與 `templates/full_report.*`，不屬於單一功能分類）、`generate_full_report.py`、`league_relabel.py` 與本檔案、README 等文件
 
 各資料夾內的腳本仍用原本扁平的 `from find_2out_first_base import x` 這類寫法互相 import，**不是** Python package（沒有 `__init__.py` 賦予的套件語意）。能這樣運作是因為根目錄的 `pathsetup.py` 會把六個資料夾都加進 `sys.path`；每支被搬動過的腳本與 `tests/` 下的測試檔開頭都有一行 `import pathsetup` 觸發這件事。**新增腳本或測試檔時比照既有檔案在檔案最前面（`from __future__ import annotations` 之後、其餘 import 之前）加上同一行**，否則 cross-folder import 會找不到模組。執行方式不變，一律 `python <資料夾>/<script>.py --參數`（例如 `python pipeline/model_batter_decisions.py ...`），不要用 `python -m`。
 
@@ -93,7 +93,7 @@ MLB、KBO 沿用 `mlb_`／`kbo_` 前綴的並行腳本，數學部分（模擬�
 - MLB：`scrapers/mlb_find_2out_first_base.py`（Gumbo 快取 `data/raw/mlb/{start}_{end}/`）→ `pipeline/mlb_model_batter_decisions.py` → `bash pipeline/run_mlb_season.sh <年>`（類型、join、先發標記、分組比較、各隊決策、保留效應、WPA、跑者名單、決策報告一次跑完）。檔名標籤是日期區間 `YYYY-03-15_YYYY-10-10`。
 - KBO：`scrapers/KBO_crawl_seasons.py`（HTML 快取 `data/raw/kbo/{年}/`）→ `scrapers/kbo_find_2out_first_base.py` → `pipeline/kbo_model_batter_decisions.py` → `bash pipeline/run_kbo_season.sh <年>`。檔名標籤是年份。
 - RE24／WE：`re24/{mlb,kbo}_build_re24_matrix.py`、`re24/{mlb,kbo}_validate_re24_simulation.py`、`win_expectancy/{mlb,kbo}_build_win_expectancy_matrix.py`（四季合併）。**引擎驗證（模擬 RE24 對真實 RE24）是 MLB／KBO 解析正確性的檢查點**，每次動解析邏輯後都要重跑。
-- 報告：決策／RE24／WE 報告用 CPBL 版產生器產出後以 `league_relabel.py` 換標籤；WPA 報告用 `wpa/generate_league_wpa_report.py`（CPBL 版模板寫死 CPBL 結論，不可直接換標籤）；入口頁 `generate_league_full_report.py mlb|kbo`。
+- 報告：決策／RE24／WE 報告用 CPBL 版產生器產出後以 `league_relabel.py` 換標籤；WPA 報告用 `wpa/generate_league_wpa_report.py`（CPBL 版模板寫死 CPBL 結論，不可直接換標籤）；入口頁只有 `reports/all-leagues-report.html`（`python generate_all_leagues_report.py` 產生），不再有各聯盟自己的 `*-full-report.html`。
 - 通用腳本（`join_decision_batter_types.py`、`compare_groups.py`、`analyze_team_decisions.py` 等）只吃 CPBL 的 `{year}_{kind}_{start}-{end}` 標籤、輸出 `cpbl_` 檔名；`run_*_season.sh` 會輸出到暫存目錄再改名成 `mlb_`／`kbo_`，不要直接對它們傳 MLB／KBO 檔案後留在 `outputs/`。
 
 必須知道的陷阱：

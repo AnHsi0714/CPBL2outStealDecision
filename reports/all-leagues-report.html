@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>三聯盟盜壘決策報告</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f1ea;
+      --surface: #fffdf8;
+      --text: #18201c;
+      --muted: #65706a;
+      --line: #d9d4c9;
+      --accent: #d59c25;
+      --shadow: 0 14px 35px rgba(43, 49, 45, .09);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111512;
+        --surface: #1a201c;
+        --text: #edf2ee;
+        --muted: #aab5ae;
+        --line: #39423c;
+        --accent: #efbd55;
+        --shadow: none;
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      line-height: 1.65;
+    }
+    .wrap { width: 100%; margin: 0 auto; padding: 0 8px; }
+    header { flex: none; padding: 22px 0 0; border-bottom: 1px solid var(--line); }
+    .title-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+    .eyebrow { color: var(--accent); font-weight: 700; letter-spacing: .08em; font-size: .8rem; white-space: nowrap; }
+    h1 { margin: 0; font-size: clamp(1.3rem, 2.6vw, 1.8rem); line-height: 1.2; letter-spacing: -.015em; }
+
+    .tabs-row { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin: 16px 0 0; padding-bottom: 4px; }
+
+    .tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+    .tab {
+      appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--text);
+      font: inherit; font-size: .88rem; font-weight: 600; padding: 8px 16px; border-radius: 8px 8px 0 0;
+      border-bottom: none; cursor: pointer; transition: background .15s ease, color .15s ease;
+    }
+    .tab:hover { background: var(--bg); }
+    .tab[aria-selected="true"] { background: var(--accent); color: #18201c; }
+
+    .sub-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 14px; border-left: 1px solid var(--line); }
+    .sub-tab {
+      appearance: none; border: 1px solid var(--line); background: var(--bg); color: var(--text);
+      font: inherit; font-size: .78rem; font-weight: 600; padding: 4px 12px; border-radius: 999px; cursor: pointer;
+    }
+    .sub-tab[aria-selected="true"] { background: var(--text); color: var(--surface); border-color: var(--text); }
+
+    main {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      width: 100%;
+      padding: 0 8px;
+    }
+
+    .frame-panel {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 70vh;
+      margin: 8px -8px 0;
+      background: var(--surface); border-top: 1px solid var(--line);
+    }
+    .frame-toolbar {
+      flex: none;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 6px 16px; border-bottom: 1px solid var(--line); font-size: .82rem; color: var(--muted);
+    }
+    .frame-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .frame-toolbar a { flex: none; color: var(--accent); text-decoration: none; font-weight: 600; }
+    .frame-toolbar a:hover { text-decoration: underline; }
+    .report-frame { flex: 1 1 auto; display: block; width: 100%; height: 100%; border: 0; background: var(--bg); }
+
+    .league-tabs { display: flex; gap: 6px; margin-left: auto; }
+    .league-tabs button { font: inherit; font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+      padding: 5px 14px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--text); cursor: pointer; }
+    .league-tabs button[aria-selected="true"] { background: var(--text); color: var(--surface); border-color: var(--text); }
+    .league-tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .title-row { align-items: center; }
+
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="title-row">
+        <h1>兩出局、僅一壘有人，盜壘該不該跑？</h1>
+        <div class="eyebrow" id="league-eyebrow"></div>
+        <nav class="league-tabs" id="league-tabs" aria-label="聯盟"><button type="button" data-league="cpbl" aria-selected="false">cpbl</button><button type="button" data-league="mlb" aria-selected="false">mlb</button><button type="button" data-league="kbo" aria-selected="false">kbo</button></nav>
+      </div>
+      <div class="tabs-row">
+        <nav class="tabs" id="primary-tabs"></nav>
+        <div class="sub-tabs" id="secondary-tabs" hidden></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="frame-panel">
+      <div class="frame-toolbar">
+        <span id="frame-current-label" class="frame-label"></span>
+        <a id="frame-open-new" href="#" target="_blank" rel="noopener">在新分頁開啟 ↗</a>
+      </div>
+      <iframe id="report-frame" class="report-frame" title="報告內容"></iframe>
+    </div>
+  </main>
+
+  <script id="categories-data" type="application/json">{"cpbl": [{"id": "decision", "label": "盜壘決策報告", "description": "三分支模擬（成功／失敗／不跑）、棒次 × 打者類型分組、六隊決策品質、符合門檻的跑者名單。", "variants": [{"year": "2023", "file": "cpbl-steal-decision-2023.html"}, {"year": "2024", "file": "cpbl-steal-decision-2024.html"}, {"year": "2025", "file": "cpbl-steal-decision-2025.html"}, {"year": "2026", "file": "cpbl-steal-decision-2026.html"}], "defaultIndex": 2}, {"id": "re24", "label": "RE24 矩陣", "description": "24 格 base-out 期望得分熱力圖，以及未計保留效應的基礎損益兩平門檻。", "variants": [{"year": "2023", "file": "cpbl-re24-matrix-2023.html"}, {"year": "2024", "file": "cpbl-re24-matrix-2024.html"}, {"year": "2025", "file": "cpbl-re24-matrix-2025.html"}, {"year": "2026", "file": "cpbl-re24-matrix-2026.html"}], "defaultIndex": 2}, {"id": "we", "label": "勝率增值矩陣（WE）", "description": "局數 × 攻守方 × 分差 × 出局 × 壘包，合併四季推回的進攻方最終獲勝機率。", "variants": [{"year": null, "file": "cpbl-win-expectancy-matrix.html"}], "defaultIndex": 0}, {"id": "wpa", "label": "WPA 版損益兩平門檻", "description": "第 2–8 局改以勝率增值取代得分期望值當判準，含四季逐局 bootstrap 信賴區間比較。", "variants": [{"year": null, "file": "cpbl-wpa-decision-thresholds.html"}], "defaultIndex": 0}], "mlb": [{"id": "decision", "label": "盜壘決策報告", "description": "三分支模擬（成功／失敗／不跑）、棒次 × 打者類型分組、六隊決策品質、符合門檻的跑者名單。", "variants": [{"year": "2023", "file": "mlb-steal-decision-2023.html"}, {"year": "2024", "file": "mlb-steal-decision-2024.html"}, {"year": "2025", "file": "mlb-steal-decision-2025.html"}, {"year": "2026", "file": "mlb-steal-decision-2026.html"}], "defaultIndex": 2}, {"id": "re24", "label": "RE24 矩陣", "description": "24 格 base-out 期望得分熱力圖，以及未計保留效應的基礎損益兩平門檻。", "variants": [{"year": "2023", "file": "mlb-re24-matrix-2023.html"}, {"year": "2024", "file": "mlb-re24-matrix-2024.html"}, {"year": "2025", "file": "mlb-re24-matrix-2025.html"}, {"year": "2026", "file": "mlb-re24-matrix-2026.html"}], "defaultIndex": 2}, {"id": "we", "label": "勝率增值矩陣（WE）", "description": "局數 × 攻守方 × 分差 × 出局 × 壘包，合併四季推回的進攻方最終獲勝機率。", "variants": [{"year": null, "file": "mlb-win-expectancy-matrix.html"}], "defaultIndex": 0}, {"id": "wpa", "label": "WPA 版損益兩平門檻", "description": "第 2–8 局改以勝率增值取代得分期望值當判準，含四季逐局 bootstrap 信賴區間比較。", "variants": [{"year": null, "file": "mlb-wpa-decision-thresholds.html"}], "defaultIndex": 0}], "kbo": [{"id": "decision", "label": "盜壘決策報告", "description": "三分支模擬（成功／失敗／不跑）、棒次 × 打者類型分組、六隊決策品質、符合門檻的跑者名單。", "variants": [{"year": "2023", "file": "kbo-steal-decision-2023.html"}, {"year": "2024", "file": "kbo-steal-decision-2024.html"}, {"year": "2025", "file": "kbo-steal-decision-2025.html"}, {"year": "2026", "file": "kbo-steal-decision-2026.html"}], "defaultIndex": 2}, {"id": "re24", "label": "RE24 矩陣", "description": "24 格 base-out 期望得分熱力圖，以及未計保留效應的基礎損益兩平門檻。", "variants": [{"year": "2023", "file": "kbo-re24-matrix-2023.html"}, {"year": "2024", "file": "kbo-re24-matrix-2024.html"}, {"year": "2025", "file": "kbo-re24-matrix-2025.html"}, {"year": "2026", "file": "kbo-re24-matrix-2026.html"}], "defaultIndex": 2}, {"id": "we", "label": "勝率增值矩陣（WE）", "description": "局數 × 攻守方 × 分差 × 出局 × 壘包，合併四季推回的進攻方最終獲勝機率。", "variants": [{"year": null, "file": "kbo-win-expectancy-matrix.html"}], "defaultIndex": 0}, {"id": "wpa", "label": "WPA 版損益兩平門檻", "description": "第 2–8 局改以勝率增值取代得分期望值當判準，含四季逐局 bootstrap 信賴區間比較。", "variants": [{"year": null, "file": "kbo-wpa-decision-thresholds.html"}], "defaultIndex": 0}]}</script>
+  <script>
+const allLeagues = JSON.parse(document.getElementById("categories-data").textContent);
+let categories = [];
+
+const primaryTabs = document.getElementById("primary-tabs");
+const secondaryTabs = document.getElementById("secondary-tabs");
+const frame = document.getElementById("report-frame");
+const frameLabel = document.getElementById("frame-current-label");
+const frameOpenNew = document.getElementById("frame-open-new");
+
+let activeCategoryId = null;
+
+function categoryById(id) {
+  return categories.find((c) => c.id === id);
+}
+
+function renderPrimaryTabs() {
+  primaryTabs.querySelectorAll(".tab").forEach((btn) => {
+    btn.setAttribute("aria-selected", btn.dataset.cat === activeCategoryId ? "true" : "false");
+  });
+}
+
+function renderSecondaryTabs() {
+  const cat = categoryById(activeCategoryId);
+  const hasYearTabs = cat.variants.length > 1;
+  if (!hasYearTabs) {
+    secondaryTabs.hidden = true;
+    secondaryTabs.innerHTML = "";
+    return;
+  }
+  secondaryTabs.hidden = false;
+  secondaryTabs.innerHTML = cat.variants
+    .map(
+      (v, i) =>
+        `<button type="button" class="sub-tab" data-idx="${i}" aria-selected="${i === cat.defaultIndex ? "true" : "false"}">${v.year}</button>`
+    )
+    .join("");
+}
+
+function selectVariant(cat, index) {
+  const variant = cat.variants[index] || cat.variants[0];
+  const label = variant.year ? `${cat.label}・${variant.year}` : cat.label;
+  frameLabel.textContent = `${label}｜${cat.description}`;
+  frameLabel.title = cat.description;
+  frameOpenNew.href = variant.file;
+  frame.src = variant.file;
+  secondaryTabs.querySelectorAll(".sub-tab").forEach((btn) => {
+    btn.setAttribute("aria-selected", Number(btn.dataset.idx) === index ? "true" : "false");
+  });
+}
+
+function activateCategory(id) {
+  activeCategoryId = id;
+  const cat = categoryById(id);
+  renderPrimaryTabs();
+  renderSecondaryTabs();
+  selectVariant(cat, cat.defaultIndex);
+}
+
+secondaryTabs.addEventListener("click", (event) => {
+  const btn = event.target.closest(".sub-tab");
+  if (!btn) return;
+  selectVariant(categoryById(activeCategoryId), Number(btn.dataset.idx));
+});
+
+
+const leagueTabs = document.getElementById("league-tabs");
+
+function renderPrimaryButtons() {
+  primaryTabs.innerHTML = categories
+    .map((c) => `<button type="button" class="tab" data-cat="${c.id}" aria-selected="false">${c.label}</button>`)
+    .join("");
+  primaryTabs.querySelectorAll(".tab").forEach((btn) => {
+    btn.addEventListener("click", () => activateCategory(btn.dataset.cat));
+  });
+}
+
+function activateLeague(league) {
+  if (!allLeagues[league]) league = Object.keys(allLeagues)[0];
+  categories = allLeagues[league];
+  leagueTabs.querySelectorAll("button").forEach((btn) => {
+    btn.setAttribute("aria-selected", btn.dataset.league === league ? "true" : "false");
+  });
+  document.getElementById("league-eyebrow").textContent = league.toUpperCase() + " · 2 OUT, RUNNER ON FIRST";
+  try { history.replaceState(null, "", "#" + league); } catch (e) {}
+  renderPrimaryButtons();
+  activateCategory(categories[0].id);
+}
+
+leagueTabs.addEventListener("click", (event) => {
+  const btn = event.target.closest("button");
+  if (btn) activateLeague(btn.dataset.league);
+});
+
+activateLeague(location.hash.replace("#", ""));
+
+  </script>
+</body>
+</html>
