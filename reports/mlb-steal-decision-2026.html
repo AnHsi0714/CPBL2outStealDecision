@@ -87,6 +87,7 @@
     .team-name[title] { text-decoration: underline dotted; text-underline-offset: 4px; }
     #validation-stats { grid-template-columns: repeat(2, 1fr); }
     #validation-stats .stat strong { white-space: nowrap; }
+    .takeaway { margin: 14px 0 0; padding: 14px 18px; border-left: 5px solid var(--accent); background: var(--surface); font-size: 1.02rem; }
     .goto-note a { color: var(--text); text-underline-offset: 3px; }
     .team-dot { display: inline-block; width: 12px; height: 12px; margin-right: 8px; vertical-align: -1px; border: 1px solid color-mix(in srgb, var(--text) 45%, transparent); }
     .bar-row { display: grid; grid-template-columns: 96px 1fr 72px; align-items: center; gap: 12px; margin: 16px 0; }
@@ -240,11 +241,13 @@
         <article class="stat"><small>實際盜壘失敗</small><strong id="stat-failure-count"></strong><span id="stat-failure-rate"></span></article>
         <article class="stat"><small>情境損益兩平中位數</small><strong id="stat-threshold"></strong><span>每個情境先各自計算，再取中位數</span></article>
       </div>
+        <p class="takeaway" id="key-takeaway"></p>
         <p class="muted goto-note" style="margin-top:14px">以上是得分期望值（RE）版。第 4 局起建議改看 <a class="rc-goto" data-category="wpa" href="mlb-wpa-decision-thresholds.html">勝率版（WPA）損益兩平門檻</a>，晚局門檻明顯較低。</p>
     </section>
 
     <section aria-labelledby="branches-title">
       <h2 id="branches-title">三種情況怎麼算</h2>
+      <p class="muted">把同一個比賽瞬間拆成三條路線，各自模擬到下一個進攻半局結束，數字是平均期望得分。</p>
       <div class="branches">
         <article class="branch success">
           <div class="branch-head"><h3>1 · 盜壘成功</h3><div class="branch-value" id="v-success"></div><small>平均期望得分</small></div>
@@ -297,11 +300,13 @@
         <div class="grid" id="substitution-stats" style="margin-top:14px"></div>
 
         <h3 style="margin-top:22px">逐棒次（1–9）損益兩平門檻中位數</h3>
+        <p class="muted">長條越長，門檻越高，代表越不該冒險盜壘。<span id="bar-axis-note"></span></p>
         <div id="lineup-bars" style="margin-top:12px"></div>
 
         <p class="muted" style="margin-top:12px">門檻最高在第 <span id="peak-slot"></span> 棒（<span id="peak-value"></span>），最低在第 <span id="trough-slot"></span> 棒（<span id="trough-value"></span>）。棒次影響兩件事：這棒自己的打擊價值，以及盜壘失敗後打席被保留到下一局的影響。</p>
 
         <h3 style="margin-top:28px">分組比較</h3>
+        <p class="muted">差異為正，代表組一的門檻較高，也就是比較不該冒險。</p>
         <div class="table-wrap">
           <table>
             <thead><tr><th>比較</th><th>組一</th><th>組二</th><th>差異（組一－組二）</th><th>p 值（Mann-Whitney U）</th></tr></thead>
@@ -367,6 +372,15 @@
           </div>
           <p class="muted" style="margin-top:14px" id="runner-unresolved-note"></p>
         </details>
+      </div>
+    </section>
+
+    <section id="handedness-section" aria-labelledby="handedness-title" hidden>
+      <h2 id="handedness-title">左投還是右投：跑得掉的機率不同</h2>
+      <div class="panel">
+        <p class="muted">只看投手慣用手對「跑不跑得掉」的影響。門檻由打者決定，不會因投手而變，變的是跑者達不達得到門檻。範圍是一壘盜二壘，不限出局數。</p>
+        <div class="grid" id="handedness-cards"></div>
+        <p class="muted" id="handedness-note" style="margin-top:14px"></p>
       </div>
     </section>
 
@@ -620,11 +634,14 @@
         `;
       }
 
-      const maxMedian = Math.max(...segments.lineupSlots.map((s) => s.median ?? 0));
+      const medians = segments.lineupSlots.map((s) => s.median).filter((v) => v !== null);
+      const hi = Math.max(...medians);
+      const lo = Math.max(0, Math.floor((Math.min(...medians) - 0.03) * 20) / 20);
+      $('bar-axis-note').textContent = `長條從 ${pct(lo, 0)} 起算，方便看出棒次間的差異。`;
       $('lineup-bars').innerHTML = segments.lineupSlots.map((s) => `
         <div class="bar-row">
           <span>第 ${s.slot} 棒</span>
-          <div class="track"><div class="bar neutral" style="width:${maxMedian ? (s.median / maxMedian) * 100 : 0}%"></div></div>
+          <div class="track"><div class="bar neutral" style="width:${s.median === null ? 0 : Math.max(4, ((s.median - lo) / (hi - lo)) * 100)}%"></div></div>
           <strong>${s.median === null ? '無' : pct(s.median)}</strong>
         </div>
       `).join('');
@@ -813,11 +830,42 @@
       }
     }
 
+    function fillTakeaway() {
+      const a = REPORT.aggregate;
+      const attempts = a.outcomes.steal_success + a.outcomes.steal_failure;
+      if (!attempts) return;
+      const rate = a.outcomes.steal_success / attempts;
+      const above = rate >= a.medianThreshold;
+      $('key-takeaway').innerHTML = `<strong>重點：</strong>實際成功率 ${pct(rate)}（${attempts.toLocaleString()} 次嘗試）${above ? '高於' : '低於'}情境門檻中位數 ${pct(a.medianThreshold)}，${above ? '這個情境下盜壘整體划算；真正要看的是哪些棒次、哪些打者更適合跑，往下看。' : '整體而言，這個情境下盜壘不夠划算；往下看哪些棒次與打者例外。'}`;
+    }
+
+    function fillHandedness() {
+      const h = REPORT.handedness;
+      if (!h) return;
+      $('handedness-section').hidden = false;
+      const L = h.LHP, R = h.RHP;
+      const gap = (R.successRate - L.successRate) * 100;
+      $('handedness-cards').innerHTML = `
+        <article class="stat"><small>對左投成功率</small><strong>${pct(L.successRate)}</strong><span>${L.success} 成功／${L.attempts} 次嘗試</span></article>
+        <article class="stat"><small>對右投成功率</small><strong>${pct(R.successRate)}</strong><span>${R.success} 成功／${R.attempts} 次嘗試</span></article>
+        <article class="stat"><small>成功率差距</small><strong>${gap >= 0 ? '+' : ''}${gap.toFixed(1)} pp</strong><span>右投減左投，單位為百分點</span></article>
+        <article class="stat"><small>每球嘗試率（左／右）</small><strong>${pct(L.attemptRatePerPitch, 2)}／${pct(R.attemptRatePerPitch, 2)}</strong><span>一壘有人時，每球發動盜壘的比例</span></article>`;
+      const thr = REPORT.aggregate.medianThreshold;
+      const cmp = (name, row) => {
+        const diff = row.successRate - thr;
+        const rel = Math.abs(diff) < 0.01 ? '與' : (diff > 0 ? '高於' : '低於');
+        return `${name}成功率 ${pct(row.successRate)} ${rel}門檻中位數${Math.abs(diff) < 0.01 ? '相當' : ''}`;
+      };
+      $('handedness-note').textContent = `對照門檻中位數 ${pct(thr)}：${cmp('對右投', R)}，${cmp('對左投', L)}。左投面對一壘跑者是正面朝向，牽制與起跑時機都比較難抓。`;
+    }
+
     fillAggregate();
+    fillTakeaway();
     fillValidation();
     fillTeamDecisions();
     fillSegments();
     fillRunnerQualification();
+    fillHandedness();
     $('runner-search').addEventListener('input', renderRunnerTable);
     $('runner-filter').addEventListener('change', renderRunnerTable);
     fillFilterOptions();
@@ -847,6 +895,10 @@
     '決策當下為該棒次先發打者': '決策時站在打擊區的是該棒次的先發球員，不是代打或換人',
     '代打／換人後才上場': '決策時站在打擊區的是代打或換人後才上場的球員',
     '代打比例最高的棒次': '該棒次的決策中，非先發球員的比例最高',
+    '對左投成功率': '面對左投時，一壘跑者盜二壘的成功比例',
+    '對右投成功率': '面對右投時，一壘跑者盜二壘的成功比例',
+    '成功率差距': '右投成功率減左投成功率，單位是百分點（pp）',
+    '每球嘗試率（左／右）': '一壘有人時，平均每投一球就有多少機率發動盜壘',
     'N': '樣本數：這個格子實際觀測到的次數，越少數字越不穩定',
     'n': '樣本數：這個格子實際觀測到的次數，越少數字越不穩定',
     'SD': '標準差：同一局面下得分的分散程度，越大代表結果越難預測',
@@ -974,6 +1026,17 @@
     tip.style.left = left + 'px';
     tip.style.top = top + 'px';
     tip.classList.add('show');
+  });
+  // 觸控裝置沒有 hover：點一下顯示提示，點別處關閉
+  doc.addEventListener('click', function (e) {
+    var t = e.target.closest && e.target.closest(TIP_TARGETS);
+    if (!t) { if (tipEl) tipEl.classList.remove('show'); currentTarget = null; return; }
+    if (currentTarget === t && tipEl && tipEl.classList.contains('show') && !(window.matchMedia && window.matchMedia('(hover: hover)').matches)) {
+      tipEl.classList.remove('show'); currentTarget = null; return;
+    }
+    if (window.matchMedia && window.matchMedia('(hover: hover)').matches) return;
+    currentTarget = null;
+    t.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
   });
   doc.addEventListener('mouseout', function (e) {
     if (!currentTarget) return;
