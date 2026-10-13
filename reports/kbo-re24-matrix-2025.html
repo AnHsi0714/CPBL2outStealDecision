@@ -158,7 +158,7 @@
     <div class="wrap">
       <div class="eyebrow">KBO 2025 REGULAR SEASON</div>
       <h1>韓職 RE24 得分期望值矩陣</h1>
-      <p class="lede">24 種 base-out state（3 種出局數 × 8 種壘包組合）各自「從該狀態起算到半局結束」的平均剩餘得分。起算點對齊到壘包狀態實際變化的那一球，不是打席或半局的開頭——方法見計畫書 3.0 節。</p>
+      <p class="lede">24 種出局數與壘包組合，各自從該狀態起算到半局結束的平均得分。顏色越深，這個局面越值錢。</p>
       <div class="meta">
         <span>KindCode R</span>
         <span>日期 2025-03–2025-10</span>
@@ -182,7 +182,7 @@
           <div class="legend-bar"></div>
           <span>2.566 分</span>
         </div>
-        <p class="lede" style="margin-top:14px; font-size:.86rem">顏色深淺（淺色模式）／亮度（深色模式）代表平均剩餘得分的相對高低；每格滑鼠移過或鍵盤 Tab 到該格可看到樣本數與標準差。空白格代表本季無樣本觀測到該 state。</p>
+        <p class="lede" style="margin-top:14px; font-size:.86rem">滑鼠移到格子上可看樣本數與標準差。</p>
         <details style="margin-top:16px">
           <summary>顯示完整資料表</summary>
           <div class="table-wrap">
@@ -196,12 +196,12 @@
     </section>
 
     <section aria-labelledby="threshold-title">
-      <h2 id="threshold-title">由 RE24 直接推導的基礎門檻（層次二）</h2>
-      <p class="lede">計畫書 3.1 節層次二公式：<code>p ≥ RE(一壘) / RE(二壘)</code>，尚未計入盜壘失敗的「保留打者到下一局」效應（層次三蒙地卡羅模擬已處理，見 README 逐棒次門檻）。此處僅作為與模擬結果交叉核對的基準值。</p>
+      <h2 id="threshold-title">由 RE24 推得的基礎門檻</h2>
+      <p class="lede">盜壘成功率至少要達到 <code>RE(一壘) ÷ RE(二壘)</code> 才划算。這是不含打者個人差異與保留效應的基準值。</p>
       <div class="grid" style="margin-top:14px"><article class="stat"><small>0 出局｜RE(一壘)／RE(二壘)</small><strong>75.2%</strong><span>層次二基礎損益兩平門檻（未計保留效應）</span></article><article class="stat"><small>1 出局｜RE(一壘)／RE(二壘)</small><strong>61.9%</strong><span>層次二基礎損益兩平門檻（未計保留效應）</span></article><article class="stat"><small>2 出局｜RE(一壘)／RE(二壘)</small><strong>56.3%</strong><span>層次二基礎損益兩平門檻（未計保留效應）</span></article></div>
     </section>
   </main>
 
-  <footer><div class="wrap">資料：KBO 官網文字轉播，2025 例行賽 日期 2025-03–2025-10 · RE 計算對齊事件發生當下（計畫書 3.0 節），排除未打完的半局 · 由 build_re24_matrix.py 產生</div></footer>
+  <footer><div class="wrap">資料：KBO 官網文字轉播，2025 例行賽 日期 2025-03–2025-10</div></footer>
 </body>
 </html>
