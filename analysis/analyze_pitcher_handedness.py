@@ -275,8 +275,18 @@ def main() -> int:
     league: dict[str, Counter[str]] = defaultdict(Counter)
     events: list[dict[str, Any]] = []
     skipped: Counter[str] = Counter()
-    for directory in cache_dirs:
-        part_league, part_events, part_skipped = collect(directory, hands, team_names)
+    for year, directory in zip(years, cache_dirs):
+        # GameSno 在不同球季會重複（2025 與 2026 之間有 301/359 個場次編號對應到不同球隊），
+        # 所以球隊名稱必須按該事件自己的球季去查，不能共用一張對照表，否則合併模式下
+        # 多數跑者的 Team 欄位會被標成別隊。
+        season_tag = f"{year}_{args.kind_code}_1-{args.end}"
+        season_decision_csv = Path("outputs") / f"cpbl_2out_first_base_{season_tag}.csv"
+        season_teams = (
+            load_team_names(season_decision_csv)
+            if season_decision_csv.exists()
+            else team_names
+        )
+        part_league, part_events, part_skipped = collect(directory, hands, season_teams)
         for hand, bucket in part_league.items():
             league[hand].update(bucket)
         events.extend(part_events)
