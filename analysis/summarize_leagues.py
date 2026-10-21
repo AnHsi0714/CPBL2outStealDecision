@@ -51,10 +51,6 @@ def season_label(league: str, tag: str) -> str:
     return tag[:4]
 
 
-def rows_for(league: str, name: str, tag: str) -> Any:
-    return load_json(OUT / f"{league}_{name}_{tag}.json") or load_json(OUT / f"{league}_{name}_{tag}_summary.json")
-
-
 def summarize(league: str) -> str:
     lines: list[str] = []
     tags = TAGS[league]
