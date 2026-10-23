@@ -191,6 +191,27 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def composition_by_slot(
+    rows: list[dict[str, Any]], group_keys: dict[str, str]
+) -> list[dict[str, Any]]:
+    """逐棒次（實際出賽棒次）的打者類型占比：每個類型維度內，高/低兩組各占該棒次決策點的比例。
+    用來檢查「棒次差異是否其實是教練把某類打者固定排在某棒」。分母是該棒次有類型資料的決策點。"""
+    result = []
+    for slot in range(1, 10):
+        slot_rows = [r for r in rows if r["HitterLineup"] == str(slot)]
+        entry: dict[str, Any] = {"slot": slot, "n": len(slot_rows)}
+        for dim, column in group_keys.items():
+            labeled = [r[column] for r in slot_rows if r[column]]
+            counts: dict[str, int] = {}
+            for label in labeled:
+                counts[label] = counts.get(label, 0) + 1
+            entry[dim] = {
+                label: {"n": count, "share": count / len(labeled)} for label, count in sorted(counts.items())
+            }
+        result.append(entry)
+    return result
+
+
 def main() -> int:
     args = parse_args()
     tag = f"{args.year}_{args.kind_code}_{args.start}-{args.end}"
@@ -241,6 +262,16 @@ def main() -> int:
         "cross_table_lineup_x_contact": cross_table(qualified_rows, "LineupGroup", "ContactGroup"),
         "cross_table_lineup_x_tto": cross_table(qualified_rows, "LineupGroup", "TTOGroup"),
         "lineup_slot_breakdown": lineup_slot_breakdown(valid_rows),
+        "composition_by_slot": composition_by_slot(
+            qualified_rows,
+            {
+                "power": "PowerGroup",
+                "patience": "PatienceGroup",
+                "obp": "OBPGroup",
+                "contact": "ContactGroup",
+                "tto": "TTOGroup",
+            },
+        ),
         "lineup_substitution": substitution_stats(rows),
     }
 

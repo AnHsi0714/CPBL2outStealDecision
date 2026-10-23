@@ -94,11 +94,16 @@
 
         <p class="muted" style="margin-top:12px">門檻最高在第 <span id="peak-slot"></span> 棒（<span id="peak-value"></span>），最低在第 <span id="trough-slot"></span> 棒（<span id="trough-value"></span>）。棒次影響兩件事：這棒自己的打擊價值，以及盜壘失敗後打席被保留到下一局的影響。</p>
 
+        <h3 style="margin-top:28px">各棒次排的是哪類打者</h3>
+        <p class="muted">每根長條是該棒次決策點中「高」組打者的占比，最右邊一組為全體；滑過長條可看人數。棒次間差距大，代表教練把這類打者固定排在某些棒次，棒次與類型的效應就混在一起。</p>
+        <div class="comp-legend" id="composition-legend"></div>
+        <div id="composition-chart" class="comp-chart"></div>
+
         <h3 style="margin-top:28px">分組比較</h3>
         <p class="muted">差異為正，代表組一的門檻較高，也就是比較不該冒險。</p>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>比較</th><th>組一</th><th>組二</th><th>差異（組一－組二）</th><th>p 值（Mann-Whitney U）</th></tr></thead>
+            <thead><tr><th>比較</th><th>組一門檻中位數</th><th>組二門檻中位數</th><th>差異（組一－組二）</th><th>p 值（Mann-Whitney U）</th></tr></thead>
             <tbody id="segment-table"></tbody>
           </table>
         </div>

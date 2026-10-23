@@ -200,6 +200,46 @@
         return `<tr><td>${labelA} vs ${labelB}</td><td>${pct(a.median)}（n=${a.n}）</td><td>${pct(b.median)}（n=${b.n}）</td><td>${diff >= 0 ? '+' : ''}${pct(diff)}</td><td>${pText}</td></tr>`;
       }).join('');
 
+      if (segments.composition) {
+        const dims = [['power', 'high_ISO', '高長打'], ['patience', 'high_BB', '高選球'], ['obp', 'high_OBP', '高上壘率'], ['contact', 'high_1B', '高單打率'], ['tto', 'high_TTO', '高TTO']];
+        const tally = (entry, dim, high) => {
+          const g = entry[dim] || {};
+          const total = Object.values(g).reduce((sum, v) => sum + v.n, 0);
+          return { hi: g[high] ? g[high].n : 0, total };
+        };
+        const groups = segments.composition.map((e) => ({ label: `第${e.slot}棒`, name: `第 ${e.slot} 棒`, e }));
+        const overall = { };
+        dims.forEach(([d, h]) => {
+          let hi = 0, total = 0;
+          segments.composition.forEach((e) => { const t = tally(e, d, h); hi += t.hi; total += t.total; });
+          overall[d] = { hi, total };
+        });
+        $('composition-legend').innerHTML = dims.map(([, , name], i) => `<span><i style="background:var(--s${i + 1})"></i>${name}</span>`).join('');
+        const W = 780, H = 300, L = 40, R = 8, T = 12, B = 30;
+        const plotW = W - L - R, plotH = H - T - B;
+        const gw = plotW / (groups.length + 1);
+        const bw = Math.min(13, (gw - 10) / dims.length);
+        const y = (v) => T + plotH * (1 - v);
+        let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="各棒次高長打、高選球、高上壘率、高單打率、高TTO打者占比">`;
+        [0, .25, .5, .75, 1].forEach((v) => {
+          svg += `<line class="grid${v === .5 ? ' half' : ''}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${Math.round(v * 100)}%</text>`;
+        });
+        const draw = (gi, label, getTally, title) => {
+          const x0 = L + gi * gw + (gw - bw * dims.length) / 2;
+          dims.forEach(([d, h, name], i) => {
+            const t = getTally(d, h);
+            if (!t.total) return;
+            const v = t.hi / t.total;
+            svg += `<rect class="m" x="${(x0 + i * bw + 1).toFixed(1)}" y="${y(v).toFixed(1)}" width="${(bw - 2).toFixed(1)}" height="${(plotH * v).toFixed(1)}" rx="3" fill="var(--s${i + 1})"><title>${title} ${name}：${pct(v, 0)}（${t.hi} / ${t.total} 筆）</title></rect>`;
+          });
+          svg += `<text x="${(L + gi * gw + gw / 2).toFixed(1)}" y="${H - 10}" text-anchor="middle">${label}</text>`;
+        };
+        groups.forEach((g, gi) => draw(gi, g.label, (d, h) => tally(g.e, d, h), g.name));
+        draw(groups.length, '全體', (d) => overall[d], '全體');
+        svg += '</svg>';
+        $('composition-chart').innerHTML = svg;
+      }
+
       const slots = segments.lineupSlots.filter((s) => s.median !== null);
       if (slots.length) {
         const sorted = [...slots].sort((a, b) => b.median - a.median);
