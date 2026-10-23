@@ -564,11 +564,18 @@ th:focus-visible, .stat small:focus-visible, .pill:focus-visible, .branch-head h
       if (!entry.isIntersecting) return;
       fired = true;
       entry.target.classList.add('in');
+      // 長條縮成 0 寬時面積為 0，跨來源 iframe 內的觀察器可能不回報；改觀察它的容器，再展開裡面的長條
+      if (entry.target._bars) entry.target._bars.forEach(function (b) { b.classList.add('in'); });
       io.unobserve(entry.target);
     });
   }, { rootMargin: '0px 0px -8% 0px', threshold: 0 });
   doc.querySelectorAll('main section').forEach(function (el) { el.classList.add('reveal'); io.observe(el); });
-  doc.querySelectorAll('.bar').forEach(function (el) { el.classList.add('barr'); io.observe(el); });
+  doc.querySelectorAll('.bar').forEach(function (el) {
+    el.classList.add('barr');
+    var host = el.parentElement;
+    (host._bars = host._bars || []).push(el);
+    io.observe(host);
+  });
   doc.documentElement.classList.add('js-reveal');
   // 保險：觀察器一直沒有回報（例如被瀏覽器節流）時，直接顯示全部內容，避免頁面空白。
   setTimeout(function () { if (!fired) doc.documentElement.classList.remove('js-reveal'); }, 1500);
