@@ -314,7 +314,7 @@ th:focus-visible, .stat small:focus-visible, .pill:focus-visible, .branch-head h
         <p class="muted">差異為正，代表組一的門檻較高，也就是比較不該冒險。</p>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>比較</th><th>組一</th><th>組二</th><th>差異（組一－組二）</th><th>p 值（Mann-Whitney U）</th></tr></thead>
+            <thead><tr><th>比較</th><th>組一門檻中位數</th><th>組二門檻中位數</th><th>差異（組一－組二）</th><th>p 值（Mann-Whitney U）</th></tr></thead>
             <tbody id="segment-table"></tbody>
           </table>
         </div>
@@ -1246,12 +1246,17 @@ th:focus-visible, .stat small:focus-visible, .pill:focus-visible, .branch-head h
     entries.forEach(function (entry) {
       if (!entry.isIntersecting) return;
       fired = true;
-      entry.target.classList.add('in');
+      entry.target.classList.add('in'); if (entry.target._bars) entry.target._bars.forEach(function (b) { b.classList.add('in'); });
       io.unobserve(entry.target);
     });
   }, { rootMargin: '0px 0px -8% 0px', threshold: 0 });
   doc.querySelectorAll('main section').forEach(function (el) { el.classList.add('reveal'); io.observe(el); });
-  doc.querySelectorAll('.bar').forEach(function (el) { el.classList.add('barr'); io.observe(el); });
+  doc.querySelectorAll('.bar').forEach(function (el) {
+    el.classList.add('barr');
+    var host = el.parentElement;
+    (host._bars = host._bars || []).push(el);
+    io.observe(host);
+  });
   doc.documentElement.classList.add('js-reveal');
   // 保險：觀察器一直沒有回報（例如被瀏覽器節流）時，直接顯示全部內容，避免頁面空白。
   setTimeout(function () { if (!fired) doc.documentElement.classList.remove('js-reveal'); }, 1500);
