@@ -103,7 +103,7 @@ python pipeline/generate_decision_report.py --year 2025 --start 1 --end 360
 
 ### 跨聯盟（MLB／KBO）並行腳本
 
-MLB、KBO 沿用 `mlb_`／`kbo_` 前綴的並行腳本，數學部分（模擬引擎、分組比較、保留效應、bootstrap 等）直接 import CPBL 版，只換資料來源；**不改 CPBL 腳本**。結果與數字見 `分析發現.md` 的「跨聯盟擴充」，過程與每個 bug 見 `跨聯盟擴充進度.md`。
+MLB、KBO 沿用 `mlb_`／`kbo_` 前綴的並行腳本，數學部分（模擬引擎、分組比較、保留效應、bootstrap 等）直接 import CPBL 版，只換資料來源；**不改 CPBL 腳本**。結果與數字見 `分析發現.md` 的「跨聯盟擴充」；`跨聯盟擴充進度.md` 只記 MLB 沒抓到的場次。
 
 - MLB：`scrapers/mlb_find_2out_first_base.py`（Gumbo 快取 `data/raw/mlb/{start}_{end}/`）→ `pipeline/mlb_model_batter_decisions.py` → `bash pipeline/run_mlb_season.sh <年>`（類型、join、先發標記、分組比較、各隊決策、保留效應、WPA、跑者名單、決策報告一次跑完）。檔名標籤是日期區間 `YYYY-03-15_YYYY-10-10`。
 - KBO：`scrapers/KBO_crawl_seasons.py`（HTML 快取 `data/raw/kbo/{年}/`）→ `scrapers/kbo_find_2out_first_base.py` → `pipeline/kbo_model_batter_decisions.py` → `bash pipeline/run_kbo_season.sh <年>`。檔名標籤是年份。
