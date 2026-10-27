@@ -13,9 +13,11 @@
       --soft-failure: #f8e5e3;
       --soft-neutral: #e3eaf5;
       --shadow: none;
+      --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4;
     }
     @media (prefers-color-scheme: dark) {
       :root {
+        --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
         --bg: #0e1116;
         --surface: #161b22;
         --text: #f2f4f7;
@@ -175,3 +177,12 @@
     }
 
     @media (max-width: 560px) { #validation-stats { grid-template-columns: 1fr; } #validation-stats .stat strong { white-space: normal; } }
+
+    .comp-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0 4px; font-size: .86rem; }
+    .comp-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .comp-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+    .comp-chart svg { width: 100%; height: auto; display: block; }
+    .comp-chart text { fill: var(--muted); font-size: 11px; }
+    .comp-chart .grid { stroke: var(--line); stroke-width: 1; }
+    .comp-chart .grid.half { stroke-dasharray: 3 3; }
+    .comp-chart rect.m:hover { opacity: .75; }

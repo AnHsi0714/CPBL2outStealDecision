@@ -228,6 +228,7 @@ def build_segments(comparison: dict[str, Any] | None) -> dict[str, Any] | None:
             }
             for item in comparison["lineup_slot_breakdown"]
         ],
+        "composition": comparison.get("composition_by_slot"),
         "comparisons": comparison["comparisons"],
         "qualifiedRows": comparison["batter_type_qualified_rows"],
         "substitution": comparison.get("lineup_substitution"),
