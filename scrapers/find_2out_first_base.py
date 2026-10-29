@@ -13,6 +13,7 @@ import argparse
 import csv
 import json
 import random
+import re
 import time
 from collections import Counter
 from pathlib import Path
@@ -77,7 +78,9 @@ def is_steal_success(content: str) -> bool:
 
 
 def is_steal_failure(content: str) -> bool:
-    return "一壘跑者" in content and "盜壘刺" in content and "出局" in content
+    # 被盜壘刺的必須是一壘跑者本人；雙盜壘時同一列可能是一壘跑者安全上二壘、
+    # 二／三壘跑者被盜壘刺，只比對「一壘跑者」「盜壘刺」會把失敗記到一壘跑者頭上
+    return bool(re.search(r"一壘跑者[^\s。]*出局-盜壘刺", content))
 
 
 def pa_key(row: dict[str, Any]) -> tuple[int, str, int]:

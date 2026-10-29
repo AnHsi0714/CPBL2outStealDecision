@@ -8,6 +8,7 @@ from find_2out_first_base import (
     analyze_game,
     deduplicate_schedule,
     is_administrative_only_row,
+    is_steal_failure,
     remove_administrative_rows,
 )
 
@@ -268,6 +269,17 @@ class AnalyzeGameTests(unittest.TestCase):
             row(2, "1", 1, 1, 2, first="1", second="2"),
         ]
         self.assertEqual(analyze_game(META, game_data(rows)), [])
+
+
+class StealFailureAttributionTests(unittest.TestCase):
+    def test_only_first_base_runner_caught_counts(self):
+        self.assertTrue(is_steal_failure("壞球。一壘跑者甲出局-盜壘刺 3人出局。"))
+
+    def test_other_base_runner_caught_in_double_steal_is_not_first_base_failure(self):
+        self.assertFalse(
+            is_steal_failure("好球。一壘跑者甲 出壘進壘上二壘。 三壘跑者乙出局-盜壘刺 2人出局。")
+        )
+        self.assertFalse(is_steal_failure("二壘跑者乙出局-盜壘刺 1人出局。 一壘跑者甲 出壘進壘上二壘。"))
 
 
 class AdministrativeRowFilterTests(unittest.TestCase):
