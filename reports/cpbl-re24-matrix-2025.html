@@ -137,6 +137,10 @@
       .heatmap { grid-template-columns: 56px repeat(8, minmax(46px, 1fr)); }
       .cell-n { display: none; }
     }
+    @media (max-width: 560px) {
+      .heatmap { overflow-x: auto; }
+      .cell::after { display: none; }
+    }
 
     .cell[data-level="0"] { --cell-bg: #cde2fb; --cell-fg: #12130f; }
     .cell[data-level="1"] { --cell-bg: #b7d3f6; --cell-fg: #12130f; }
