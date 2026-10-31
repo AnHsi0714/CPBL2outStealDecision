@@ -37,9 +37,11 @@
     .eyebrow { color: var(--accent); font-weight: 700; letter-spacing: .08em; font-size: .8rem; white-space: nowrap; }
     h1 { margin: 0; font-size: clamp(1.3rem, 2.6vw, 1.8rem); line-height: 1.2; letter-spacing: -.015em; }
 
-    .tabs-row { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin: 16px 0 0; padding-bottom: 0; }
+    .tabs-wrap { margin: 16px 0 0 -8px; container-type: inline-size; }
+    .tabs-row { display: flex; align-items: flex-end; flex-wrap: nowrap; gap: 14px; }
 
-    .tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+    .tabs { display: flex; flex: 0 1 auto; min-width: 0; flex-wrap: nowrap; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
     .tab {
       appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--text);
       font: inherit; font-size: .88rem; font-weight: 600; padding: 8px 16px; border-radius: 0;
@@ -47,15 +49,41 @@
     }
     .tab:hover { background: color-mix(in srgb, var(--text) 12%, var(--surface)); border-color: var(--text); }
     .tab:active, .sub-tab:active, .league-tabs button:active { transform: translateY(1px); }
-    .tab[aria-selected="true"], .tab[aria-selected="true"]:hover { background: var(--text); color: var(--bg); }
+    .tab[aria-selected="true"], .tab[aria-selected="true"]:hover { background: var(--text); color: var(--bg); border-color: var(--text); }
+    .tabs .tab:first-child { border-left-width: 0; }
 
-    .sub-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 14px; border-left: 1px solid var(--line); }
+    .sub-tabs { display: flex; flex: none; flex-wrap: nowrap; align-items: center; gap: 6px; padding-left: 14px; padding-bottom: 4px; border-left: 1px solid var(--line); }
+    .sub-tabs[hidden] { display: none; }
+    .tab:focus-visible, .sub-tab:focus-visible { outline-offset: -3px; }
     .sub-tab {
       appearance: none; border: 1px solid var(--line); background: var(--bg); color: var(--text);
       font: inherit; font-size: .78rem; font-weight: 600; padding: 4px 12px; border-radius: 0; cursor: pointer;
     }
     .sub-tab:hover { background: color-mix(in srgb, var(--text) 14%, var(--bg)); border-color: var(--text); }
     .sub-tab[aria-selected="true"], .sub-tab[aria-selected="true"]:hover { background: var(--text); color: var(--surface); border-color: var(--text); }
+    /* 空間不夠（展開目錄、手機）時依序處理：先縮內距與字級，讓小分頁仍和主分頁同一行；
+       縮到最小仍放不下就改成主分頁 2 × 2 格、小分頁獨立一列，每個分頁都完整可見，不靠橫向捲動。須放在上面各分頁規則之後才蓋得過去 */
+    @container (max-width: 832px) {
+      .tab { padding: 8px 10px; font-size: .84rem; }
+      .sub-tab { padding: 4px 8px; }
+      .sub-tabs { gap: 4px; padding-left: 10px; }
+    }
+    @container (max-width: 724px) {
+      .tab { padding: 8px 6px; font-size: .78rem; }
+      .sub-tab { padding: 4px 6px; font-size: .74rem; }
+    }
+    @container (max-width: 659px) {
+      .tabs-row { flex-wrap: wrap; margin-right: -8px; }
+      .tabs { flex: 1 1 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
+      .tab { padding: 8px; font-size: .88rem; border-bottom: 1px solid var(--line); }
+      .tabs .tab:nth-child(odd) { border-left-width: 0; }
+      .tabs .tab:nth-child(even) { border-right-width: 0; }
+      .tabs .tab:last-child:nth-child(odd) { grid-column: 1 / -1; }
+      .sub-tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; gap: 6px; padding: 0; border-left: 0; }
+      .sub-tabs::-webkit-scrollbar { display: none; }
+      .sub-tabs .sub-tab:first-child { border-left-width: 0; }
+      .sub-tab { padding: 4px 12px; font-size: .78rem; }
+    }
 
     main {
       flex: 1 1 auto;
@@ -71,15 +99,16 @@
       display: flex;
       flex-direction: column;
       min-height: 70vh;
-      margin: 0 -8px;
-      background: var(--surface); border-top: 1px solid var(--line);
+      margin: -2px -8px 0;
+      position: relative; z-index: 1;
+      background: var(--surface); border-top: 2px solid var(--text);
     }
     .frame-toolbar {
       flex: none;
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      padding: 6px 16px; border-bottom: 1px solid var(--line); font-size: .82rem; color: var(--muted);
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+      padding: 6px 8px; border-bottom: 1px solid var(--line); font-size: .82rem; color: var(--muted);
     }
-    .frame-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .frame-label { min-width: 0; }
     .frame-toolbar a { flex: none; color: var(--accent); text-decoration: none; font-weight: 600; }
     .frame-toolbar a:hover { text-decoration: underline; }
     .report-frame { flex: 1 1 auto; display: block; width: 100%; height: 100%; border: 0; background: var(--bg); }

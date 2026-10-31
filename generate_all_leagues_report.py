@@ -106,10 +106,9 @@ activateLeague(location.hash.replace("#", ""));
     @media (max-width: 760px) {
       .mobile body { display: block; min-height: 0; }
       .mobile main { display: block; }
-      .mobile .frame-panel { min-height: 0; margin: 0 -8px; }
+      .mobile .frame-panel { min-height: 0; margin: -2px -8px 0; }
       .mobile .report-frame { flex: none; height: 80vh; }
       .mobile .eyebrow { display: none; }
-      .mobile .tabs, .mobile .sub-tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
       .mobile .tab, .mobile .sub-tab, .mobile .league-tabs button { min-height: 40px; }
       .mobile header { position: static; }
     }
@@ -132,9 +131,11 @@ activateLeague(location.hash.replace("#", ""));
         <div class="eyebrow" id="league-eyebrow"></div>
         <nav class="league-tabs" id="league-tabs" aria-label="聯盟">{league_buttons}</nav>
       </div>
-      <div class="tabs-row">
-        <nav class="tabs" id="primary-tabs"></nav>
-        <div class="sub-tabs" id="secondary-tabs" hidden></div>
+      <div class="tabs-wrap">
+        <div class="tabs-row">
+          <nav class="tabs" id="primary-tabs"></nav>
+          <div class="sub-tabs" id="secondary-tabs" hidden></div>
+        </div>
       </div>
     </div>
   </header>
