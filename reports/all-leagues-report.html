@@ -152,6 +152,18 @@
     .league-tabs button[aria-selected="true"], .league-tabs button[aria-selected="true"]:hover { background: var(--text); color: var(--surface); border-color: var(--text); }
     .league-tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .title-row { align-items: center; }
+    .mbar { display: none; }
+    .mbar-row { display: flex; align-items: center; gap: 6px; }
+    .mbar-row[hidden] { display: none; }
+    .mbar-row + .mbar-row { margin-top: 6px; }
+    .mbar-group { display: flex; gap: 6px; }
+    .mbar button { font: inherit; font-weight: 700; border: 1px solid var(--line); border-radius: 0; background: var(--surface); color: var(--text); cursor: pointer; }
+    .mbar-group button { min-height: 36px; padding: 0 14px; font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; }
+    #mbar-cats button { flex: 1 1 0; padding: 0 4px; text-transform: none; letter-spacing: 0; }
+    #mbar-years button { padding: 0 12px; text-transform: none; letter-spacing: 0; background: var(--bg); }
+    #mbar button[aria-selected="true"] { background: var(--text); color: var(--surface); border-color: var(--text); }
+    #mbar-toc { flex: none; width: 40px; height: 36px; padding: 0; border-color: var(--text); display: grid; place-items: center; }
+    #mbar-toc span { width: 18px; height: 2px; background: var(--text); box-shadow: 0 -6px 0 var(--text), 0 6px 0 var(--text); }
 
     @media (max-width: 760px) {
       .mobile body { display: block; min-height: 0; }
@@ -163,6 +175,10 @@
       .mobile .league-tabs { flex: 0 0 100%; justify-content: flex-end; }
       .mobile .tab, .mobile .sub-tab, .mobile .league-tabs button { min-height: 40px; }
       .mobile header { position: static; }
+      .mobile .mbar { display: block; position: fixed; top: 0; left: 0; right: 0; z-index: 57; padding: 6px 8px;
+        background: var(--bg); border-bottom: 1px solid var(--line); box-shadow: 0 2px 10px rgba(0, 0, 0, .15);
+        transform: translateY(-110%); visibility: hidden; transition: transform .2s ease, visibility 0s .2s; }
+      .mobile .mbar.show { transform: none; visibility: visible; transition: transform .2s ease; }
     }
 /* 報告頁共用樣式（目錄、提示框），由各產生器附加在各報告自己的樣式後面 */
 .rc-btn { position: fixed; left: 12px; top: var(--rc-top, 14px); z-index: 60; width: 40px; height: 40px; padding: 0;
@@ -209,6 +225,14 @@ th:focus-visible, .stat small:focus-visible, .pill:focus-visible, .branch-head h
   </style>
 </head>
 <body>
+  <div class="mbar" id="mbar">
+    <div class="mbar-row">
+      <button type="button" id="mbar-toc" aria-label="目錄"><span></span></button>
+      <div class="mbar-group" id="mbar-leagues"></div>
+    </div>
+    <div class="mbar-row mbar-group" id="mbar-cats"></div>
+    <div class="mbar-row mbar-group" id="mbar-years" hidden></div>
+  </div>
   <header>
     <div class="wrap">
       <div class="title-row">
@@ -235,7 +259,7 @@ th:focus-visible, .stat small:focus-visible, .pill:focus-visible, .branch-head h
     </div>
   </main>
 
-  <script id="categories-data" type="application/json">{"cpbl": [{"id": "decision", "label": "盜壘決策報告", "description": "三分支模擬（成功／失敗／不跑）、棒次 × 打者類型分組、各隊決策品質、符合門檻的跑者名單。", "variants": [{"year": "2023", "file": "cpbl-steal-decision-2023.html"}, {"year": "2024", "file": "cpbl-steal-decision-2024.html"}, {"year": "2025", "file": "cpbl-steal-decision-2025.html"}, {"year": "2026", "file": "cpbl-steal-decision-2026.html"}], "defaultIndex": 2}, {"id": "re24", "label": "RE24 矩陣", "description": "24 格 base-out 期望得分熱力圖，以及未計保留效應的基礎損益兩平門檻。", "variants": [{"year": "2023", "file": "cpbl-re24-matrix-2023.html"}, {"year": "2024", "file": "cpbl-re24-matrix-2024.html"}, {"year": "2025", "file": "cpbl-re24-matrix-2025.html"}, {"year": "2026", "file": "cpbl-re24-matrix-2026.html"}], "defaultIndex": 2}, {"id": "we", "label": "勝率增值矩陣（WE）", "description": "局數 × 攻守方 × 分差 × 出局 × 壘包，合併四季推回的進攻方最終獲勝機率。", "variants": [{"year": null, "file": "cpbl-win-expectancy-matrix.html"}], "defaultIndex": 0}, {"id": "wpa", "label": "WPA 版損益兩平門檻", "description": "第 2–8 局改以勝率增值取代得分期望值當判準，含四季逐局 bootstrap 信賴區間比較。", "variants": [{"year": null, "file": "cpbl-wpa-decision-thresholds.html"}], "defaultIndex": 0}], "mlb": [{"id": "decision", "label": "盜壘決策報告", "description": "三分支模擬（成功／失敗／不跑）、棒次 × 打者類型分組、各隊決策品質、符合門檻的跑者名單。", "variants": [{"year": "2023", "file": "mlb-steal-decision-2023.html"}, {"year": "2024", "file": "mlb-steal-decision-2024.html"}, {"year": "2025", "file": "mlb-steal-decision-2025.html"}, {"year": "2026", "file": "mlb-steal-decision-2026.html"}], "defaultIndex": 2}, {"id": "re24", "label": "RE24 矩陣", "description": "24 格 base-out 期望得分熱力圖，以及未計保留效應的基礎損益兩平門檻。", "variants": [{"year": "2023", "file": "mlb-re24-matrix-2023.html"}, {"year": "2024", "file": "mlb-re24-matrix-2024.html"}, {"year": "2025", "file": "mlb-re24-matrix-2025.html"}, {"year": "2026", "file": "mlb-re24-matrix-2026.html"}], "defaultIndex": 2}, {"id": "we", "label": "勝率增值矩陣（WE）", "description": "局數 × 攻守方 × 分差 × 出局 × 壘包，合併四季推回的進攻方最終獲勝機率。", "variants": [{"year": null, "file": "mlb-win-expectancy-matrix.html"}], "defaultIndex": 0}, {"id": "wpa", "label": "WPA 版損益兩平門檻", "description": "第 2–8 局改以勝率增值取代得分期望值當判準，含四季逐局 bootstrap 信賴區間比較。", "variants": [{"year": null, "file": "mlb-wpa-decision-thresholds.html"}], "defaultIndex": 0}], "kbo": [{"id": "decision", "label": "盜壘決策報告", "description": "三分支模擬（成功／失敗／不跑）、棒次 × 打者類型分組、各隊決策品質、符合門檻的跑者名單。", "variants": [{"year": "2023", "file": "kbo-steal-decision-2023.html"}, {"year": "2024", "file": "kbo-steal-decision-2024.html"}, {"year": "2025", "file": "kbo-steal-decision-2025.html"}, {"year": "2026", "file": "kbo-steal-decision-2026.html"}], "defaultIndex": 2}, {"id": "re24", "label": "RE24 矩陣", "description": "24 格 base-out 期望得分熱力圖，以及未計保留效應的基礎損益兩平門檻。", "variants": [{"year": "2023", "file": "kbo-re24-matrix-2023.html"}, {"year": "2024", "file": "kbo-re24-matrix-2024.html"}, {"year": "2025", "file": "kbo-re24-matrix-2025.html"}, {"year": "2026", "file": "kbo-re24-matrix-2026.html"}], "defaultIndex": 2}, {"id": "we", "label": "勝率增值矩陣（WE）", "description": "局數 × 攻守方 × 分差 × 出局 × 壘包，合併四季推回的進攻方最終獲勝機率。", "variants": [{"year": null, "file": "kbo-win-expectancy-matrix.html"}], "defaultIndex": 0}, {"id": "wpa", "label": "WPA 版損益兩平門檻", "description": "第 2–8 局改以勝率增值取代得分期望值當判準，含四季逐局 bootstrap 信賴區間比較。", "variants": [{"year": null, "file": "kbo-wpa-decision-thresholds.html"}], "defaultIndex": 0}]}</script>
+  <script id="categories-data" type="application/json">{"cpbl": [{"id": "decision", "label": "盜壘決策報告", "short": "決策", "description": "三分支模擬（成功／失敗／不跑）、棒次 × 打者類型分組、各隊決策品質、符合門檻的跑者名單。", "variants": [{"year": "2023", "file": "cpbl-steal-decision-2023.html"}, {"year": "2024", "file": "cpbl-steal-decision-2024.html"}, {"year": "2025", "file": "cpbl-steal-decision-2025.html"}, {"year": "2026", "file": "cpbl-steal-decision-2026.html"}], "defaultIndex": 2}, {"id": "re24", "label": "RE24 矩陣", "short": "RE24", "description": "24 格 base-out 期望得分熱力圖，以及未計保留效應的基礎損益兩平門檻。", "variants": [{"year": "2023", "file": "cpbl-re24-matrix-2023.html"}, {"year": "2024", "file": "cpbl-re24-matrix-2024.html"}, {"year": "2025", "file": "cpbl-re24-matrix-2025.html"}, {"year": "2026", "file": "cpbl-re24-matrix-2026.html"}], "defaultIndex": 2}, {"id": "we", "label": "勝率增值矩陣（WE）", "short": "WE", "description": "局數 × 攻守方 × 分差 × 出局 × 壘包，合併四季推回的進攻方最終獲勝機率。", "variants": [{"year": null, "file": "cpbl-win-expectancy-matrix.html"}], "defaultIndex": 0}, {"id": "wpa", "label": "WPA 版損益兩平門檻", "short": "WPA", "description": "第 2–8 局改以勝率增值取代得分期望值當判準，含四季逐局 bootstrap 信賴區間比較。", "variants": [{"year": null, "file": "cpbl-wpa-decision-thresholds.html"}], "defaultIndex": 0}], "mlb": [{"id": "decision", "label": "盜壘決策報告", "short": "決策", "description": "三分支模擬（成功／失敗／不跑）、棒次 × 打者類型分組、各隊決策品質、符合門檻的跑者名單。", "variants": [{"year": "2023", "file": "mlb-steal-decision-2023.html"}, {"year": "2024", "file": "mlb-steal-decision-2024.html"}, {"year": "2025", "file": "mlb-steal-decision-2025.html"}, {"year": "2026", "file": "mlb-steal-decision-2026.html"}], "defaultIndex": 2}, {"id": "re24", "label": "RE24 矩陣", "short": "RE24", "description": "24 格 base-out 期望得分熱力圖，以及未計保留效應的基礎損益兩平門檻。", "variants": [{"year": "2023", "file": "mlb-re24-matrix-2023.html"}, {"year": "2024", "file": "mlb-re24-matrix-2024.html"}, {"year": "2025", "file": "mlb-re24-matrix-2025.html"}, {"year": "2026", "file": "mlb-re24-matrix-2026.html"}], "defaultIndex": 2}, {"id": "we", "label": "勝率增值矩陣（WE）", "short": "WE", "description": "局數 × 攻守方 × 分差 × 出局 × 壘包，合併四季推回的進攻方最終獲勝機率。", "variants": [{"year": null, "file": "mlb-win-expectancy-matrix.html"}], "defaultIndex": 0}, {"id": "wpa", "label": "WPA 版損益兩平門檻", "short": "WPA", "description": "第 2–8 局改以勝率增值取代得分期望值當判準，含四季逐局 bootstrap 信賴區間比較。", "variants": [{"year": null, "file": "mlb-wpa-decision-thresholds.html"}], "defaultIndex": 0}], "kbo": [{"id": "decision", "label": "盜壘決策報告", "short": "決策", "description": "三分支模擬（成功／失敗／不跑）、棒次 × 打者類型分組、各隊決策品質、符合門檻的跑者名單。", "variants": [{"year": "2023", "file": "kbo-steal-decision-2023.html"}, {"year": "2024", "file": "kbo-steal-decision-2024.html"}, {"year": "2025", "file": "kbo-steal-decision-2025.html"}, {"year": "2026", "file": "kbo-steal-decision-2026.html"}], "defaultIndex": 2}, {"id": "re24", "label": "RE24 矩陣", "short": "RE24", "description": "24 格 base-out 期望得分熱力圖，以及未計保留效應的基礎損益兩平門檻。", "variants": [{"year": "2023", "file": "kbo-re24-matrix-2023.html"}, {"year": "2024", "file": "kbo-re24-matrix-2024.html"}, {"year": "2025", "file": "kbo-re24-matrix-2025.html"}, {"year": "2026", "file": "kbo-re24-matrix-2026.html"}], "defaultIndex": 2}, {"id": "we", "label": "勝率增值矩陣（WE）", "short": "WE", "description": "局數 × 攻守方 × 分差 × 出局 × 壘包，合併四季推回的進攻方最終獲勝機率。", "variants": [{"year": null, "file": "kbo-win-expectancy-matrix.html"}], "defaultIndex": 0}, {"id": "wpa", "label": "WPA 版損益兩平門檻", "short": "WPA", "description": "第 2–8 局改以勝率增值取代得分期望值當判準，含四季逐局 bootstrap 信賴區間比較。", "variants": [{"year": null, "file": "kbo-wpa-decision-thresholds.html"}], "defaultIndex": 0}]}</script>
   <script>
 (function () {
   'use strict';
@@ -685,7 +709,11 @@ window.addEventListener("message", (event) => {
   } else if (d.type === "report-height") {
     if (mobile) frame.style.height = `${d.height}px`;
   } else if (d.type === "report-scroll-to") {
-    if (mobile) window.scrollTo({ top: frame.getBoundingClientRect().top + window.scrollY + d.y, behavior: "smooth" });
+    if (mobile) {
+      // 往上跳時頂欄會浮現，多讓出它的高度，標題才不會被蓋住
+      const target = frame.getBoundingClientRect().top + window.scrollY + d.y;
+      window.scrollTo({ top: target - (mbar && target < window.scrollY ? mbar.offsetHeight : 0), behavior: "smooth" });
+    }
   } else if (d.type === "report-goto-category") {
     if (categoryById(d.id)) {
       lastAnchor = null;
@@ -712,6 +740,60 @@ window.addEventListener("scroll", () => {
 
 frame.addEventListener("load", () => { frame.style.opacity = "1"; });
 
+// 手機版浮動頂欄：往上捲時浮現，放目錄、聯盟與年份，不必捲回頁首就能切換（只有入口頁有這個元素）
+const mbar = document.getElementById("mbar");
+const mbarLeagues = document.getElementById("mbar-leagues");
+const mbarYears = document.getElementById("mbar-years");
+const mbarCats = document.getElementById("mbar-cats");
+const leagueNav = document.getElementById("league-tabs");
+let keepBarUntil = 0;
+
+function barButtons(buttons, attr) {
+  return buttons
+    .map((b) => `<button type="button" data-${attr}="${b.dataset[attr]}" aria-selected="${b.getAttribute("aria-selected")}">${b.textContent}</button>`)
+    .join("");
+}
+
+function syncBar() {
+  if (!mbar) return;
+  mbarLeagues.innerHTML = leagueNav ? barButtons([...leagueNav.querySelectorAll("button")], "league") : "";
+  const years = [...secondaryTabs.querySelectorAll(".sub-tab")];
+  mbarCats.innerHTML = [...primaryTabs.querySelectorAll(".tab")]
+    .map((b) => `<button type="button" data-cat="${b.dataset.cat}" aria-selected="${b.getAttribute("aria-selected")}">${categoryById(b.dataset.cat).short}</button>`)
+    .join("");
+  mbarYears.hidden = years.length === 0;
+  mbarYears.innerHTML = barButtons(years, "idx");
+}
+
+if (mbar) {
+  mbar.addEventListener("click", (event) => {
+    const btn = event.target.closest("button");
+    if (!btn) return;
+    keepBarUntil = Date.now() + 2500;
+    if (btn.id === "mbar-toc") {
+      const tocBtn = document.querySelector(".rc-btn");
+      if (tocBtn) tocBtn.click();
+    } else if (btn.dataset.cat) {
+      primaryTabs.querySelector(`.tab[data-cat="${btn.dataset.cat}"]`).click();
+    } else if (btn.dataset.league) {
+      leagueNav.querySelector(`button[data-league="${btn.dataset.league}"]`).click();
+    } else if (btn.dataset.idx) {
+      secondaryTabs.querySelector(`.sub-tab[data-idx="${btn.dataset.idx}"]`).click();
+    }
+  });
+  let lastY = window.scrollY;
+  window.addEventListener("scroll", () => {
+    const y = window.scrollY;
+    const dy = y - lastY;
+    lastY = y;
+    // 剛點過頂欄的幾秒內（換報告時頁面高度會跳動）維持原狀，不要被連帶的捲動事件收掉
+    if (!mobile || Date.now() < keepBarUntil) return;
+    if (y <= document.querySelector("header").offsetHeight) mbar.classList.remove("show");
+    else if (dy < -4) mbar.classList.add("show");
+    else if (dy > 4) mbar.classList.remove("show");
+  }, { passive: true });
+}
+
 function selectVariant(cat, index) {
   const variant = cat.variants[index] || cat.variants[0];
   activeYear = variant.year;
@@ -726,6 +808,7 @@ function selectVariant(cat, index) {
   secondaryTabs.querySelectorAll(".sub-tab").forEach((btn) => {
     btn.setAttribute("aria-selected", Number(btn.dataset.idx) === index ? "true" : "false");
   });
+  syncBar();
 }
 
 function activateCategory(id) {

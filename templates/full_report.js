@@ -69,7 +69,11 @@ window.addEventListener("message", (event) => {
   } else if (d.type === "report-height") {
     if (mobile) frame.style.height = `${d.height}px`;
   } else if (d.type === "report-scroll-to") {
-    if (mobile) window.scrollTo({ top: frame.getBoundingClientRect().top + window.scrollY + d.y, behavior: "smooth" });
+    if (mobile) {
+      // 往上跳時頂欄會浮現，多讓出它的高度，標題才不會被蓋住
+      const target = frame.getBoundingClientRect().top + window.scrollY + d.y;
+      window.scrollTo({ top: target - (mbar && target < window.scrollY ? mbar.offsetHeight : 0), behavior: "smooth" });
+    }
   } else if (d.type === "report-goto-category") {
     if (categoryById(d.id)) {
       lastAnchor = null;
@@ -96,6 +100,60 @@ window.addEventListener("scroll", () => {
 
 frame.addEventListener("load", () => { frame.style.opacity = "1"; });
 
+// 手機版浮動頂欄：往上捲時浮現，放目錄、聯盟與年份，不必捲回頁首就能切換（只有入口頁有這個元素）
+const mbar = document.getElementById("mbar");
+const mbarLeagues = document.getElementById("mbar-leagues");
+const mbarYears = document.getElementById("mbar-years");
+const mbarCats = document.getElementById("mbar-cats");
+const leagueNav = document.getElementById("league-tabs");
+let keepBarUntil = 0;
+
+function barButtons(buttons, attr) {
+  return buttons
+    .map((b) => `<button type="button" data-${attr}="${b.dataset[attr]}" aria-selected="${b.getAttribute("aria-selected")}">${b.textContent}</button>`)
+    .join("");
+}
+
+function syncBar() {
+  if (!mbar) return;
+  mbarLeagues.innerHTML = leagueNav ? barButtons([...leagueNav.querySelectorAll("button")], "league") : "";
+  const years = [...secondaryTabs.querySelectorAll(".sub-tab")];
+  mbarCats.innerHTML = [...primaryTabs.querySelectorAll(".tab")]
+    .map((b) => `<button type="button" data-cat="${b.dataset.cat}" aria-selected="${b.getAttribute("aria-selected")}">${categoryById(b.dataset.cat).short}</button>`)
+    .join("");
+  mbarYears.hidden = years.length === 0;
+  mbarYears.innerHTML = barButtons(years, "idx");
+}
+
+if (mbar) {
+  mbar.addEventListener("click", (event) => {
+    const btn = event.target.closest("button");
+    if (!btn) return;
+    keepBarUntil = Date.now() + 2500;
+    if (btn.id === "mbar-toc") {
+      const tocBtn = document.querySelector(".rc-btn");
+      if (tocBtn) tocBtn.click();
+    } else if (btn.dataset.cat) {
+      primaryTabs.querySelector(`.tab[data-cat="${btn.dataset.cat}"]`).click();
+    } else if (btn.dataset.league) {
+      leagueNav.querySelector(`button[data-league="${btn.dataset.league}"]`).click();
+    } else if (btn.dataset.idx) {
+      secondaryTabs.querySelector(`.sub-tab[data-idx="${btn.dataset.idx}"]`).click();
+    }
+  });
+  let lastY = window.scrollY;
+  window.addEventListener("scroll", () => {
+    const y = window.scrollY;
+    const dy = y - lastY;
+    lastY = y;
+    // 剛點過頂欄的幾秒內（換報告時頁面高度會跳動）維持原狀，不要被連帶的捲動事件收掉
+    if (!mobile || Date.now() < keepBarUntil) return;
+    if (y <= document.querySelector("header").offsetHeight) mbar.classList.remove("show");
+    else if (dy < -4) mbar.classList.add("show");
+    else if (dy > 4) mbar.classList.remove("show");
+  }, { passive: true });
+}
+
 function selectVariant(cat, index) {
   const variant = cat.variants[index] || cat.variants[0];
   activeYear = variant.year;
@@ -110,6 +168,7 @@ function selectVariant(cat, index) {
   secondaryTabs.querySelectorAll(".sub-tab").forEach((btn) => {
     btn.setAttribute("aria-selected", Number(btn.dataset.idx) === index ? "true" : "false");
   });
+  syncBar();
 }
 
 function activateCategory(id) {

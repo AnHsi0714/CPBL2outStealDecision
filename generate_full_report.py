@@ -31,24 +31,28 @@ CATEGORY_SPECS = [
     {
         "id": "decision",
         "label": "盜壘決策報告",
+        "short": "決策",
         "description": "三分支模擬（成功／失敗／不跑）、棒次 × 打者類型分組、各隊決策品質、符合門檻的跑者名單。",
         "pattern": re.compile(r"^cpbl-steal-decision-(\d{4})\.html$"),
     },
     {
         "id": "re24",
         "label": "RE24 矩陣",
+        "short": "RE24",
         "description": "24 格 base-out 期望得分熱力圖，以及未計保留效應的基礎損益兩平門檻。",
         "pattern": re.compile(r"^cpbl-re24-matrix-(\d{4})\.html$"),
     },
     {
         "id": "we",
         "label": "勝率增值矩陣（WE）",
+        "short": "WE",
         "description": "局數 × 攻守方 × 分差 × 出局 × 壘包，合併四季推回的進攻方最終獲勝機率。",
         "pattern": re.compile(r"^cpbl-win-expectancy-matrix\.html$"),
     },
     {
         "id": "wpa",
         "label": "WPA 版損益兩平門檻",
+        "short": "WPA",
         "description": "第 2–8 局改以勝率增值取代得分期望值當判準，含四季逐局 bootstrap 信賴區間比較。",
         "pattern": re.compile(r"^cpbl-wpa-decision-thresholds\.html$"),
     },
@@ -79,6 +83,7 @@ def discover_categories(reports_dir: Path) -> list[dict[str, Any]]:
             {
                 "id": spec["id"],
                 "label": spec["label"],
+                "short": spec["short"],
                 "description": spec["description"],
                 "variants": variants,
                 "defaultIndex": default_index,

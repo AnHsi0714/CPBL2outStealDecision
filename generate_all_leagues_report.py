@@ -102,6 +102,18 @@ activateLeague(location.hash.replace("#", ""));
     .league-tabs button[aria-selected="true"], .league-tabs button[aria-selected="true"]:hover { background: var(--text); color: var(--surface); border-color: var(--text); }
     .league-tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .title-row { align-items: center; }
+    .mbar { display: none; }
+    .mbar-row { display: flex; align-items: center; gap: 6px; }
+    .mbar-row[hidden] { display: none; }
+    .mbar-row + .mbar-row { margin-top: 6px; }
+    .mbar-group { display: flex; gap: 6px; }
+    .mbar button { font: inherit; font-weight: 700; border: 1px solid var(--line); border-radius: 0; background: var(--surface); color: var(--text); cursor: pointer; }
+    .mbar-group button { min-height: 36px; padding: 0 14px; font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; }
+    #mbar-cats button { flex: 1 1 0; padding: 0 4px; text-transform: none; letter-spacing: 0; }
+    #mbar-years button { padding: 0 12px; text-transform: none; letter-spacing: 0; background: var(--bg); }
+    #mbar button[aria-selected="true"] { background: var(--text); color: var(--surface); border-color: var(--text); }
+    #mbar-toc { flex: none; width: 40px; height: 36px; padding: 0; border-color: var(--text); display: grid; place-items: center; }
+    #mbar-toc span { width: 18px; height: 2px; background: var(--text); box-shadow: 0 -6px 0 var(--text), 0 6px 0 var(--text); }
 
     @media (max-width: 760px) {
       .mobile body { display: block; min-height: 0; }
@@ -113,6 +125,10 @@ activateLeague(location.hash.replace("#", ""));
       .mobile .league-tabs { flex: 0 0 100%; justify-content: flex-end; }
       .mobile .tab, .mobile .sub-tab, .mobile .league-tabs button { min-height: 40px; }
       .mobile header { position: static; }
+      .mobile .mbar { display: block; position: fixed; top: 0; left: 0; right: 0; z-index: 57; padding: 6px 8px;
+        background: var(--bg); border-bottom: 1px solid var(--line); box-shadow: 0 2px 10px rgba(0, 0, 0, .15);
+        transform: translateY(-110%); visibility: hidden; transition: transform .2s ease, visibility 0s .2s; }
+      .mobile .mbar.show { transform: none; visibility: visible; transition: transform .2s ease; }
     }
 """
     return f"""<!doctype html>
@@ -126,6 +142,14 @@ activateLeague(location.hash.replace("#", ""));
   </style>
 </head>
 <body>
+  <div class="mbar" id="mbar">
+    <div class="mbar-row">
+      <button type="button" id="mbar-toc" aria-label="目錄"><span></span></button>
+      <div class="mbar-group" id="mbar-leagues"></div>
+    </div>
+    <div class="mbar-row mbar-group" id="mbar-cats"></div>
+    <div class="mbar-row mbar-group" id="mbar-years" hidden></div>
+  </div>
   <header>
     <div class="wrap">
       <div class="title-row">
