@@ -720,6 +720,8 @@ function selectVariant(cat, index) {
   frameLabel.textContent = `${label}｜${cat.description}`;
   frameLabel.title = cat.description;
   frameOpenNew.href = variant.file;
+  // 手機版 iframe 高度跟著內容走；換報告時先放掉舊高度，否則新報告比舊的短時，底下會留一大片空白
+  if (mobile) frame.style.height = "";
   frame.src = variant.file;
   secondaryTabs.querySelectorAll(".sub-tab").forEach((btn) => {
     btn.setAttribute("aria-selected", Number(btn.dataset.idx) === index ? "true" : "false");

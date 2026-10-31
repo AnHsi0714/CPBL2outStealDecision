@@ -156,9 +156,23 @@
       .heatmap { grid-template-columns: 56px repeat(8, minmax(42px, 1fr)); }
       .cell-n { display: none; }
     }
+    .cell:nth-child(9n+2)::after, .cell:nth-child(9n+3)::after { left: 0; transform: none; }
+    .cell:nth-child(9n+8)::after, .cell:nth-child(9n+9)::after { left: auto; right: 0; transform: none; }
     @media (max-width: 560px) {
-      .heatmap { overflow-x: auto; }
-      .cell::after { display: none; }
+      .cell:nth-child(9n+4)::after { left: 0; transform: none; }
+      .cell:nth-child(9n+7)::after { left: auto; right: 0; transform: none; }
+      .heatmap { grid-template-columns: 34px repeat(8, minmax(0, 1fr)); gap: 1px; margin-inline: -10px; }
+      .col-label, .row-label { font-size: .62rem; padding: 4px 0; }
+      .row-label { padding-left: 2px; }
+      .cell { min-height: 44px; }
+      .cell-value { font-size: .64rem; letter-spacing: -.02em; }
+      .cell::after { white-space: normal; width: 170px; }
+    }
+    @media (max-width: 340px) {
+      .cell-value { font-size: .56rem; }
+      .heatmap { margin-inline: -6px; }
+      .cell::after { width: 130px; }
+      .cell:nth-child(9n+4)::after, .cell:nth-child(9n+5)::after { left: auto; right: 0; transform: none; }
     }
 
     .cell[data-level="0"] { --cell-bg: #cde2fb; --cell-fg: #12130f; }
