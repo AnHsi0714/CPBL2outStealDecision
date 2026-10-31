@@ -14,7 +14,7 @@
     <div class="wrap">
       <div class="eyebrow">CPBL · 2025 REGULAR SEASON</div>
       <h1><span style="display:inline-block">兩出局、僅一壘有人時，</span><span style="display:inline-block">盜壘值不值得？</span></h1>
-      <p class="lede">把同一個比賽瞬間拆成「成功、失敗、不跑」三條平行路線，以當前打者及後續打序的個人化打擊分布，估算一致時間範圍內的期望得分。</p>
+      <p class="lede">把同一個比賽瞬間拆成「成功、失敗、不跑」三條平行路線，以當前打者及後續打序的個人化打擊分布，估算到下一個進攻半局結束的期望得分。</p>
       <div class="meta">
         <span id="meta-games"></span><span id="meta-pa"></span><span id="meta-batters"></span><span id="meta-sims"></span>
       </div>
@@ -63,7 +63,7 @@
     <section id="validation-section" aria-labelledby="validation-title" hidden>
       <h2 id="validation-title">方法驗證</h2>
       <div class="panel">
-        <p class="muted">模型結果不是自說自話：模擬引擎跟真實資料算出的 RE24 逐格比對過，盜壘文字判讀也跟 CPBL 官方統計逐場逐隊對過帳。</p>
+        <p class="muted">模擬引擎已和真實資料算出的 RE24 逐格比對，盜壘文字判讀也已和 CPBL 官方統計逐場逐隊對帳。</p>
         <div class="grid" id="validation-stats" style="margin-top:14px"></div>
         <p class="muted" style="margin-top:14px" id="validation-note"></p>
       </div>
@@ -95,7 +95,7 @@
         <p class="muted" style="margin-top:12px">門檻最高在第 <span id="peak-slot"></span> 棒（<span id="peak-value"></span>），最低在第 <span id="trough-slot"></span> 棒（<span id="trough-value"></span>）。棒次影響兩件事：這棒自己的打擊價值，以及盜壘失敗後打席被保留到下一局的影響。</p>
 
         <h3 style="margin-top:28px">各棒次排的是哪類打者</h3>
-        <p class="muted">每根長條是該棒次決策點中「高」組打者的占比，最右邊一組為全體；滑過長條可看人數。棒次間差距大，代表教練把這類打者固定排在某些棒次，棒次與類型的效應就混在一起。</p>
+        <p class="muted">每根長條是該棒次決策點中「高」組打者的占比，最右邊一組為全體；滑過長條可看人數。棒次間差距大，可能代表教練把這類打者固定排在某些棒次，棒次與類型的效應就混在一起。</p>
         <div class="comp-legend" id="composition-legend"></div>
         <div id="composition-chart" class="comp-chart"></div>
 
@@ -244,7 +244,7 @@
     </section>
   </main>
 
-  <footer><div class="wrap">資料：CPBL 官網逐球紀錄 · 模型版本 batter-outcome-and-lineup-v1 · 產生時間 <span id="generated-at"></span></div></footer>
+  <footer><div class="wrap">資料：CPBL 官網逐球紀錄 · 產生時間 <span id="generated-at"></span></div></footer>
 
   <script id="report-data" type="application/json">__REPORT_DATA__</script>
   <script>
