@@ -7,7 +7,24 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from generate_decision_report import build_payload, load_re24_validation, load_steal_validation
+from generate_decision_report import (
+    build_payload,
+    build_segments,
+    fisher_exact_two_sided,
+    load_handedness,
+    load_re24_validation,
+    load_steal_validation,
+    retention_by_slot,
+)
+
+SUMMARY = {
+    "year": 2025,
+    "games_with_raw_data": 360,
+    "completed_pa_for_profiles": 27161,
+    "batter_profiles": 174,
+    "simulations_per_context": 2000,
+    "prior_pa": 50,
+}
 
 
 def sample_row(outcome="no_steal"):
@@ -95,6 +112,92 @@ class DecisionReportTests(unittest.TestCase):
         payload = build_payload([sample_row("no_steal")], summary)
         self.assertIsNone(payload["validation"]["re24"])
         self.assertIsNone(payload["validation"]["steal"])
+
+
+class RetentionBySlotTests(unittest.TestCase):
+    @staticmethod
+    def row(slot, v_failure, v_if_out):
+        row = sample_row()
+        row.update(
+            {
+                "HitterLineup": str(slot),
+                "ModelVFailure": str(v_failure),
+                "ModelVIfBatterOut": str(v_if_out),
+                "RetentionValue": str(round(v_failure - v_if_out, 6)),
+            }
+        )
+        return row
+
+    def test_opposite_signs_cancel_in_the_overall_mean_but_not_per_slot(self):
+        rows = [self.row(3, 0.4, 0.3), self.row(8, 0.3, 0.4)]
+
+        slots = retention_by_slot(rows)
+
+        self.assertEqual([item["slot"] for item in slots], list(range(1, 10)))
+        self.assertAlmostEqual(slots[2]["meanValue"], 0.1)
+        self.assertAlmostEqual(slots[7]["meanValue"], -0.1)
+        # 保留有利（正值）會把損益兩平門檻壓低：(0.6-0.4)/(0.8-0.4) - (0.6-0.3)/(0.8-0.3) = -10pp
+        self.assertAlmostEqual(slots[2]["thresholdShiftPP"], -10.0)
+        self.assertAlmostEqual(slots[7]["thresholdShiftPP"], 10.0)
+        self.assertEqual(slots[0]["n"], 0)
+        self.assertIsNone(slots[0]["meanValue"])
+        self.assertIsNone(slots[0]["thresholdShiftPP"])
+
+        aggregate = build_payload(rows, SUMMARY)["aggregate"]
+        self.assertAlmostEqual(aggregate["retentionValue"], 0.0)
+        self.assertEqual(aggregate["retentionBySlot"], slots)
+
+
+class FisherExactTests(unittest.TestCase):
+    def test_matches_single_season_values_in_the_findings_doc(self):
+        # (左投成功, 左投刺殺, 右投成功, 右投刺殺) 對應 2023–2026 的單季 p 值
+        cases = (
+            ((62, 41, 308, 122), 0.032),
+            ((109, 54, 295, 121), 0.366),
+            ((130, 89, 321, 137), 0.007),
+            ((89, 50, 359, 147), 0.120),
+        )
+        for counts, expected in cases:
+            self.assertEqual(round(fisher_exact_two_sided(*counts), 3), expected)
+
+    def test_identical_rows_give_p_of_one(self):
+        self.assertAlmostEqual(fisher_exact_two_sided(10, 10, 10, 10), 1.0)
+
+
+class HandednessAndSegmentsTests(unittest.TestCase):
+    def test_load_handedness_attaches_fisher_p_value(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "hand.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "league_by_pitcher_hand": {
+                            "LHP": {"attempts": 219, "success": 130, "caught": 89, "successRate": 0.5936},
+                            "RHP": {"attempts": 458, "success": 321, "caught": 137, "successRate": 0.7009},
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = load_handedness(path)
+        self.assertEqual(result["LHP"]["success"], 130)
+        self.assertEqual(round(result["pValue"], 3), 0.007)
+
+    def test_load_handedness_returns_none_when_missing(self):
+        self.assertIsNone(load_handedness(Path("does/not/exist.json")))
+
+    def test_segments_keep_decision_rows_and_batter_count_apart(self):
+        comparison = {
+            "lineup_slot_breakdown": [],
+            "comparisons": [],
+            "batter_type_qualified_rows": 1714,
+            "batter_type_correlations": {"batters": 86},
+        }
+
+        segments = build_segments(comparison)
+
+        self.assertEqual(segments["qualifiedRows"], 1714)
+        self.assertEqual(segments["qualifiedBatters"], 86)
 
 
 class LoadValidationFilesTests(unittest.TestCase):

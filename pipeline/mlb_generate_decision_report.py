@@ -30,6 +30,7 @@ from generate_decision_report import (
     load_runner_qualification,
     load_steal_validation,
     load_team_decisions,
+    retention_by_slot,
 )
 
 
@@ -113,6 +114,7 @@ def build_payload(rows, summary, comparison=None, re24_validation=None, steal_va
             "aggregateThreshold": round(aggregate_threshold, 6),
             "medianThreshold": round(threshold_median, 6),
             "retentionValue": round(average(rows, "RetentionValue"), 6),
+            "retentionBySlot": retention_by_slot(rows),
             "conditionalOutCost": round(average(rows, "ConditionalOutCostNoSteal"), 6),
             "expectedOutPenalty": round(average(rows, "ExpectedOutPenaltyNoSteal"), 6),
             "outcomes": outcome_counts,

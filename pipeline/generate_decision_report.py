@@ -14,6 +14,8 @@ from pathlib import Path
 from statistics import mean, median
 from typing import Any
 
+from analyze_retention_contribution import retention_values
+
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE_PATH = ROOT / "templates" / "decision_report.html"
@@ -35,6 +37,43 @@ def as_float(row: dict[str, str], key: str) -> float | None:
 def average(rows: list[dict[str, str]], key: str) -> float:
     values = [value for row in rows if (value := as_float(row, key)) is not None]
     return mean(values)
+
+
+def retention_by_slot(rows: list[dict[str, str]]) -> list[dict[str, Any]]:
+    """逐棒次的保留效應。全體平均會被前段棒次的正值與後段棒次的負值抵銷，報告要逐棒次呈現。
+
+    meanValue 是 RetentionValue（V失敗 − V正常出局，單位分）的平均，正值代表失敗後原打者先打比
+    下一棒先打有利。thresholdShiftPP 是把 V失敗 換成 V正常出局 前後的損益兩平門檻差（pp）的中位數，
+    跟 analysis/analyze_retention_contribution.py 同一口徑：負值代表保留效應壓低了門檻。
+    """
+    result = []
+    for slot in range(1, 10):
+        slot_rows = [row for row in rows if row.get("HitterLineup") == str(slot)]
+        values = [value for row in slot_rows if (value := as_float(row, "RetentionValue")) is not None]
+        shifts = [shift[2] for row in slot_rows if (shift := retention_values(row)) is not None]
+        result.append(
+            {
+                "slot": slot,
+                "n": len(values),
+                "meanValue": round(mean(values), 6) if values else None,
+                "thresholdShiftPP": round(median(shifts), 4) if shifts else None,
+            }
+        )
+    return result
+
+
+def fisher_exact_two_sided(a: int, b: int, c: int, d: int) -> float:
+    """2×2 表 [[a, b], [c, d]] 的雙尾 Fisher 精確檢定 p 值（超幾何分布，不必引入 scipy）。"""
+    row1, row2, col1 = a + b, c + d, a + c
+    total = row1 + row2
+
+    def probability(x: int) -> float:
+        return math.comb(row1, x) * math.comb(row2, col1 - x) / math.comb(total, col1)
+
+    observed = probability(a)
+    low, high = max(0, col1 - row2), min(col1, row1)
+    p_value = sum(p for x in range(low, high + 1) if (p := probability(x)) <= observed * (1 + 1e-7))
+    return min(1.0, p_value)
 
 
 def load_batter_types(path: Path) -> dict[str, dict[str, str]]:
@@ -157,6 +196,11 @@ def load_handedness(path: Path) -> dict[str, Any] | None:
         if not row:
             return None
         result[hand] = {key: row.get(key) for key in keep}
+    left, right = result["LHP"], result["RHP"]
+    # 單季每手別只有一百多到五百次嘗試，差距可能只是抽樣波動，報告要附檢定結果。
+    result["pValue"] = fisher_exact_two_sided(
+        left["success"], left["caught"], right["success"], right["caught"]
+    )
     return result
 
 
@@ -231,6 +275,7 @@ def build_segments(comparison: dict[str, Any] | None) -> dict[str, Any] | None:
         "composition": comparison.get("composition_by_slot"),
         "comparisons": comparison["comparisons"],
         "qualifiedRows": comparison["batter_type_qualified_rows"],
+        "qualifiedBatters": (comparison.get("batter_type_correlations") or {}).get("batters"),
         "substitution": comparison.get("lineup_substitution"),
         "correlations": comparison.get("batter_type_correlations"),
         "crossTables": {
@@ -298,6 +343,7 @@ def build_payload(
             "aggregateThreshold": round(aggregate_threshold, 6),
             "medianThreshold": round(threshold_median, 6),
             "retentionValue": round(average(rows, "RetentionValue"), 6),
+            "retentionBySlot": retention_by_slot(rows),
             "conditionalOutCost": round(average(rows, "ConditionalOutCostNoSteal"), 6),
             "expectedOutPenalty": round(average(rows, "ExpectedOutPenaltyNoSteal"), 6),
             "outcomes": outcome_counts,
