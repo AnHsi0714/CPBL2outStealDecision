@@ -45,7 +45,8 @@ def relabel(document: str, league: str, year: str | None = None) -> str:
 
 def main() -> int:
     path, league = Path(sys.argv[1]), sys.argv[2]
-    path.write_text(relabel(path.read_text(encoding="utf-8"), league), encoding="utf-8", newline="\n")
+    year = sys.argv[3] if len(sys.argv) > 3 else None
+    path.write_text(relabel(path.read_text(encoding="utf-8"), league, year), encoding="utf-8", newline="\n")
     print(f"relabeled {path} -> {league}")
     return 0
 
