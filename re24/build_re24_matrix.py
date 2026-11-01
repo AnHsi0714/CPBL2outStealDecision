@@ -132,15 +132,16 @@ def build_matrix(segments: list[tuple[int, int, int]]) -> dict[str, Any]:
         return mean(values) if values else None
 
     # 層次二的基礎損益兩平門檻，直接由本矩陣算出，作為與模擬結果交叉核對用。
+    # 盜壘失敗後的價值：兩出局時半局結束（0 分），其餘出局數是多一人出局、壘上無人。
     basic_thresholds: dict[str, float | None] = {}
     for outs in (0, 1, 2):
         re_first = cell_mean(outs, 1)  # 一壘有人
         re_second = cell_mean(outs, 2)  # 二壘有人
-        basic_thresholds[str(outs)] = (
-            round(re_first / re_second, 4)
-            if re_first is not None and re_second not in (None, 0)
-            else None
-        )
+        re_failed = 0.0 if outs == 2 else cell_mean(outs + 1, 0)
+        if re_first is None or re_second is None or re_failed is None or re_second == re_failed:
+            basic_thresholds[str(outs)] = None
+        else:
+            basic_thresholds[str(outs)] = round((re_first - re_failed) / (re_second - re_failed), 4)
 
     return {
         "cells": cells,

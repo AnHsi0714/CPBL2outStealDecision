@@ -118,6 +118,19 @@ class BuildMatrixTests(unittest.TestCase):
             matrix["basicBreakEvenThresholdByOuts"]["2"], 0.5 / 2.0
         )
 
+    def test_basic_threshold_subtracts_the_inning_continuing_after_a_failed_steal(self):
+        segments = [
+            (0, 1, 1),  # 無人出局、一壘有人：平均 1.0
+            (0, 2, 1),  # 無人出局、二壘有人：平均 1.5
+            (0, 2, 2),
+            (1, 0, 0),  # 刺殺後變成一出局、壘上無人：平均 0.5
+            (1, 0, 1),
+        ]
+        matrix = build_matrix(segments)
+        # 失敗後半局還會繼續，所以是 (1.0 - 0.5) / (1.5 - 0.5)，不是 1.0 / 1.5
+        self.assertAlmostEqual(matrix["basicBreakEvenThresholdByOuts"]["0"], 0.5)
+        self.assertIsNone(matrix["basicBreakEvenThresholdByOuts"]["1"])
+
 
 if __name__ == "__main__":
     unittest.main()

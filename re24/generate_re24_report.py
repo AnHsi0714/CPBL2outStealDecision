@@ -136,13 +136,13 @@ def build_report(summary: dict[str, Any]) -> str:
     legend_stops = " ,".join(SEQUENTIAL_STEPS_LIGHT)
     legend_stops_dark = " ,".join(SEQUENTIAL_STEPS_DARK)
 
-    thresholds = summary.get("basic_break_even_threshold_by_outs", {})
-    threshold_cards = "".join(
-        f'<article class="stat"><small>{OUTS_LABELS[int(outs)]}｜RE(一壘)／RE(二壘)</small>'
-        f'<strong>{(value * 100):.1f}%</strong>'
-        f'<span>層次二基礎損益兩平門檻（未計保留效應）</span></article>'
-        for outs, value in sorted(thresholds.items())
-        if value is not None
+    # 只有兩出局時盜壘失敗等於半局結束（剩餘得分 0），損益兩平才是 RE(一壘) ÷ RE(二壘)；
+    # 其他出局數失敗後半局還會繼續，這個比值會高估門檻，所以只列兩出局。
+    two_out_threshold = summary.get("basic_break_even_threshold_by_outs", {}).get("2")
+    threshold_cards = "" if two_out_threshold is None else (
+        f'<article class="stat"><small>{OUTS_LABELS[2]}｜RE(一壘)／RE(二壘)</small>'
+        f'<strong>{(two_out_threshold * 100):.1f}%</strong>'
+        f'<span>基礎損益兩平門檻（未計保留效應）</span></article>'
     )
 
     total_segments = summary.get("total_state_segments", 0)
