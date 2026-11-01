@@ -206,7 +206,7 @@ th:focus-visible, .stat small:focus-visible, .pill:focus-visible, .branch-head h
     <section aria-labelledby="finding-title">
       <h2 id="finding-title">結論：第 4 局起，勝率版門檻明顯低於得分版</h2>
       <div class="panel">
-        <p>得分版門檻各局都在 54–60% 上下，不隨局數變。勝率版把比分與局數算進去，門檻明顯較低：</p>
+        <p>得分版門檻在第 2–8 局都落在 53–60% 上下，不隨局數變。勝率版把比分與局數算進去，門檻明顯較低：</p>
         <div class="table-wrap" style="margin-top:14px">
           <table>
             <thead><tr><th>局</th><th>RE 門檻中位數</th><th>WPA 門檻中位數</th></tr></thead>
@@ -223,14 +223,14 @@ th:focus-visible, .stat small:focus-visible, .pill:focus-visible, .branch-head h
         <div class="grid" style="margin-top:14px; grid-template-columns:repeat(3,1fr)">
 <article class="stat"><small>第 1–6 局．領先 1 分時的勝率</small><strong>58.5%</strong><span>n=593</span></article><article class="stat"><small>第 7 局．領先 1 分時的勝率</small><strong>73.4%</strong><span>n=94</span></article><article class="stat"><small>第 8 局．領先 1 分時的勝率</small><strong>77.5%</strong><span>n=91</span></article><article class="stat"><small>第 1–6 局．落後 1 分時的勝率</small><strong>26.3%</strong><span>n=494</span></article><article class="stat"><small>第 7 局．落後 1 分時的勝率</small><strong>15.9%</strong><span>n=91</span></article><article class="stat"><small>第 8 局．落後 1 分時的勝率</small><strong>12.1%</strong><span>n=87</span></article>
         </div>
-        <p style="margin-top:14px">第 2–3 局方向相同，但單一數字不穩定，建議第 4 局起再引用。</p>
+        <p style="margin-top:14px">第 2–3 局的分母不穩，中位數多半落在自己的信賴區間外，建議第 4 局起再引用。</p>
       </div>
 </div>
     </section>
 
     <section aria-labelledby="chart-title">
       <h2 id="chart-title">逐局 95% 信賴區間</h2>
-      <p class="lede" style="margin-bottom:14px">藍色線段是勝率版門檻的 95% 信賴區間，圓點是中位數；橘色菱形是得分版中位數。菱形落在線段右邊，代表勝率版門檻明顯較低。</p>
+      <p class="lede" style="margin-bottom:14px">藍色線段是勝率版門檻的 95% 區間，圓點是原始資料的中位數。區間重抽時加入了估計誤差，會有偏移，圓點可能落在線段外，請看線段的位置與寬度。橘色菱形是得分版中位數，落在線段右邊代表勝率版門檻明顯較低。</p>
       <div class="legend">
         <div class="legend-item"><span class="legend-swatch wpa"></span>WPA 門檻 95% CI（圓點＝中位數）</div>
         <div class="legend-item"><span class="legend-swatch re"></span>RE 門檻中位數</div>
@@ -305,7 +305,7 @@ th:focus-visible, .stat small:focus-visible, .pill:focus-visible, .branch-head h
     '出局成本': '打者出局相對於沒出局，少掉的期望得分',
     '期望出局懲罰': '出局成本 × 該打者的出局率，也就是平均每次打席因出局損失的期望得分',
     '條件式出局成本': '打者出局相對於沒出局，少掉的期望得分',
-    '保留打者平均差異': '盜壘失敗後同一打者下一局先打，相對於正常出局由下一棒開局的期望得分差',
+    '保留效應（依棒次）': '盜壘失敗後原打者下一局先打，相對於正常出局由下一棒先打的期望得分差；各棒次有正有負，全體平均會互相抵銷',
     '平滑先驗': '打席少的打者先用聯盟平均補上這麼多打席再算機率，避免數字被少量打席帶偏',
     '情境損益兩平中位數': '每個情境各自算出損益兩平成功率，再取中位數',
     '符合條件的決策機會': '第 1–8 局、2 出局、僅一壘有人的情境數',
@@ -325,23 +325,23 @@ th:focus-visible, .stat small:focus-visible, .pill:focus-visible, .branch-head h
     '組一': '第一組的門檻中位數與樣本數（n）',
     '組二': '第二組的門檻中位數與樣本數（n）',
     '差異（組一－組二）': '兩組門檻中位數相差幾個百分點',
-    'p 值（Mann-Whitney U）': '兩組差異只是巧合的機率，越小越不像巧合，低於 0.05 通常視為顯著。Mann-Whitney U 是不假設常態分布的檢定',
+    'p 值（Mann-Whitney U）': '假設兩組其實沒有差異，仍出現這麼大差距的機率；越小越不像巧合，低於 0.05 通常視為顯著。Mann-Whitney U 是不假設常態分布的檢定',
     '球隊': '球隊',
     '決策機會': '該隊兩出局、一壘有人的情境數（不論有沒有跑）',
     '盜壘嘗試': '實際發動盜壘的次數',
     '嘗試': '實際發動盜壘的次數',
     '實際成功率': '嘗試次數中成功的比例',
     '成功率': '嘗試次數中成功的比例',
-    '95% 信賴區間': '重複抽樣下，真實值有 95% 機會落在的範圍',
+    '95% 信賴區間': '同樣的抽樣重複很多次，約 95% 次算出的區間會包含真實值',
     '該隊門檻': '該隊所有決策機會的損益兩平門檻中位數',
-    'p 值': '實際成功率與門檻的差異只是巧合的機率，低於 0.05 才判定跑對或跑錯',
+    'p 值': '假設真實成功率剛好等於門檻，仍出現這麼大差距的機率；低於 0.05 才判定跑對或跑錯',
     '判定': '成功率顯著高於門檻判跑對，顯著低於判跑錯，其餘標無法判定',
     '棒次': '打者排在打線第幾棒',
     '跑者': '一壘上的跑者',
     'RE 門檻中位數': '用得分期望值（RE）算出的損益兩平門檻中位數',
     'WPA 門檻中位數': '用勝率增值（WPA）算出的損益兩平門檻中位數',
-    'WPA 95% CI': '勝率版門檻中位數的 95% 信賴區間',
-    '與 RE 重疊': '勝率版信賴區間是否碰到得分版門檻；沒重疊代表兩者差異不是雜訊',
+    'WPA 95% CI': '勝率版門檻的 95% 區間：重抽時加入估計誤差，會有偏移，中位數可能落在區間外',
+    '與 RE 重疊': '勝率版區間是否碰到得分版門檻中位數',
     'RE 成功率': '該跑者的實際盜壘成功率',
     '嘗試次數': '實際發動盜壘的次數',
     'WPA 下夠格的局數': '用勝率版門檻重新判定，成功率達標的局數',
@@ -362,22 +362,22 @@ th:focus-visible, .stat small:focus-visible, .pill:focus-visible, .branch-head h
     [/(領先|落後) 1 分時的勝率/, '該局進攻方領先（或落後）1 分時最後贏球的機率，用來看一分的份量隨局數變重'],
     [/^模擬 vs 真實 RE24/, 'r 是相關係數，越接近 1 代表模擬的 RE24 與真實比賽越吻合；誤差單位是分'],
     [/^盜壘文字判讀/, '把文字紀錄判讀出的盜壘成功與刺殺，與官方統計逐場逐隊比對'],
-    [/^高長打/, 'ISO（長打率 − 打擊率）高於聯盟中位數的打者'],
-    [/^低長打/, 'ISO（長打率 − 打擊率）低於聯盟中位數的打者'],
-    [/^高選球/, '保送與觸身率（BB%）高於聯盟中位數的打者'],
-    [/^低選球/, '保送與觸身率（BB%）低於聯盟中位數的打者'],
-    [/^高上壘率/, '真上壘率（OBP，安打＋保送）高於聯盟中位數的打者'],
-    [/^低上壘率/, '真上壘率（OBP，安打＋保送）低於聯盟中位數的打者'],
-    [/^高單打率/, '單打占打席比例高於聯盟中位數，靠單打上壘的接觸型打者'],
-    [/^低單打率/, '單打占打席比例低於聯盟中位數的打者'],
-    [/^高\s*TTO/, 'TTO（三振＋全壘打＋保送）機率合計高於聯盟中位數，打席結果較不受守備影響'],
-    [/^低\s*TTO/, 'TTO（三振＋全壘打＋保送）機率合計低於聯盟中位數'],
+    [/^高長打/, 'ISO（長打率 − 打擊率）高於合格打者（打席 ≥ 100）中位數的打者'],
+    [/^低長打/, 'ISO（長打率 − 打擊率）低於合格打者（打席 ≥ 100）中位數的打者'],
+    [/^高選球/, '保送與觸身率（BB%）高於合格打者（打席 ≥ 100）中位數的打者'],
+    [/^低選球/, '保送與觸身率（BB%）低於合格打者（打席 ≥ 100）中位數的打者'],
+    [/^高上壘率/, '真上壘率（OBP，安打＋保送）高於合格打者（打席 ≥ 100）中位數的打者'],
+    [/^低上壘率/, '真上壘率（OBP，安打＋保送）低於合格打者（打席 ≥ 100）中位數的打者'],
+    [/^高單打率/, '單打占打席比例高於合格打者（打席 ≥ 100）中位數，靠單打上壘的接觸型打者'],
+    [/^低單打率/, '單打占打席比例低於合格打者（打席 ≥ 100）中位數的打者'],
+    [/^高\s*TTO/, 'TTO（三振＋全壘打＋保送）機率合計高於合格打者（打席 ≥ 100）中位數，打席結果較不受守備影響'],
+    [/^低\s*TTO/, 'TTO（三振＋全壘打＋保送）機率合計低於合格打者（打席 ≥ 100）中位數'],
     [/^前段/, '該打者最常排在打線第 1–5 棒'],
     [/^後段/, '該打者最常排在打線第 6–9 棒'],
     [/^實際：盜壘成功/, '這筆決策實際發生的結果'],
     [/^實際：盜壘失敗/, '這筆決策實際發生的結果'],
     [/^實際：不盜壘/, '這筆決策實際發生的結果'],
-    [/ISO.*選球|BB%|OBP|單打率|TTO|長打/, '打者類型分組的比較：以聯盟中位數把打者切成高低兩組，比較兩組的門檻中位數']
+    [/ISO.*選球|BB%|OBP|單打率|TTO|長打/, '打者類型分組的比較：以合格打者（打席 ≥ 100）的中位數把打者切成高低兩組，比較兩組的門檻中位數']
   ];
   function lookup(text) {
     text = text.replace(/\s+/g, ' ').trim();
@@ -630,7 +630,9 @@ th:focus-visible, .stat small:focus-visible, .pill:focus-visible, .branch-head h
     entries.forEach(function (entry) {
       if (!entry.isIntersecting) return;
       fired = true;
-      entry.target.classList.add('in'); if (entry.target._bars) entry.target._bars.forEach(function (b) { b.classList.add('in'); });
+      entry.target.classList.add('in');
+      // 長條縮成 0 寬時面積為 0，跨來源 iframe 內的觀察器可能不回報；改觀察它的容器，再展開裡面的長條
+      if (entry.target._bars) entry.target._bars.forEach(function (b) { b.classList.add('in'); });
       io.unobserve(entry.target);
     });
   }, { rootMargin: '0px 0px -8% 0px', threshold: 0 });
