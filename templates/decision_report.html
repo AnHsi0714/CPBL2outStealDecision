@@ -55,15 +55,14 @@
       <div class="formula">
         <strong>盜壘損益兩平成功率</strong>
         <code>p* = (V不跑 − V失敗) ÷ (V成功 − V失敗)</code>
-        <code id="aggregate-formula"></code>
-        <p class="muted">以三條路線的全體平均值計算為 <strong id="aggregate-threshold"></strong>；逐情境計算後的中位數為 <strong id="median-threshold"></strong>。兩者不同是因為「先平均再相除」不等於「先逐筆相除再取中位數」。</p>
+        <p class="muted">每個情境各用自己的三個價值算出一個 p*，全部情境的中位數是 <strong id="median-threshold"></strong>。</p>
       </div>
     </section>
 
     <section id="validation-section" aria-labelledby="validation-title" hidden>
       <h2 id="validation-title">方法驗證</h2>
       <div class="panel">
-        <p class="muted">模擬引擎已和真實資料算出的 RE24 逐格比對，盜壘文字判讀也已和 CPBL 官方統計逐場逐隊對帳。</p>
+        <p class="muted" id="validation-intro"></p>
         <div class="grid" id="validation-stats" style="margin-top:14px"></div>
         <p class="muted" style="margin-top:14px" id="validation-note"></p>
       </div>
@@ -72,20 +71,22 @@
     <section aria-labelledby="personal-title">
       <h2 id="personal-title">打者沒有被視為同一個人</h2>
       <div class="panel">
-        <p>每位打者用自己的打擊結果機率（1B／2B／3B／HR／BB／OUT）模擬，打席少的打者以 <span id="prior-pa-text"></span> 打席的聯盟平均先驗平滑。跑者推進、投手、守備與捕手則使用聯盟平均。</p>
+        <p>每位打者用自己整季的打擊結果機率（1B／2B／3B／HR／BB／OUT）模擬，打席少的打者以 <span id="prior-pa-text"></span> 打席的聯盟平均先驗平滑。跑者推進、投手、守備與捕手則使用聯盟平均。</p>
         <div class="grid" style="margin-top:18px">
           <article class="stat"><small>條件式出局成本</small><strong id="out-cost"></strong><span>非出局分支 EV − 出局分支 EV</span></article>
           <article class="stat"><small>期望出局懲罰</small><strong id="out-penalty"></strong><span>條件式成本 × 該打者出局率</span></article>
-          <article class="stat"><small>保留打者平均差異</small><strong id="retention"></strong><span>失敗後同一打者下局先打的打序效果</span></article>
+          <article class="stat"><small>保留效應（依棒次）</small><strong id="retention"></strong><span id="retention-sub"></span></article>
           <article class="stat"><small>平滑先驗</small><strong id="prior-pa"></strong><span>主力打者仍主要由本人數據決定</span></article>
         </div>
+        <p class="muted" style="margin-top:14px">保留效應：盜壘失敗後，原打者下一局先打，相對於正常出局由下一棒先打，期望得分多出（正）或少掉（負）多少。正值代表失敗的代價較小、損益兩平門檻較低，負值相反。各棒次有正有負，全體平均因此接近 0，不代表沒有影響。</p>
+        <div class="ret-strip" id="retention-strip"></div>
       </div>
     </section>
 
     <section id="segment-section" aria-labelledby="segment-title" hidden>
       <h2 id="segment-title">棒次與打者類型如何影響門檻</h2>
       <div class="panel">
-        <p class="muted">打者類型分組只納入該季打席數 ≥ 100 的打者（<span id="segment-qualified"></span> 位），以聯盟中位數切成高低兩組。</p>
+        <p class="muted">打者類型分組只納入該季打席數 ≥ 100 的打者（<span id="segment-qualified"></span>），以這些打者的中位數切成高低兩組。</p>
         <div class="grid" id="substitution-stats" style="margin-top:14px"></div>
 
         <h3 style="margin-top:22px">逐棒次（1–9）損益兩平門檻中位數</h3>
@@ -95,7 +96,7 @@
         <p class="muted" style="margin-top:12px">門檻最高在第 <span id="peak-slot"></span> 棒（<span id="peak-value"></span>），最低在第 <span id="trough-slot"></span> 棒（<span id="trough-value"></span>）。棒次影響兩件事：這棒自己的打擊價值，以及盜壘失敗後打席被保留到下一局的影響。</p>
 
         <h3 style="margin-top:28px">各棒次排的是哪類打者</h3>
-        <p class="muted">每根長條是該棒次決策點中「高」組打者的占比，最右邊一組為全體；滑過長條可看人數。棒次間差距大，可能代表教練把這類打者固定排在某些棒次，棒次與類型的效應就混在一起。</p>
+        <p class="muted">每根長條是該棒次決策點中「高」組打者的占比，最右邊一組為全體；滑過長條可看人數。<span id="composition-note"></span></p>
         <div class="comp-legend" id="composition-legend"></div>
         <div id="composition-chart" class="comp-chart"></div>
 
@@ -113,7 +114,7 @@
     <section id="team-decisions-section" aria-labelledby="team-decisions-title" hidden>
       <h2 id="team-decisions-title">各隊決策品質評估</h2>
       <div class="panel">
-        <p class="muted">以各隊的門檻中位數對照實際盜壘成功率，二項檢定 p &lt; 0.05 才判「跑對」或「跑錯」，其餘標「無法判定」。全聯盟：<span id="team-league-summary"></span>。</p>
+        <p class="muted">以各隊的門檻中位數對照實際盜壘成功率，二項檢定 p &lt; 0.05 才判「跑對」或「跑錯」，其餘標「無法判定」。只評估實際發動的盜壘，沒有跑的機會不列入。全聯盟：<span id="team-league-summary"></span>。</p>
         <div class="table-wrap" style="margin-top:14px">
           <table>
             <thead><tr><th>球隊</th><th>決策機會</th><th>盜壘嘗試</th><th>實際成功率</th><th>95% 信賴區間</th><th>該隊門檻</th><th>p 值</th><th>判定</th></tr></thead>
@@ -170,7 +171,7 @@
     </section>
 
     <section id="handedness-section" aria-labelledby="handedness-title" hidden>
-      <h2 id="handedness-title">左投還是右投：跑得掉的機率不同</h2>
+      <h2 id="handedness-title">左投還是右投：跑得掉的機率有差嗎</h2>
       <div class="panel">
         <p class="muted">只看投手慣用手對「跑不跑得掉」的影響。門檻由打者決定，不會因投手而變，變的是跑者達不達得到門檻。範圍是一壘盜二壘，不限出局數。</p>
         <div class="grid" id="handedness-cards"></div>
@@ -240,7 +241,12 @@
       <ul class="note-list">
         <li>使用得分期望值（RE），不含比分與局數；勝率版見 WPA 報告。</li>
         <li>跑者速度、投捕手組合尚未個人化。</li>
-        <li>三條路線都比較「本半局剩餘＋球隊下一次進攻半局」。</ul>
+        <li>打者機率是整季平均，沒有納入近況（手感好壞），所以門檻反映他整季的樣子，不是當天的狀態。</li>
+        <li>三條路線都比較「本半局剩餘＋球隊下一次進攻半局」。</li>
+        <li id="scope-pvalue" hidden><span id="scope-pvalue-what"></span>的 p 值把每筆決策或嘗試當成獨立樣本，但同一位打者、跑者會重複出現，p 值因此偏小，宜看差距大小與方向。</li>
+        <li id="scope-attempts" hidden>球隊判定與跑者名單用的是單季少量嘗試的成功率，誤差大，只反映當季表現，不是下一季的預測。</li>
+        <li id="scope-multitest" hidden>球隊判定逐隊各做一次檢定，沒有校正多重比較，個別「跑對」「跑錯」可能只是巧合。</li>
+      </ul>
     </section>
   </main>
 

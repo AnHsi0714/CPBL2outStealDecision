@@ -186,3 +186,12 @@
     .comp-chart .grid { stroke: var(--line); stroke-width: 1; }
     .comp-chart .grid.half { stroke-dasharray: 3 3; }
     .comp-chart rect.m:hover { opacity: .75; }
+
+    #retention { font-size: 1.3rem; }
+    .ret-strip { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; margin-top: 12px; }
+    .ret-cell { padding: 8px 4px; text-align: center; background: var(--soft-neutral); border: 1px solid var(--line); }
+    .ret-cell.pos { background: var(--soft-success); }
+    .ret-cell.neg { background: var(--soft-failure); }
+    .ret-cell span, .ret-cell small { display: block; color: var(--muted); font-size: .78rem; }
+    .ret-cell strong { display: block; font-size: 1rem; line-height: 1.35; }
+    @media (max-width: 960px) { .ret-strip { grid-template-columns: repeat(3, 1fr); } }

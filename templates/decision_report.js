@@ -2,6 +2,11 @@
     const $ = (id) => document.getElementById(id);
     const fmt = (value, digits = 3) => Number(value).toFixed(digits);
     const pct = (value, digits = 1) => `${(Number(value) * 100).toFixed(digits)}%`;
+    // 帶正負號的小數，負號用減號；先四捨五入再判斷正負，避免出現「−0.000」。
+    const signed = (value, digits = 3) => {
+      const n = Number(Number(value).toFixed(digits));
+      return `${n < 0 ? '−' : '+'}${Math.abs(n).toFixed(digits)}`;
+    };
     const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
     })[char]);
@@ -40,10 +45,23 @@
 
     const outcomeLabel = { steal_success: '實際：盜壘成功', steal_failure: '實際：盜壘失敗', no_steal: '實際：不盜壘' };
 
+    // 分組比較與左右投的 p 值都把觀測當獨立樣本，有哪些區塊就列哪些，共用一則提醒。
+    const pValueSections = [];
+    function noteIndependentPValues(name) {
+      pValueSections.push(name);
+      $('scope-pvalue-what').textContent = pValueSections.join('、');
+      $('scope-pvalue').hidden = false;
+    }
+
     function fillValidation() {
       const v = REPORT.validation;
       if (!v || (!v.re24 && !v.steal)) return;
       $('validation-section').hidden = false;
+      // 說明只寫實際做過的檢查，沒有官方統計可對帳的聯盟不聲稱對帳過。
+      const checked = [];
+      if (v.re24) checked.push('模擬引擎已和真實資料算出的 RE24 逐格比對');
+      checked.push(v.steal ? `盜壘文字判讀${v.re24 ? '也' : ''}已和 CPBL 官方統計逐場逐隊對帳` : '盜壘文字判讀沒有和官方統計對帳');
+      $('validation-intro').textContent = `${checked.join('，')}。`;
       const cards = [];
       if (v.re24) {
         cards.push(`
@@ -82,6 +100,8 @@
       const t = REPORT.teamDecisions;
       if (!t) return;
       $('team-decisions-section').hidden = false;
+      $('scope-attempts').hidden = false;
+      $('scope-multitest').hidden = false;
       const league = t.league;
       $('team-league-summary').textContent =
         `${league.attempts.toLocaleString()} 次嘗試，實際成功率 ${pct(league.actualSuccessRate)}，門檻中位數 ${pct(league.thresholdMedian)}`;
@@ -104,6 +124,22 @@
       $('team-decisions-lineup-table').innerHTML = halfRows.join('');
     }
 
+    // 保留效應全體平均會被前段棒次的正值與後段棒次的負值抵銷，所以卡片顯示各棒次的範圍，再逐棒次列出。
+    function fillRetention() {
+      const a = REPORT.aggregate;
+      const slots = a.retentionBySlot.filter((s) => s.meanValue !== null);
+      if (!slots.length) return;
+      const values = slots.map((s) => s.meanValue);
+      $('retention').textContent = `${signed(Math.min(...values))} ~ ${signed(Math.max(...values))}\u00A0分`;
+      $('retention-sub').textContent = `各棒次平均；全體平均 ${signed(a.retentionValue)} 分`;
+      $('retention-strip').innerHTML = slots.map((s) => {
+        const tone = Math.abs(s.meanValue) < 0.005 ? 'flat' : (s.meanValue > 0 ? 'pos' : 'neg');
+        const meaning = tone === 'flat' ? '影響很小' : (s.meanValue > 0 ? '保留有利，門檻較低' : '保留不利，門檻較高');
+        const shift = s.thresholdShiftPP === null ? '' : `<small>門檻 ${signed(s.thresholdShiftPP, 1)} pp</small>`;
+        return `<div class="ret-cell ${tone}" title="第 ${s.slot} 棒（${s.n} 筆決策）：${meaning}"><span>第 ${s.slot} 棒</span><strong>${signed(s.meanValue)}</strong>${shift}</div>`;
+      }).join('');
+    }
+
     function fillAggregate() {
       const { meta: m, aggregate: a } = REPORT;
       $('meta-games').textContent = `${m.games} 場完整賽事`;
@@ -120,12 +156,10 @@
       $('v-success').textContent = fmt(a.vSuccess);
       $('v-failure').textContent = fmt(a.vFailure);
       $('v-no-steal').textContent = fmt(a.vNoSteal);
-      $('aggregate-formula').textContent = `(${fmt(a.vNoSteal)} − ${fmt(a.vFailure)}) ÷ (${fmt(a.vSuccess)} − ${fmt(a.vFailure)}) = ${pct(a.aggregateThreshold)}`;
-      $('aggregate-threshold').textContent = pct(a.aggregateThreshold);
       $('median-threshold').textContent = pct(a.medianThreshold);
       $('out-cost').textContent = `${fmt(a.conditionalOutCost)} 分`;
       $('out-penalty').textContent = `${fmt(a.expectedOutPenalty)} 分`;
-      $('retention').textContent = `${a.retentionValue >= 0 ? '+' : ''}${fmt(a.retentionValue)} 分`;
+      fillRetention();
       $('prior-pa').textContent = `${m.priorPA} PA`;
       $('prior-pa-text').textContent = m.priorPA;
       $('generated-at').textContent = new Date(m.generatedAt).toLocaleString('zh-TW');
@@ -164,7 +198,10 @@
       const segments = REPORT.segments;
       if (!segments) return;
       $('segment-section').hidden = false;
-      $('segment-qualified').textContent = segments.qualifiedRows.toLocaleString();
+      noteIndependentPValues('分組比較');
+      // qualifiedRows 是決策筆數（同一位打者會出現多次），不是打者人數。
+      const qualifiedBatters = segments.qualifiedBatters ? `${segments.qualifiedBatters.toLocaleString()} 位打者、` : '';
+      $('segment-qualified').textContent = `${qualifiedBatters}${segments.qualifiedRows.toLocaleString()} 筆決策`;
 
       const sub = segments.substitution;
       if (sub) {
@@ -181,7 +218,7 @@
       const medians = segments.lineupSlots.map((s) => s.median).filter((v) => v !== null);
       const hi = Math.max(...medians);
       const lo = Math.max(0, Math.floor((Math.min(...medians) - 0.03) * 20) / 20);
-      $('bar-axis-note').textContent = `長條從 ${pct(lo, 0)} 起算，方便看出棒次間的差異。`;
+      $('bar-axis-note').textContent = `長條從 ${pct(lo, 0)} 起算，會放大棒次間的差距，實際差距請看右側數字。`;
       $('lineup-bars').innerHTML = segments.lineupSlots.map((s) => `
         <div class="bar-row">
           <span>第 ${s.slot} 棒</span>
@@ -197,7 +234,7 @@
         const b = c[keys[1]];
         const diff = a.median - b.median;
         const pText = c.p_value === null ? '無' : (c.p_value < 0.001 ? '< 0.001' : c.p_value.toFixed(4));
-        return `<tr><td>${labelA} vs ${labelB}</td><td>${pct(a.median)}（n=${a.n}）</td><td>${pct(b.median)}（n=${b.n}）</td><td>${diff >= 0 ? '+' : ''}${pct(diff)}</td><td>${pText}</td></tr>`;
+        return `<tr><td>${labelA} vs ${labelB}</td><td>${pct(a.median)}（n=${a.n}）</td><td>${pct(b.median)}（n=${b.n}）</td><td>${signed(diff * 100, 1)} pp</td><td>${pText}</td></tr>`;
       }).join('');
 
       if (segments.composition) {
@@ -214,6 +251,21 @@
           segments.composition.forEach((e) => { const t = tally(e, d, h); hi += t.hi; total += t.total; });
           overall[d] = { hi, total };
         });
+        // 組成的落差直接由圖上的占比算出來，挑棒次間落差最大的一組當例子。
+        let widest = null;
+        dims.forEach(([d, h, name]) => {
+          const shares = segments.composition
+            .map((e) => ({ slot: e.slot, t: tally(e, d, h) }))
+            .filter((s) => s.t.total)
+            .map((s) => ({ slot: s.slot, share: s.t.hi / s.t.total }));
+          if (shares.length < 2) return;
+          const top = shares.reduce((a, b) => (b.share > a.share ? b : a));
+          const bottom = shares.reduce((a, b) => (b.share < a.share ? b : a));
+          if (!widest || top.share - bottom.share > widest.top.share - widest.bottom.share) widest = { name, top, bottom };
+        });
+        if (widest) {
+          $('composition-note').textContent = `各棒次的打者組成不同，落差最大的是「${widest.name}」組：第 ${widest.top.slot} 棒占 ${pct(widest.top.share, 0)}，第 ${widest.bottom.slot} 棒只占 ${pct(widest.bottom.share, 0)}，所以棒次的效應和打者類型的效應混在一起。類型只依整季成績分，沒有納入近況。`;
+        }
         $('composition-legend').innerHTML = dims.map(([, , name], i) => `<span><i style="background:var(--s${i + 1})"></i>${name}</span>`).join('');
         const W = 780, H = 300, L = 40, R = 8, T = 12, B = 30;
         const plotW = W - L - R, plotH = H - T - B;
@@ -305,6 +357,7 @@
       const r = REPORT.runnerQualification;
       if (!r) return;
       $('runner-section').hidden = false;
+      $('scope-attempts').hidden = false;
       const slotValues = Object.values(r.thresholds.bySlot);
       $('runner-threshold-min').textContent = slotValues.length ? pct(Math.min(...slotValues)) : '無資料';
       $('runner-threshold-max').textContent = slotValues.length ? pct(Math.max(...slotValues)) : '無資料';
@@ -361,9 +414,11 @@
       const stealEV = p * c.ModelVSuccess + (1 - p) * c.ModelVFailure;
       const delta = stealEV - c.ModelVNoSteal;
       $('success-rate-value').textContent = pct(p);
-      $('decision-label').textContent = delta >= 0 ? '這個成功率下：盜壘較有利' : '這個成功率下：不跑較有利';
-      $('decision-math').textContent = `EV(盜壘) ${fmt(stealEV)} − EV(不跑) ${fmt(c.ModelVNoSteal)} = ${delta >= 0 ? '+' : ''}${fmt(delta)} 分`;
-      $('decision-readout').className = `decision-readout ${delta >= 0 ? 'good' : 'bad'}`;
+      // 預設成功率就是這筆的損益兩平門檻，兩邊差距四捨五入後是 0，不該宣布誰比較有利。
+      const tie = Math.abs(delta) < 0.0005;
+      $('decision-label').textContent = tie ? '這個成功率下：盜壘與不跑差不多' : (delta >= 0 ? '這個成功率下：盜壘較有利' : '這個成功率下：不跑較有利');
+      $('decision-math').textContent = `EV(盜壘) ${fmt(stealEV)} − EV(不跑) ${fmt(c.ModelVNoSteal)} = ${tie ? fmt(0) : signed(delta)} 分`;
+      $('decision-readout').className = `decision-readout ${tie ? '' : (delta >= 0 ? 'good' : 'bad')}`;
     }
 
     // 篩選器：選項由資料產生，標籤沿用分組名稱
@@ -420,13 +475,14 @@
       if (!attempts) return;
       const rate = a.outcomes.steal_success / attempts;
       const above = rate >= a.medianThreshold;
-      $('key-takeaway').innerHTML = `<strong>重點：</strong>實際成功率 ${pct(rate)}（${attempts.toLocaleString()} 次嘗試）${above ? '高於' : '低於'}情境門檻中位數 ${pct(a.medianThreshold)}，${above ? '這個情境下盜壘整體划算；真正要看的是哪些棒次、哪些打者更適合跑，往下看。' : '整體而言，這個情境下盜壘不夠划算；往下看哪些棒次與打者例外。'}`;
+      $('key-takeaway').innerHTML = `<strong>重點：</strong>實際成功率 ${pct(rate)}（${attempts.toLocaleString()} 次嘗試）${above ? '高於' : '低於'}情境門檻中位數 ${pct(a.medianThreshold)}，${above ? '實際發動的盜壘整體划算。這些是球隊自己挑的時機，不代表每個機會都該跑；真正要看的是哪些棒次、哪些打者更適合跑，往下看。' : '實際發動的盜壘整體不夠划算；往下看哪些棒次與打者例外。'}`;
     }
 
     function fillHandedness() {
       const h = REPORT.handedness;
       if (!h) return;
       $('handedness-section').hidden = false;
+      noteIndependentPValues('左右投比較');
       const L = h.LHP, R = h.RHP;
       const gap = (R.successRate - L.successRate) * 100;
       $('handedness-cards').innerHTML = `
@@ -440,7 +496,10 @@
         const rel = Math.abs(diff) < 0.01 ? '與' : (diff > 0 ? '高於' : '低於');
         return `${name}成功率 ${pct(row.successRate)} ${rel}門檻中位數${Math.abs(diff) < 0.01 ? '相當' : ''}`;
       };
-      $('handedness-note').textContent = `對照門檻中位數 ${pct(thr)}：${cmp('對右投', R)}，${cmp('對左投', L)}。左投面對一壘跑者是正面朝向，牽制與起跑時機都比較難抓。`;
+      // 單季每手別只有一百多到五百次嘗試，差距不一定顯著，要把檢定結果跟著寫出來。
+      const pText = h.pValue < 0.001 ? 'p < 0.001' : `p = ${h.pValue.toFixed(3)}`;
+      const verdict = h.pValue < 0.05 ? '達顯著' : '未達顯著，單季樣本還不足以確認有差';
+      $('handedness-note').textContent = `${REPORT.meta.year} 年右投減左投的成功率差距 ${gap.toFixed(1)} 個百分點（Fisher 精確檢定 ${pText}），${verdict}。對照兩出局的門檻中位數 ${pct(thr)}（這裡的成功率含所有出局數，只作粗略對照）：${cmp('對右投', R)}，${cmp('對左投', L)}。`;
     }
 
     fillAggregate();
