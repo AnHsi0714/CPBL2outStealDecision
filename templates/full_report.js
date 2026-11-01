@@ -108,11 +108,12 @@ frame.addEventListener("load", () => {
 // 瀏覽器不會把一般 fetch 存下的快取給 iframe 的文件請求用（子框架文件的快取是分開放的），
 // 所以目前這份載入完、瀏覽器閒下來後，依「接下來最可能點的」順序把其他報告抓進記憶體，
 // 切換時用 srcdoc 直接餵給 iframe，不必再等網路。
+// 預載不能跟使用者搶頻寬：點到正在預載的那份就等它抓完（不重複下載），點到還沒抓的就中止其他預載。
 const PREFETCH_PARALLEL = 2;
 const prefetched = new Map(); // 檔名 -> Blob
 const prefetchStarted = new Set();
+const inflight = new Map(); // 檔名 -> { controller, done }：正在抓的預載，done 解析成是否抓到
 let prefetchQueue = [];
-let prefetchActive = 0;
 let frameLoading = false;
 let currentFile = null;
 const netInfo = navigator.connection;
@@ -130,36 +131,49 @@ function prefetchOrder() {
     const cat = cats.find((c) => c.id === activeCategoryId);
     if (cat) add(cat.variants.find((v) => v.year === activeYear) || cat.variants[cat.defaultIndex]);
   });
-  leagues.forEach((cats) => cats.forEach((c) => c.variants.forEach(add))); // 其餘全部
+  // 其餘由小到大：幾十 KB 的 RE24、WE、WPA 幾乎不花頻寬，卻各省一次往返，先抓完；MLB 決策報告約 0.5 MB 排最後
+  const rest = [];
+  leagues.forEach((cats) => cats.forEach((c) => c.variants.forEach((v) => rest.push(v))));
+  rest.sort((a, b) => (a.kb || 0) - (b.kb || 0)).forEach(add);
   return files.filter((file) => file !== currentFile && !prefetchStarted.has(file));
 }
 
 function pumpPrefetch() {
   // 使用者剛點了報告時先讓出頻寬，等那份載入完再繼續
-  while (!frameLoading && prefetchActive < PREFETCH_PARALLEL && prefetchQueue.length) {
+  while (!frameLoading && inflight.size < PREFETCH_PARALLEL && prefetchQueue.length) {
     const file = prefetchQueue.shift();
     if (prefetchStarted.has(file)) continue;
     prefetchStarted.add(file);
-    prefetchActive += 1;
-    fetch(file, { priority: "low" })
+    const controller = new AbortController();
+    const done = fetch(file, { priority: "low", signal: controller.signal })
       .then((response) => (response.ok ? response.blob() : Promise.reject(new Error(String(response.status)))))
-      .then((blob) => prefetched.set(file, blob))
-      .catch(() => prefetchStarted.delete(file)) // 失敗的下次還能再試
-      .then(() => { prefetchActive -= 1; whenIdle(pumpPrefetch); });
+      .then((blob) => { prefetched.set(file, blob); return true; })
+      .catch(() => { prefetchStarted.delete(file); return false; }) // 失敗或被中止的下次還能再試
+      .then((ok) => { inflight.delete(file); whenIdle(pumpPrefetch); return ok; });
+    inflight.set(file, { controller, done });
   }
 }
 
-function loadReport(file) {
+let loadSeq = 0;
+
+function loadReport(file, seq = ++loadSeq) {
+  const stale = () => seq !== loadSeq; // 等待期間使用者又點了別的（或同一份再點一次）就不用換了
   const blob = prefetched.get(file);
-  if (!blob) {
-    // 先設 src 再拿掉 srcdoc，只會導向一次（srcdoc 存在時 src 不會生效）
-    frame.src = file;
-    if (frame.hasAttribute("srcdoc")) frame.removeAttribute("srcdoc");
+  if (blob) {
+    blob.text().then((html) => { if (!stale()) frame.srcdoc = html; });
     return;
   }
-  blob.text().then((html) => {
-    if (currentFile === file) frame.srcdoc = html; // 讀取期間使用者又點了別的就不用換了
-  });
+  // 要走網路了：其他預載先停，頻寬讓給使用者點的這份
+  inflight.forEach((job, name) => { if (name !== file) job.controller.abort(); });
+  const job = inflight.get(file);
+  if (job) {
+    // 這份已經在預載，等它抓完直接用；抓失敗時 inflight 已清掉，再呼叫一次會走下面的一般載入
+    job.done.then(() => { if (!stale()) loadReport(file, seq); });
+    return;
+  }
+  // 先設 src 再拿掉 srcdoc，只會導向一次（srcdoc 存在時 src 不會生效）
+  frame.src = file;
+  if (frame.hasAttribute("srcdoc")) frame.removeAttribute("srcdoc");
 }
 
 function startPrefetch() {

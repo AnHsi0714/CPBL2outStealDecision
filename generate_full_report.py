@@ -73,7 +73,9 @@ def discover_categories(reports_dir: Path) -> list[dict[str, Any]]:
             if not match:
                 continue
             year = match.group(1) if match.groups() else None
-            variants.append({"year": year, "file": name})
+            # kb 只用來決定預載順序（小的先抓），湊到 10 KB 避免報告每次重產就讓入口頁跟著變
+            kb = round((reports_dir / name).stat().st_size / 10240) * 10
+            variants.append({"year": year, "file": name, "kb": kb})
         if not variants:
             continue
         variants.sort(key=lambda v: v["year"] or "")
