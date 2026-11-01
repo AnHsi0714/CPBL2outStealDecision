@@ -53,7 +53,7 @@ CATEGORY_SPECS = [
         "id": "wpa",
         "label": "WPA 版損益兩平門檻",
         "short": "WPA",
-        "description": "第 2–8 局改以勝率增值取代得分期望值當判準，含四季逐局 bootstrap 信賴區間比較。",
+        "description": "第 4–8 局改以勝率增值取代得分期望值當判準，含四季逐局 bootstrap 區間比較。",
         "pattern": re.compile(r"^cpbl-wpa-decision-thresholds\.html$"),
     },
 ]

@@ -26,7 +26,7 @@
     <section aria-labelledby="finding-title">
       <h2 id="finding-title">結論：第 4 局起，勝率版門檻明顯低於得分版</h2>
       <div class="panel">
-        <p>得分版門檻各局都在 54–60% 上下，不隨局數變。勝率版把比分與局數算進去，門檻明顯較低：</p>
+        <p>得分版門檻在第 2–8 局都落在 53–60% 上下，不隨局數變。勝率版把比分與局數算進去，門檻明顯較低：</p>
         <div class="table-wrap" style="margin-top:14px">
           <table>
             <thead><tr><th>局</th><th>RE 門檻中位數</th><th>WPA 門檻中位數</th></tr></thead>
@@ -43,14 +43,14 @@
         <div class="grid" style="margin-top:14px; grid-template-columns:repeat(3,1fr)">
 __LEVERAGE_CARDS__
         </div>
-        <p style="margin-top:14px">第 2–3 局方向相同，但單一數字不穩定，建議第 4 局起再引用。</p>
+        <p style="margin-top:14px">第 2–3 局的分母不穩，中位數多半落在自己的信賴區間外，建議第 4 局起再引用。</p>
       </div>
 </div>
     </section>
 
     <section aria-labelledby="chart-title">
       <h2 id="chart-title">逐局 95% 信賴區間</h2>
-      <p class="lede" style="margin-bottom:14px">藍色線段是勝率版門檻的 95% 信賴區間，圓點是中位數；橘色菱形是得分版中位數。菱形落在線段右邊，代表勝率版門檻明顯較低。</p>
+      <p class="lede" style="margin-bottom:14px">藍色線段是勝率版門檻的 95% 區間，圓點是原始資料的中位數。區間重抽時加入了估計誤差，會有偏移，圓點可能落在線段外，請看線段的位置與寬度。橘色菱形是得分版中位數，落在線段右邊代表勝率版門檻明顯較低。</p>
       <div class="legend">
         <div class="legend-item"><span class="legend-swatch wpa"></span>WPA 門檻 95% CI（圓點＝中位數）</div>
         <div class="legend-item"><span class="legend-swatch re"></span>RE 門檻中位數</div>
