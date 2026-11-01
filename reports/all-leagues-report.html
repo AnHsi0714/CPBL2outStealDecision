@@ -738,7 +738,75 @@ window.addEventListener("scroll", () => {
   }, 120);
 });
 
-frame.addEventListener("load", () => { frame.style.opacity = "1"; });
+frame.addEventListener("load", () => {
+  frame.style.opacity = "1";
+  frameLoading = false;
+  startPrefetch();
+});
+
+// 切換報告時要先拿到整份 HTML：線上要等網路（MLB 決策報告壓縮後約 0.5 MB），本機從磁碟讀所以很快。
+// 瀏覽器不會把一般 fetch 存下的快取給 iframe 的文件請求用（子框架文件的快取是分開放的），
+// 所以目前這份載入完、瀏覽器閒下來後，依「接下來最可能點的」順序把其他報告抓進記憶體，
+// 切換時用 srcdoc 直接餵給 iframe，不必再等網路。
+const PREFETCH_PARALLEL = 2;
+const prefetched = new Map(); // 檔名 -> Blob
+const prefetchStarted = new Set();
+let prefetchQueue = [];
+let prefetchActive = 0;
+let frameLoading = false;
+let currentFile = null;
+const netInfo = navigator.connection;
+// 本機開檔不需要；省流量、行動網路或很慢的連線也不要偷抓
+const prefetchAllowed = location.protocol !== "file:" && typeof fetch === "function"
+  && !(netInfo && (netInfo.saveData || netInfo.type === "cellular" || /2g/.test(netInfo.effectiveType || "")));
+const whenIdle = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 2000 }) : setTimeout(fn, 300));
+
+function prefetchOrder() {
+  const leagues = typeof allLeagues !== "undefined" ? Object.values(allLeagues) : [categories];
+  const files = [];
+  const add = (variant) => { if (variant && !files.includes(variant.file)) files.push(variant.file); };
+  categoryById(activeCategoryId).variants.forEach(add); // 同分類的其他年份
+  leagues.forEach((cats) => { // 其他聯盟的同分類、同年份
+    const cat = cats.find((c) => c.id === activeCategoryId);
+    if (cat) add(cat.variants.find((v) => v.year === activeYear) || cat.variants[cat.defaultIndex]);
+  });
+  leagues.forEach((cats) => cats.forEach((c) => c.variants.forEach(add))); // 其餘全部
+  return files.filter((file) => file !== currentFile && !prefetchStarted.has(file));
+}
+
+function pumpPrefetch() {
+  // 使用者剛點了報告時先讓出頻寬，等那份載入完再繼續
+  while (!frameLoading && prefetchActive < PREFETCH_PARALLEL && prefetchQueue.length) {
+    const file = prefetchQueue.shift();
+    if (prefetchStarted.has(file)) continue;
+    prefetchStarted.add(file);
+    prefetchActive += 1;
+    fetch(file, { priority: "low" })
+      .then((response) => (response.ok ? response.blob() : Promise.reject(new Error(String(response.status)))))
+      .then((blob) => prefetched.set(file, blob))
+      .catch(() => prefetchStarted.delete(file)) // 失敗的下次還能再試
+      .then(() => { prefetchActive -= 1; whenIdle(pumpPrefetch); });
+  }
+}
+
+function loadReport(file) {
+  const blob = prefetched.get(file);
+  if (!blob) {
+    // 先設 src 再拿掉 srcdoc，只會導向一次（srcdoc 存在時 src 不會生效）
+    frame.src = file;
+    if (frame.hasAttribute("srcdoc")) frame.removeAttribute("srcdoc");
+    return;
+  }
+  blob.text().then((html) => {
+    if (currentFile === file) frame.srcdoc = html; // 讀取期間使用者又點了別的就不用換了
+  });
+}
+
+function startPrefetch() {
+  if (!prefetchAllowed) return;
+  prefetchQueue = prefetchOrder();
+  whenIdle(pumpPrefetch);
+}
 
 // 手機版浮動頂欄：往上捲時浮現，放目錄、聯盟與年份，不必捲回頁首就能切換（只有入口頁有這個元素）
 const mbar = document.getElementById("mbar");
@@ -804,7 +872,9 @@ function selectVariant(cat, index) {
   frameOpenNew.href = variant.file;
   // 手機版 iframe 高度跟著內容走；換報告時先放掉舊高度，否則新報告比舊的短時，底下會留一大片空白
   if (mobile) frame.style.height = "";
-  frame.src = variant.file;
+  frameLoading = true;
+  currentFile = variant.file;
+  loadReport(variant.file);
   secondaryTabs.querySelectorAll(".sub-tab").forEach((btn) => {
     btn.setAttribute("aria-selected", Number(btn.dataset.idx) === index ? "true" : "false");
   });
